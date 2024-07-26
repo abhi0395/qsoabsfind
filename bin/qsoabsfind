@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+python -m qsoabsfind.parallel_convolution "$@"
