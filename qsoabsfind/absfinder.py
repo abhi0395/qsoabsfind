@@ -14,6 +14,29 @@ from .spec import QSOSpecRead
 
 @njit
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):
+    """
+    Identify valid absorber redshifts based on convolution thresholds.
+
+    This function evaluates each candidate redshift in the `our_z` array to check if it meets the
+    secondary threshold criteria for valid absorbers. The secondary thresholds are based on the
+    convolution array values around expected absorber wavelengths.
+
+    Parameters:
+    - our_z (numpy.ndarray): Array of candidate redshift values.
+    - residual_our_z (numpy.ndarray): Array of residual flux values corresponding to the candidate redshifts.
+    - lam_search (numpy.ndarray): Wavelength array in the observed frame.
+    - conv_arr (numpy.ndarray): Convolution array used for initial redshift detection.
+    - sigma_cr (numpy.ndarray): Array of local sigma values for noise estimation.
+    - coeff_sigma (float): Coefficient for sigma to apply secondary threshold.
+    - d_pix (float): Pixel distance for line separation during Gaussian fitting.
+    - beta (float): Ratio of oscillator strengths of the doublet lines.
+    - line1 (float): Wavelength of the first line of the doublet in the rest frame.
+    - line2 (float): Wavelength of the second line of the doublet in the rest frame.
+
+    Returns:
+    - new_our_z (list): List of validated redshift values.
+    - new_res_arr (list): List of corresponding residual flux values for validated redshifts.
+    """
     new_our_z = []
     new_res_arr = []
 
