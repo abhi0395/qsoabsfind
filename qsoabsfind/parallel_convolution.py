@@ -4,7 +4,6 @@ import numpy as np
 import argparse
 import time
 from multiprocessing import Pool
-from importlib import import_module
 from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from .io import save_results_to_fits
 import re
@@ -107,17 +106,12 @@ def main():
     parser.add_argument('--input-fits-file', type=str, required=True, help='Path to the input FITS file.')
     parser.add_argument('--n-qso', required=True, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '1-1000', '1-1000:10').")
     parser.add_argument('--absorber', type=str, required=True, help='Absorber name for searching doublets (MgII, CIV).')
-    parser.add_argument('--constant-file', type=str, required=True, help='Path to the constants .py file.')
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--n-tasks', type=int, required=True, help='Number of tasks.')
     parser.add_argument('--ncpus', type=int, required=True, help='Number of CPUs per task.')
 
     args = parser.parse_args()
-
-    # Import constants from the provided file
-    constants = import_module(args.constant_file.rstrip('.py'))
-
     # Prepare headers
     headers = {}
     if args.headers:
