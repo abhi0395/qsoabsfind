@@ -20,15 +20,13 @@ def read_fits_file(fits_file, index=None):
             tgtdetails = hdul['TGTDETAILS'].data
         else:
             if isinstance(index, int):
-                flux = hdul['FLUX'].data[index].flatten()
-                error = hdul['ERROR'].data[index].flatten()
-                tgtdetails = {name: hdul['TGTDETAILS'].data[index][name] for name in hdul['TGTDETAILS'].data.names}
-            else:
-                flux = hdul['FLUX'].data[index]
-                error = hdul['ERROR'].data[index]
-                tgtdetails = hdul['TGTDETAILS'].data[index]
+                index = [index]
+            flux = hdul['FLUX'].data[index]
+            error = hdul['ERROR'].data[index]
             wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
+            tgtdetails = hdul['TGTDETAILS'].data[index]
     return flux, error, wavelength, tgtdetails
+
 
 def save_results_to_fits(results, output_file, headers, absorber):
     """

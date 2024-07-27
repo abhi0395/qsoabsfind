@@ -170,6 +170,8 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     EW_total = np.zeros(size_array, dtype='float32')
     EW_total_error = np.zeros(size_array, dtype='float32')
 
+    lines = line_data()
+
     if use_kernel == 'MgII':
         line_centre1 = lines['MgII_2796']
         line_centre2 = lines['MgII_2803']

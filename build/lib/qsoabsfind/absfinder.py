@@ -92,7 +92,10 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
         raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
 
     spectra = QSOSpecRead(fits_file, spec_index)
-    z_qso = spectra.tgtdetails['Z_QSO']
+    try:
+        z_qso = spectra.tgtdetails['Z_QSO'][0]
+    except IndexError:
+        import pdb;pdb.set_trace()
     lam_obs = spectra.wavelength
     min_wave, max_wave = lam_obs.min() + 500, lam_obs.max() - 500
 
@@ -112,7 +115,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
         print(f'Detection finished up to spec index = {spec_index}', flush=True)
 
     # Retrieve quasar data
-    residual, error = spectra.flux, spectra.error
+    residual, error = spectra.flux[0], spectra.error[0]
     ind_nonan = ~np.isnan(residual)
     residual, error = residual[ind_nonan], error[ind_nonan]
     lam_obs = lam_obs[ind_nonan]
@@ -239,20 +242,17 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
             sn1_all = sn1_all[sel_indices]
             sn2_all = sn2_all[sel_indices]
         else:
-            redshift_err = np.array([0])
-            pure_z_abs = np.array([0])
-            pure_gauss_fit = pure_gauss_fit_std = np.array([[0, 0, 0, 0, 0, 0]])
-            pure_ew_first_line_mean = pure_ew_second_line_mean = pure_ew_total_mean = np.array([0])
-            pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
-            sn1_all = sn2_all = np.array([0])
+            redshift_err = [0]
+            pure_z_abs = [0]
+            pure_gauss_fit, pure_gauss_fit_std = [[0, 0, 0, 0, 0, 0]]
+            pure_ew_first_line_mean = pure_ew_second_line_mean = pure_ew_total_mean = [0]
+            pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = [0]
+            sn1_all = sn2_all = [0]
 
-        not_found = max(1, len(pure_z_abs))
+        not_found = max(1, len(final_redshift))
         index_spec = [spec_index for _ in range(not_found)]
-
-        print("Index:", index_spec)
 
         return (index_spec, pure_z_abs.tolist(), pure_gauss_fit.tolist(), pure_gauss_fit_std.tolist(), pure_ew_first_line_mean.tolist(), pure_ew_second_line_mean.tolist(), pure_ew_total_mean.tolist(),
                 pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist())
     else:
-        print("Index:", [spec_index])
         return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])

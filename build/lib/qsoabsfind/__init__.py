@@ -1,0 +1,3 @@
+"""
+qsoabsfind module initialization.
+"""
