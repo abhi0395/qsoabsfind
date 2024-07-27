@@ -3,15 +3,10 @@ qsoabsfind
 
 **The Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar**
 
-.. image:: https://img.shields.io/badge/GitHub-abhi0395%2Fqsoabsfind-blue.svg?style=flat
-    :target: https://github.com/abhi0395/qsoabsfind
-.. image:: https://github.com/abhi0395/qsoabsfind/actions/workflows/tests.yml/badge.svg
-    :target: https://github.com/abhi0395/qsoabsfind/actions?query=workflow%3Atests
-.. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
-    :target: https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE
-.. image:: http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat
-    :target: https://arxiv.org/abs/2103.15842
-
+[![github shields.io](https://img.shields.io/badge/GitHub-abhi0395%2Fqsoabsfind-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind)
+[![Tests](https://github.com/abhi0395/qsoabsfind/actions/workflows/tests.yml/badge.svg)](https://github.com/abhi0395/qsoabsfind/actions?query=workflow%3Atests)
+[![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
+[![arXiv-2103.15842](http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat)](https://arxiv.org/abs/2103.15842)
 
 `qsoabsfind` is a Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar spectra. This tool identifies potential absorbers using vonvolution-based adaptive S/N approach, applies Gaussian fitting and extensive checks to reject false positives, and computes equivalent widths (EWs) of the lines using a simple double gaussian.
 
@@ -71,9 +66,7 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 Citation
 --------
 
-Please cite `[Anand, Nelson & Kauffmann 2021]
-(https://arxiv.org/abs/2103.15842)` if you find this code useful in your  
-research. The BibTeX entry for the paper is::
+Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) if you find this code useful in your research. The BibTeX entry for the paper is:
 
     @ARTICLE{2021MNRAS.504...65A,
        author = {{Anand}, Abhijeet and {Nelson}, Dylan and {Kauffmann}, Guinevere},
@@ -99,8 +92,7 @@ License
 
 Copyright (c) 2021-2025 Abhijeet Anand.  
 
-**qsoabsfind** is free software made available under the MIT License. For details see  
-the LICENSE file.
+**qsoabsfind** is free software made available under the MIT License. For details, see the LICENSE file.
 
 
 Thanks,  
