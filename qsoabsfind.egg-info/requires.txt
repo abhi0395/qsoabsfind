@@ -1,5 +1,0 @@
-numpy
-astropy
-scipy
-fitsio
-numba
