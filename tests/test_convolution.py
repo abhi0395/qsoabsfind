@@ -1,4 +1,5 @@
 import unittest
+import os
 import numpy as np
 from qsoabsfind.absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra
@@ -7,7 +8,9 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = './qso_test.fits'
+        fits_file = os.path.join(os.path.dirname(__file__), 'qso_test.fits')
+        # Check if the file exists
+        assert os.path.exists(file_path), f"File {fits_file} does not exist"
         spec_index = 0
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
