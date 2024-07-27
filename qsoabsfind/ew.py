@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
 from .constants import lines
+from .utils import double_gaussian
 
 # Example usage within double_curve_fit
 def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, bounds, init_cond, iter_n):
@@ -211,7 +212,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             init_cond = [amp_first_nmf, line_first, sigma1, 0.54 * amp_first_nmf, line_second, sigma2]
 
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k] = double_curve_fit(
-                index, gauss, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
+                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
             #errors on EW
             if not use_covariance:
                 EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = calculate_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])

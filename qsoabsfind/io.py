@@ -61,7 +61,7 @@ def save_results_to_fits(results, output_file, headers, absorber):
         fits.Column(name='GAUSS_FIT_STD', format='6D', array=np.array(results['gauss_fit_std'])),
         fits.Column(name=f'{EW_1}', format='D', array=np.array(results['ew_1_mean'])),
         fits.Column(name=f'{EW_2}', format='D', array=np.array(results['ew_2_mean'])),
-        fits.Column(name=ew_total, format='D', array=np.array(results['ew_total_mean'])),
+        fits.Column(name=f'{EW_TOTAL}', format='D', array=np.array(results['ew_total_mean'])),
         fits.Column(name=f'{EW_1}_ERROR', format='D', array=np.array(results['ew_1_error'])),
         fits.Column(name=f'{EW_2}_ERROR', format='D', array=np.array(results['ew_2_error'])),
         fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', array=np.array(results['ew_total_error'])),

@@ -1,5 +1,3 @@
-import numpy as np
-import argparse
 from .io import read_fits_file
 from .utils import elapsed
 import time

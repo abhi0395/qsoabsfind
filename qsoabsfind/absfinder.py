@@ -9,7 +9,7 @@ from .absorberutils import (
     contiguous_pixel_remover, check_error_on_residual, redshift_estimate, absorber_search_window
 )
 from .ew import measure_absorber_properties_double_gaussian
-from .constants import lines, search_parameters, speed_of_light, oscillator_parameters
+from .constants import lines, speed_of_light, oscillator_parameters
 from .spec import QSOSpecRead
 
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):
@@ -98,9 +98,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
 
     line_sep = line2 - line1
     resolution = 69  # km/s for SDSS or DESI
-
-    delta_z_start = lines['dz_start']
-    delta_z_end = lines['dz_end']
 
     del_sigma = line1 * resolution / speed_of_light  # in Ang
 
