@@ -25,9 +25,6 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
         - EW_first (float): Equivalent width of the first Gaussian.
         - EW_second (float): Equivalent width of the second Gaussian.
         - EW_total (float): Total equivalent width of both Gaussians.
-        - EW1_error (float): Error in the equivalent width of the first Gaussian.
-        - EW2_error (float): Error in the equivalent width of the second Gaussian.
-        - EW_total_error (float): Total error in the equivalent width of both Gaussians.
     """
     nparm = len(init_cond)
     save_param_array = np.zeros(nparm)
@@ -185,8 +182,8 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
     #defining wwavelength range for Gaussian fitting
     sigma = d_pix*5 # assuming maximum line width of d_pix * 5, can be larger/smaller, but this is a reasonable assumption.
-    ix0 = line_centre1 - 5 * sigma
-    ix1 = line_centre2 + 5 * sigma
+    ix0 = line_centre1 -  sigma
+    ix1 = line_centre2 +  sigma
 
     if size_array == 0:
         return (
