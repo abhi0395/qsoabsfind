@@ -1,2 +1,4 @@
-fitsio
 numpy
+numba
+astropy
+scipy

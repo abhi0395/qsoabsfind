@@ -9,7 +9,6 @@ setup(
         'numpy',
         'astropy',
         'scipy',
-        'fitsio',
         'numba',
     ],
     entry_points={
