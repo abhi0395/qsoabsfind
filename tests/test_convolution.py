@@ -10,7 +10,7 @@ class TestQSOAbsFind(unittest.TestCase):
         # Set up the input parameters for the function
         fits_file = os.path.join(os.path.dirname(__file__), 'qso_test.fits')
         # Check if the file exists
-        assert os.path.exists(file_path), f"File {fits_file} does not exist"
+        assert os.path.exists(fits_file), f"File {fits_file} does not exist"
         spec_index = 0
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
