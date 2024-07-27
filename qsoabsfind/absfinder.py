@@ -117,6 +117,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
     lam_search, unmsk_residual, unmsk_error = absorber_search_window(
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, verbose=False)
 
+    assert lam_search.size=unmsk_residual.size=unmsk_error.size
+
     # Kernel width computation
     width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pix])
 
