@@ -8,7 +8,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = '../qso-data/qso_test.fits'
+        fits_file = 'data/qso_test.fits'
         # Check if the file exists
         assert os.path.exists(fits_file), f"File {fits_file} does not exist"
         spec_index = np.random.randint(100)
