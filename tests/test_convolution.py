@@ -7,7 +7,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = 'qso_test.fits'
+        fits_file = './qso_test.fits'
         spec_index = 0
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
