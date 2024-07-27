@@ -98,9 +98,6 @@ dmypy.json
 # PyCharm
 .idea/
 
-# Local test data
-test_data/
-
 # Temporary files
 *.tmp
 *.temp
@@ -114,9 +111,6 @@ test_data/
 
 # Backup files
 *.bak
-
-# Output files
-*.fits
 
 # HDF5 files
 *.h5

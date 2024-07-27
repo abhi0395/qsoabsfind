@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from .io import save_results_to_fits
 import re
+from .constants import search_parameters
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance):
     return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance)
@@ -128,13 +129,13 @@ def main():
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        ker_width_pix=constants.search_parameters[args.absorber]["ker_width_pixels"],
-        coeff_sigma=constants.search_parameters[args.absorber]["coeff_sigma"],
-        mult_resi=constants.search_parameters[args.absorber]["mult_resi"],
-        d_pix=constants.search_parameters[args.absorber]["d_pix"],
-        pm_pixel=constants.search_parameters[args.absorber]["pm_pixel"],
-        sn_line1=constants.search_parameters[args.absorber]["sn1_thresh"],
-        sn_line2=constants.search_parameters[args.absorber]["sn2_thresh"],
+        ker_width_pix=search_parameters[args.absorber]["ker_width_pixels"],
+        coeff_sigma=search_parameters[args.absorber]["coeff_sigma"],
+        mult_resi=search_parameters[args.absorber]["mult_resi"],
+        d_pix=search_parameters[args.absorber]["d_pix"],
+        pm_pixel=search_parameters[args.absorber]["pm_pixel"],
+        sn_line1=search_parameters[args.absorber]["sn1_thresh"],
+        sn_line2=search_parameters[args.absorber]["sn2_thresh"],
         use_covariance=False, n_jobs=args.n_tasks * args.ncpus
     )
 
