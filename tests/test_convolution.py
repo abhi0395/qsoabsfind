@@ -6,11 +6,14 @@ from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber
 
 class TestQSOAbsFind(unittest.TestCase):
 
+    def setUp(self):
+        # Set the file path to the data file
+        self.fits_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'qso_test.fits')
+        # Ensure the file exists
+        self.assertTrue(os.path.exists(self.fits_file), f"File {self.fits_file} does not exist")
+
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = 'data/qso_test.fits'
-        # Check if the file exists
-        assert os.path.exists(fits_file), f"File {fits_file} does not exist"
         spec_index = np.random.randint(100)
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
@@ -24,7 +27,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
         # Call the function
         result = convolution_method_absorber_finder_in_QSO_spectra(
-            fits_file, spec_index, absorber, ker_width_pix, coeff_sigma,
+            self.fits_file, spec_index, absorber, ker_width_pix, coeff_sigma,
             mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance)
 
         # Validate the output
@@ -33,8 +36,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = 'qso_test.fits'
-        spec_indices = np.random.randint(0,100, size=3)
+        spec_indices = np.random.randint(0, 100, size=3)
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
         coeff_sigma = 2.5
@@ -48,10 +50,9 @@ class TestQSOAbsFind(unittest.TestCase):
 
         # Call the function
         results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            fits_file, spec_indices, absorber, ker_width_pix, coeff_sigma,
+            self.fits_file, spec_indices, absorber, ker_width_pix, coeff_sigma,
             mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance, n_jobs)
 
-        print("Results:", results)
         # Validate the output
         self.assertIsInstance(results, dict)
         self.assertIn('index_spec', results)
