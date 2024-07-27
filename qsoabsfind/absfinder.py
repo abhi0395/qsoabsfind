@@ -221,7 +221,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
 
         if len(pure_z_abs) > 0:
             match_abs1 = remove_Mg_falsely_identified_fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, use_kernel=absorber, d_pix=d_pix)
-            match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, use_kernel=absorber)
+            match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, use_kernel=absorber)
             ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all)
             sel_indices = (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)  # pure final absorber candidates
 

@@ -226,7 +226,7 @@ def remove_Mg_falsely_identified_fe_absorber(index, z_after_grouping, lam_obs, r
     lam_obs (numpy.ndarray): Observed wavelengths.
     residual (numpy.ndarray): Residual values.
     error (numpy.ndarray): Error values corresponding to the residuals.
-    d_pix (int): Delta pixel value.
+    d_pix (float): Delta pixel value.
 
     Returns:
     numpy.ndarray: Updated list of absorbers with false positives removed.
@@ -282,7 +282,7 @@ def remove_Mg_falsely_identified_fe_absorber(index, z_after_grouping, lam_obs, r
     return match_abs
 
 @jit(nopython=True)
-def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, use_kernel='MgII'):
+def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII'):
     """
     Remove any absorber that arises due to the 2803 line but has already been detected for the 2796 line,
     exploiting the doublet property of MgII to remove false positives.
@@ -292,6 +292,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, use_k
     lam_obs (numpy.ndarray): Observed wavelengths.
     residual (numpy.ndarray): Residual values.
     error (numpy.ndarray): Error values corresponding to the residuals.
+    d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
     use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
 
     Returns:
