@@ -8,10 +8,10 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        fits_file = os.path.join(os.path.dirname(__file__), 'qso_test.fits')
+        fits_file = '../test_data/qso_test.fits'
         # Check if the file exists
         assert os.path.exists(fits_file), f"File {fits_file} does not exist"
-        spec_index = 0
+        spec_index = np.random.randint(100)
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
         coeff_sigma = 2.5
@@ -34,7 +34,7 @@ class TestQSOAbsFind(unittest.TestCase):
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
         fits_file = 'qso_test.fits'
-        spec_indices = np.array([0, 1, 2])
+        spec_indices = np.random.randint(0,100, size=3)
         absorber = 'MgII'
         ker_width_pix = [3, 4, 5, 6, 7, 8]
         coeff_sigma = 2.5
