@@ -112,11 +112,11 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     return combined_results
 
 def main():
-    parser = argparse.ArgumentParser(description='Run convolution method for QSO spectra in parallel.')
+    parser = argparse.ArgumentParser(description='Run convolution-based adaptive S/N method to search for metal doublets in SDSS/DESI-like QSO spectra in parallel.')
     parser.add_argument('--input-fits-file', type=str, required=True, help='Path to the input FITS file.')
     parser.add_argument('--n-qso', required=True, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '1-1000', '1-1000:10').")
     parser.add_argument('--absorber', type=str, required=True, help='Absorber name for searching doublets (MgII, CIV).')
-    parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same strcuture as qsoabsfind.constants, i.e the default parameter that the code uses')
+    parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as qsoabsfind.constants, i.e the default parameter that the code uses')
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--n-tasks', type=int, required=True, help='Number of tasks.')
