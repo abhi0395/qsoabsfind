@@ -9,7 +9,7 @@ from .absorberutils import (
     contiguous_pixel_remover, check_error_on_residual, redshift_estimate, absorber_search_window
 )
 from .ew import measure_absorber_properties_double_gaussian
-from .constants import lines, speed_of_light, oscillator_parameters
+from .config import lines, speed_of_light, oscillator_parameters
 from .spec import QSOSpecRead
 
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):

@@ -7,10 +7,14 @@ from multiprocessing import Pool
 from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from .io import save_results_to_fits
 import re
-from .constants import search_parameters
 
-def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance):
-    return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance)
+from importlib import import_module
+
+# Ensure config is imported first to set up the environment
+import config
+
+def run_convolution_method_absorber_finder_QSO_spectra(params):
+    return convolution_method_absorber_finder_in_QSO_spectra(*params)
 
 
 def parse_qso_sequence(qso_sequence):
@@ -107,12 +111,18 @@ def main():
     parser.add_argument('--input-fits-file', type=str, required=True, help='Path to the input FITS file.')
     parser.add_argument('--n-qso', required=True, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '1-1000', '1-1000:10').")
     parser.add_argument('--absorber', type=str, required=True, help='Absorber name for searching doublets (MgII, CIV).')
+    parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same strcuture as qsoabsfind.constants, i.e the default parameter that the code uses')
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--n-tasks', type=int, required=True, help='Number of tasks.')
     parser.add_argument('--ncpus', type=int, required=True, help='Number of CPUs per task.')
 
     args = parser.parse_args()
+
+    # Set the environment variable for the constants file
+    if args.constant_file:
+        os.environ['QSO_CONSTANTS_FILE'] = args.constant_file
+
     # Prepare headers
     headers = {}
     if args.headers:
@@ -129,13 +139,13 @@ def main():
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        ker_width_pix=search_parameters[args.absorber]["ker_width_pixels"],
-        coeff_sigma=search_parameters[args.absorber]["coeff_sigma"],
-        mult_resi=search_parameters[args.absorber]["mult_resi"],
-        d_pix=search_parameters[args.absorber]["d_pix"],
-        pm_pixel=search_parameters[args.absorber]["pm_pixel"],
-        sn_line1=search_parameters[args.absorber]["sn1_thresh"],
-        sn_line2=search_parameters[args.absorber]["sn2_thresh"],
+        ker_width_pix=config.search_parameters[args.absorber]["ker_width_pixels"],
+        coeff_sigma=config.search_parameters[args.absorber]["coeff_sigma"],
+        mult_resi=config.search_parameters[args.absorber]["mult_resi"],
+        d_pix=config.search_parameters[args.absorber]["d_pix"],
+        pm_pixel=config.search_parameters[args.absorber]["pm_pixel"],
+        sn_line1=config.search_parameters[args.absorber]["sn1_thresh"],
+        sn_line2=config.search_parameters[args.absorber]["sn2_thresh"],
         use_covariance=False, n_jobs=args.n_tasks * args.ncpus
     )
 

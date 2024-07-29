@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from .constants import lines
+from .config import lines
 from .utils import double_gaussian
 
 # Example usage within double_curve_fit

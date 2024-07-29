@@ -5,7 +5,7 @@ This script contains a function to find metal absorbers in QSO spectra.
 """
 
 import numpy as np
-from .constants import speed_of_light, lines
+from .config import speed_of_light, lines
 from .utils import elapsed
 from numba import jit
 

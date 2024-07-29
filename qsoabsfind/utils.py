@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from .constants import lines, amplitude_dict
+from .config import lines, amplitude_dict
 
 def elapsed(start, msg):
     """
