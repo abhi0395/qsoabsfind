@@ -149,8 +149,8 @@ def main():
         mult_resi=config.search_parameters[args.absorber]["mult_resi"],
         d_pix=config.search_parameters[args.absorber]["d_pix"],
         pm_pixel=config.search_parameters[args.absorber]["pm_pixel"],
-        sn_line1=config.search_parameters[args.absorber]["sn1_thresh"],
-        sn_line2=config.search_parameters[args.absorber]["sn2_thresh"],
+        sn_line1=config.search_parameters[args.absorber]["sn_line1"],
+        sn_line2=config.search_parameters[args.absorber]["sn_line2"],
         use_covariance=False, n_jobs=args.n_tasks * args.ncpus
     )
 
