@@ -12,11 +12,15 @@ import os
 from importlib import import_module
 
 # Ensure config is imported first to set up the environment
-import config
+import qsoabsfind.config as config
 
-def run_convolution_method_absorber_finder_QSO_spectra(params):
-    return convolution_method_absorber_finder_in_QSO_spectra(*params)
-
+def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
+                pm_pixel, sn_line1, sn_line2, use_covariance):
+    """
+    Wrapper function to unpack parameters and call the main convolution method.
+    """
+    return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
+                    pm_pixel, sn_line1, sn_line2, use_covariance)
 
 def parse_qso_sequence(qso_sequence):
     """
@@ -61,9 +65,9 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     Returns:
     dict: A dictionary containing combined results from all parallel runs.
     """
-    params_list = [(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix, pm_pixel, sn_line1, sn_line2, use_covariance) for spec_index in spec_indices]
+    params_list = [(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
+                    pm_pixel, sn_line1, sn_line2, use_covariance) for spec_index in spec_indices]
 
-    print(params_list)
     # Run the jobs in parallel
     with Pool(processes=n_jobs) as pool:
         results = pool.starmap(run_convolution_method_absorber_finder_QSO_spectra, params_list)
