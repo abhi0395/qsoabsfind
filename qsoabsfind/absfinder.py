@@ -118,7 +118,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, verbose=False)
 
     # Assert that the sizes of the arrays are equal
-    assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes"
+    assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual and unmsk_error"
 
     # Kernel width computation
     width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pix])
@@ -129,11 +129,15 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
         for sig_ker in width_kernel:
             line_centre = (line1 + line2) / 2
             conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=True)
+            assert conv_arr.size == unmsk_residual.size == lam_search.size, "Mismatch in array sizes of lam_search, unmsk_residual and convolved array"
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
             conv_arr[np.isnan(conv_arr)] = 1e5
             our_z_ind = conv_arr < thr
             conv_arr[conv_arr == 1e5] = np.nan
+
+            if len(our_z_ind) != len(lam_search):
+                raise ValueError("Mismatch in array lengths: our_z_ind and lam_search must have the same length.")
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
