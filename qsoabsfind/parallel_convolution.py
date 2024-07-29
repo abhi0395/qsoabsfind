@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from .io import save_results_to_fits
 import re
+import os
 
 from importlib import import_module
 
