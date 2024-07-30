@@ -23,7 +23,7 @@ The input `fits file` must have the following HDU extensions:
 - **FLUX**: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).
 - **WAVELENGTH**: Observed wavelength (in Angstroms).
 - **ERROR**: Error on residuals.
-- **TGTDETALS**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
+- **TGTDETAILS**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
 Constant File (Optional)
 ------------------------
