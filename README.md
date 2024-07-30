@@ -49,7 +49,7 @@ python -m unittest discover -s tests
 Instructions
 -------------
 
-Before you run, please read the `datamodel.md` file. The instructions about the input and output file are provided there.
+Before you run, please read the `datamodel.rst` file. The instructions about the input and output file are provided there.
 
 Running example:
 ----------------
