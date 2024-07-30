@@ -34,7 +34,8 @@ search_parameters = {
         'd_pix': 0.6,
         'sn_line1':3,
         'sn_line2':2,
-        'use_covariance':False
+        'use_covariance':False,
+        'logwave':True
     },
     'CIV': {
         'ker_width_pixels': ker_width_pixels,
@@ -44,7 +45,8 @@ search_parameters = {
         'd_pix': 0.7,
         'sn_line1':3,
         'sn_line2':2,
-        'use_covariance':False
+        'use_covariance':False,
+        'logwave':True
     }
 }
 

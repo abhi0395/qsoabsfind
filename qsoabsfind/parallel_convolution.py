@@ -9,18 +9,16 @@ from .io import save_results_to_fits
 import re
 import os
 
-from importlib import import_module
-
 # Ensure config is imported first to set up the environment
 import qsoabsfind.config as config
 
-def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
-                pm_pixel, sn_line1, sn_line2, use_covariance):
+def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
+                pm_pixel, sn_line1, sn_line2, use_covariance, logwave):
     """
     Wrapper function to unpack parameters and call the main convolution method.
     """
-    return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
-                    pm_pixel, sn_line1, sn_line2, use_covariance)
+    return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
+                    pm_pixel, sn_line1, sn_line2, use_covariance, logwave)
 
 def parse_qso_sequence(qso_sequence):
     """
@@ -35,16 +33,22 @@ def parse_qso_sequence(qso_sequence):
     if isinstance(qso_sequence, int):
         return np.arange(qso_sequence)
 
-    match = re.match(r"(\d+)-(\d+)(?::(\d+))?", qso_sequence)
-    if match:
-        start, end, step = match.groups()
-        start, end = int(start), int(end)
-        step = int(step) if step else 1
-        return np.arange(start, end + 1, step)
+    # Handle string input
+    if isinstance(qso_sequence, str):
+        if qso_sequence.isdigit():
+            return np.arange(int(qso_sequence))
 
-    raise ValueError("Invalid QSO sequence format. Use 'start-end[:step]' or an integer.")
+        match = re.match(r"(\d+)-(\d+)(?::(\d+))?", qso_sequence)
+        if match:
+            start, end, step = match.groups()
+            start, end = int(start), int(end)
+            step = int(step) if step else 1
+            return np.arange(start, end + 1, step)
 
-def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber='MgII', ker_width_pix=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, n_jobs=1):
+    # If none of the conditions matched, raise an error
+    raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
+
+def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, n_jobs=1):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using multiprocessing.
 
@@ -60,13 +64,14 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     sn_line1 (float): Signal-to-noise ratio for thresholding for line1.
     sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
     use_covariance (bool): If want to use full covariance of scipy curve_fit for EW error calculation (default is False).
+    logwave (bool): If wavelength on logscale (default True for SDSS).
     n_jobs (int): Number of parallel jobs to run.
 
     Returns:
     dict: A dictionary containing combined results from all parallel runs.
     """
-    params_list = [(fits_file, spec_index, absorber, ker_width_pix, coeff_sigma, mult_resi, d_pix,
-                    pm_pixel, sn_line1, sn_line2, use_covariance) for spec_index in spec_indices]
+    params_list = [(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
+                    pm_pixel, sn_line1, sn_line2, use_covariance, logwave) for spec_index in spec_indices]
 
     # Run the jobs in parallel
     with Pool(processes=n_jobs) as pool:
@@ -114,7 +119,7 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
 def main():
     parser = argparse.ArgumentParser(description='Run convolution-based adaptive S/N method to search for metal doublets in SDSS/DESI-like QSO spectra in parallel.')
     parser.add_argument('--input-fits-file', type=str, required=True, help='Path to the input FITS file.')
-    parser.add_argument('--n-qso', required=True, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '1-1000', '1-1000:10').")
+    parser.add_argument('--n-qso', type=str, required=True, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '1-1000', '1-1000:10').")
     parser.add_argument('--absorber', type=str, required=True, help='Absorber name for searching doublets (MgII, CIV).')
     parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as qsoabsfind.constants, i.e the default parameter that the code uses')
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file.')
@@ -151,7 +156,8 @@ def main():
         pm_pixel=config.search_parameters[args.absorber]["pm_pixel"],
         sn_line1=config.search_parameters[args.absorber]["sn_line1"],
         sn_line2=config.search_parameters[args.absorber]["sn_line2"],
-        use_covariance=False, n_jobs=args.n_tasks * args.ncpus
+        use_covariance=config.search_parameters[args.absorber]["use_covariance"],
+        logwave=config.search_parameters[args.absorber]["logwave"], n_jobs=args.n_tasks * args.ncpus
     )
 
     # Save the results to a FITS file

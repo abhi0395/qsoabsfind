@@ -9,6 +9,8 @@ from .config import speed_of_light, lines
 from .utils import elapsed
 from numba import jit
 
+
+
 def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     """
     Estimate the local standard deviation for each element in the convolution array over a window defined by pm_pixel.
@@ -49,6 +51,7 @@ def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
            Returns (mean_sn1, mean_sn2).
     """
     dpix = 5
+
     if log:
         delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
         delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
@@ -75,6 +78,7 @@ def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
     sum_err1 = np.sqrt(np.nansum(err1**2))
     sum_err2 = np.sqrt(np.nansum(err2**2))
 
+
     mean_sn1, mean_sn2 = -1, -1 # in case failure
 
     if sum_err1 != 0 and sum_err2 !=0:
@@ -83,7 +87,7 @@ def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
 
     return mean_sn1, mean_sn2
 
-@jit(nopython=True)
+@jit(nopython=False)
 def group_contiguous_pixel(data, resi, avg):
     """
     Arrange data into groups where successive elements differ by less than a given average difference.
@@ -158,8 +162,9 @@ def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, resi
 
     # Grouping contiguous pixels separated by ~0.0006 on redshift scale
     z_temp, res_temp = group_contiguous_pixel(z_check, residual, avg=0.0006)
-
     for group_z, group_res in zip(z_temp, res_temp):
+        if isinstance(group_res, list):
+            group_res, group_z = np.array(group_res), np.array(group_z)
         if group_res.size > 0 and np.all(group_res != 0):
             abs_z = weighted_mean(10**group_z - 1, group_res, gamma)
             z_ind.append(abs_z)
@@ -215,8 +220,8 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     else:
         return combined_final_our_z
 
-@jit(nopython=True)
-def remove_Mg_falsely_identified_fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix):
+@jit(nopython=False)
+def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix):
     """
     Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case of 2796, 2803 when using Fe kernel line
     but has already been detected for the 2796 line, i.e., false positive due to Fe lines.
@@ -233,8 +238,8 @@ def remove_Mg_falsely_identified_fe_absorber(index, z_after_grouping, lam_obs, r
     """
     fe1 = 2586.649 #FeII absorption lines
     fe2 = 2600.117
-    mg1 = lines['MgII_2796']
-    mg2 = lines['MgII_2803']
+    mg1 = 2796.35
+    mg2 = 2803.52
 
     z = np.array(z_after_grouping)
     nabs = z.size
@@ -281,7 +286,7 @@ def remove_Mg_falsely_identified_fe_absorber(index, z_after_grouping, lam_obs, r
 
     return match_abs
 
-@jit(nopython=True)
+@jit(nopython=False)
 def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII'):
     """
     Remove any absorber that arises due to the 2803 line but has already been detected for the 2796 line,
@@ -332,7 +337,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
     return match_abs
 
-@jit(nopython=True)
+@jit(nopython=False)
 def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
     """
     Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR) for absorbers.
@@ -375,26 +380,28 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
 
     return ind_true
 
-def redshift_estimate(gauss_params, std_params, line1, line2):
+def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitted_obs_l2, line1, line2):
     """
     Estimate the redshift and its error from Gaussian fitting parameters for two spectral lines.
 
     Parameters:
-    gauss_params (numpy.ndarray): Gaussian fitting parameters.
-    std_params (numpy.ndarray): Standard deviations of the fitting parameters.
-    line1 (float): Wavelength of the first spectral line.
-    line2 (float): Wavelength of the second spectral line.
+    fitted_obs_l1 (float): Gaussian fitted line centre 1 (obs frame).
+    fitted_obs_l2 (float): Gaussian fitted line centre 2 (obs frame).
+    std_fitted_obs_l1 (float): error on Gaussian fitted line centre 1 (obs frame).
+    std_fitted_obs_l2 (float): error on Gaussian fitted line centre 2 (obs frame).
+    line1 (float): first line centre of metal spectral line.
+    line2 (float): second line centre of metal spectral line.
 
     Returns:
     tuple: A tuple containing:
-        - z_corr (float): Corrected redshift estimated from the Gaussian fitting parameters.
+        - z_corr (float): mean redshift estimated from the Gaussian fitting parameters.
         - z_err (float): Estimated error in the corrected redshift.
     """
-    z1 = (gauss_params[1] / line1) - 1
-    z2 = (gauss_params[4] / line2) - 1
+    z1 = (fitted_obs_l1 / line1) - 1
+    z2 = (fitted_obs_l2 / line2) - 1
 
-    err1 = (std_params[1] / line1) * z1
-    err2 = (std_params[4] / line2) * z2
+    err1 = (std_fitted_obs_l1 / line1) * z1
+    err2 = (std_fitted_obs_l2 / line2) * z2
 
     z_corr = 0.5 * (z1 + z2)  # New redshifts computed using line centers of the first and second Gaussian
     z_err = np.sqrt(0.25 * (err1**2 + err2**2))

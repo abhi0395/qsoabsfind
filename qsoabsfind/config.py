@@ -17,7 +17,6 @@ Usage:
 import importlib.util
 import os
 
-# Default constants
 from .constants import *
 
 def load_constants(constants_file):
