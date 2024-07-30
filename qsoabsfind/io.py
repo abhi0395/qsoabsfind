@@ -40,7 +40,7 @@ def save_results_to_fits(results, output_file, headers, absorber):
     headers (dict): The headers to include in the FITS file.
     absorber (str): The absorber type (MgII or CIV).
     """
-    EW_TOTAL = f'{absorber}_EW_TOTAL'
+    EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
     if absorber == 'MgII':
         sn_1 = 'SN_MGII_2796'
         sn_2 = 'SN_MGII_2803'
@@ -59,20 +59,20 @@ def save_results_to_fits(results, output_file, headers, absorber):
         fits.Column(name='Z_ABS', format='D', array=np.array(results['z_abs'])),
         fits.Column(name='GAUSS_FIT', format='6D', array=np.array(results['gauss_fit'])),
         fits.Column(name='GAUSS_FIT_STD', format='6D', array=np.array(results['gauss_fit_std'])),
-        fits.Column(name=f'{EW_1}', format='D', array=np.array(results['ew_1_mean'])),
-        fits.Column(name=f'{EW_2}', format='D', array=np.array(results['ew_2_mean'])),
-        fits.Column(name=f'{EW_TOTAL}', format='D', array=np.array(results['ew_total_mean'])),
-        fits.Column(name=f'{EW_1}_ERROR', format='D', array=np.array(results['ew_1_error'])),
-        fits.Column(name=f'{EW_2}_ERROR', format='D', array=np.array(results['ew_2_error'])),
-        fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', array=np.array(results['ew_total_error'])),
+        fits.Column(name=f'{EW_1}', format='D', unit='Angstrom', array=np.array(results['ew_1_mean'])),
+        fits.Column(name=f'{EW_2}', format='D', unit='Angstrom', array=np.array(results['ew_2_mean'])),
+        fits.Column(name=f'{EW_TOTAL}', format='D', unit='Angstrom', array=np.array(results['ew_total_mean'])),
+        fits.Column(name=f'{EW_1}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_1_error'])),
+        fits.Column(name=f'{EW_2}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_2_error'])),
+        fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_total_error'])),
         fits.Column(name='Z_ABS_ERR', format='D', array=np.array(results['z_abs_err'])),
         fits.Column(name=sn_1, format='D', array=np.array(results['sn_1'])),
         fits.Column(name=sn_2, format='D', array=np.array(results['sn_2']))
     ], name='ABSORBER')
 
     hdr = fits.Header()
-    for key, value in headers.items():
-        hdr[key.upper()] = value
+    for key, header in headers.items():
+        hdr[key] = (header["value"], header["comment"])
 
     hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu])
     hdul.writeto(output_file, overwrite=True)

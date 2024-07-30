@@ -8,9 +8,23 @@ from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
 from .io import save_results_to_fits
 import re
 import os
+import pkg_resources
+import qsoabsfind
 
 # Ensure config is imported first to set up the environment
 import qsoabsfind.config as config
+
+def get_package_versions():
+    """
+    Get the versions of qsoabsfind and other relevant packages.
+
+    Returns:
+    dict: A dictionary containing the versions of the packages.
+    """
+    packages = ['qsoabsfind', 'numpy', 'astropy', 'scipy', 'numba', 'matplotlib']
+    versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
+    return versions
+
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
                 pm_pixel, sn_line1, sn_line2, use_covariance, logwave):
@@ -135,10 +149,29 @@ def main():
 
     # Prepare headers
     headers = {}
-    if args.headers:
-        for header in args.headers:
-            key, value = header.split('=')
-            headers[key] = value
+    for header in args.headers:
+        key, value = header.split('=')
+        headers[key] = {"value": value, "comment": ""}
+
+    # Add search parameters and package versions to headers
+    headers.update({
+        'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
+        'KERWIDTH': {"value": str(config.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels'},
+        'COEFFSIG': {"value": config.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold'},
+        'MULTRE': {"value": config.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals'},
+        'D_PIX': {"value": config.search_parameters[args.absorber]["d_pix"], "comment": 'toloerance for line separation (in Ang)'},
+        'PM_PIXEL': {"value": config.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation'},
+        'SN_LINE1': {"value": config.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line'},
+        'SN_LINE2': {"value": config.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line'},
+        'EWCOVAR': {"value": config.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation'},
+        'LOGWAVE': {"value": config.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling'}
+    })
+
+    package_versions = get_package_versions()
+    for pkg, ver in package_versions.items():
+        headers[pkg.upper()] = {"value": ver, "comment": f'{pkg} version'}
+    headers['QSABFI'] = headers.pop('QSOABSFIND')
+    headers['MATPLOT'] = headers.pop('MATPLOTLIB')
 
     # Start timing
     start_time = time.time()
