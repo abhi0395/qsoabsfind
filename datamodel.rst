@@ -57,6 +57,6 @@ The **output** `fits file` will have the `ABSORBER` HDU, containing arrays such 
 - **${metal}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${metal}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
 
-Thanks,
+Thanks,  
 Abhijeet Anand
-Lawrence Berkeley National Lab  
+Lawrence Berkeley National Lab

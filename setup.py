@@ -10,6 +10,7 @@ setup(
         'astropy',
         'scipy',
         'numba',
+        'matplotlib',
     ],
     entry_points={
         'console_scripts': [
