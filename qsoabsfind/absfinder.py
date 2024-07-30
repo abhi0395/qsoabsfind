@@ -268,7 +268,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
 
             not_found = max(1, len(pure_z_abs))
             index_spec = [spec_index for _ in range(not_found)]
-            print(pure_z_abs)
             return (index_spec, pure_z_abs.tolist(), pure_gauss_fit.tolist(), pure_gauss_fit_std.tolist(), pure_ew_first_line_mean.tolist(), pure_ew_second_line_mean.tolist(), pure_ew_total_mean.tolist(),
                     pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist())
         else:
