@@ -30,6 +30,7 @@ Prerequisites
 - `scipy`
 - `astropy`
 - `numba`
+- `matplotlib`
 - `pytest` (for running tests)
 
 Clone the Repository
