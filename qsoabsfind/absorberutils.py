@@ -9,8 +9,7 @@ from .config import speed_of_light, lines
 from .utils import elapsed
 from numba import jit
 
-
-
+@jit(nopython=True)
 def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     """
     Estimate the local standard deviation for each element in the convolution array over a window defined by pm_pixel.
@@ -380,6 +379,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
 
     return ind_true
 
+@jit(nopython=True)
 def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitted_obs_l2, line1, line2):
     """
     Estimate the redshift and its error from Gaussian fitting parameters for two spectral lines.

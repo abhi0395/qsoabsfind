@@ -87,9 +87,6 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
 
     gauss_kernel = gauss_two_lines_kernel(lam_ker, a=ker_parm)
 
-    if index is not None:
-        save_plot(lam_ker, gauss_kernel, f'kernel_{index}.png', 'wave', 'flux', f'{index}')
-
     result = np.convolve(gauss_kernel, residual_arr_after_mask, mode='same')
 
     #check if input and output array size are same

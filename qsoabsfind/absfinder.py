@@ -1,7 +1,7 @@
 import numpy as np
 from functools import reduce
 from operator import add
-from .utils import convolution_fun, save_plot, plot_absorber
+from .utils import convolution_fun
 from .absorberutils import (
     estimate_local_sigma_conv_array, group_and_weighted_mean_selection_function,
     median_selection_after_combining,
@@ -11,7 +11,9 @@ from .absorberutils import (
 from .ew import measure_absorber_properties_double_gaussian
 from .config import lines, speed_of_light, oscillator_parameters
 from .spec import QSOSpecRead
+from numba import jit
 
+@jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):
     """
     Find valid indices based on thresholding in the convolved array.
@@ -139,9 +141,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
-            if spec_index%20==0:
-                _ = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=logwave, index=spec_index)
-                save_plot(lam_search, [unmsk_residual, conv_arr, thr], f'qsoabsfind_plot_spec_{spec_index}.png', 'wave', 'flux', f'{spec_index}')
 
             conv_arr[np.isnan(conv_arr)] = 1e5
             our_z_ind = conv_arr < thr
@@ -149,7 +148,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
-            #print(f'INFO:: Potential absorber = {our_z}')
+
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2)
 
             final_our_z = group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr))
@@ -165,15 +164,11 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
         combined_final_our_z = combined_final_our_z[~np.isnan(combined_final_our_z)]
         combined_final_our_z = combined_final_our_z.tolist()
 
-        #plot_absorber(lam_obs, residual, absorber, combined_final_our_z, xlabel='obs wave (ang)', ylabel='residual', title=f'QSO_{spec_index}', plot_filename=None)
-
         if len(combined_final_our_z)>0:
 
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
 
-
-            #print(f'INFO:: {spec_index}, {z_abs}, {fit_param}')
             pure_z_abs = np.zeros(len(z_abs))
             pure_gauss_fit = np.zeros((len(z_abs), 6))
             pure_gauss_fit_std = np.zeros((len(z_abs), 6))
@@ -240,7 +235,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
                 if absorber=='MgII':
                     match_abs1 = remove_Mg_falsely_identified_as_Fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, d_pix=d_pix)
                 else:
-                    match_abs1 = -1
+                    match_abs1 = -1*np.ones(len(pure_z_abs))
                 match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, use_kernel=absorber)
                 ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all)
                 sel_indices = (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)  # pure final absorber candidates
