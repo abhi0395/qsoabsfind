@@ -56,7 +56,7 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     fits_file (str): Path to the FITS file containing Normalized QSO spectra.
     spec_indices (list or numpy.array): Indices of quasars in the data matrix.
     absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
-    ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
+    ker_width_pixels (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
     coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
     mult_resi (float): Factor to shift the residual up or down. Default is 1.
     d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
@@ -149,7 +149,7 @@ def main():
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        ker_width_pix=config.search_parameters[args.absorber]["ker_width_pixels"],
+        ker_width_pixels=config.search_parameters[args.absorber]["ker_width_pixels"],
         coeff_sigma=config.search_parameters[args.absorber]["coeff_sigma"],
         mult_resi=config.search_parameters[args.absorber]["mult_resi"],
         d_pix=config.search_parameters[args.absorber]["d_pix"],

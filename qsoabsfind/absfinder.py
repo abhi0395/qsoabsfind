@@ -1,7 +1,7 @@
 import numpy as np
 from functools import reduce
 from operator import add
-from .utils import convolution_fun
+from .utils import convolution_fun, vel_dispersion
 from .absorberutils import (
     estimate_local_sigma_conv_array, group_and_weighted_mean_selection_function,
     median_selection_after_combining,
@@ -179,16 +179,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
             pure_ew_second_line_error = np.zeros(len(z_abs))
             pure_ew_total_error = np.zeros(len(z_abs))
             redshift_err = np.zeros(len(z_abs))
-            final_redshift = np.zeros(len(z_abs))
             sn1_all = np.zeros(len(z_abs))
             sn2_all = np.zeros(len(z_abs))
 
 
             for m in range(len(z_abs)):
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
-                    gauss_params = np.array(fit_param[m])
-                    std_params = np.array(fit_param_std[m])
-
                     lower_del_lam = line_sep - d_pix
                     upper_del_lam = line_sep + d_pix
 
@@ -200,10 +196,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
                         lam_rest = lam_obs / (1 + z_abs[m])
                         c0 = gaussian_parameters[1]
                         c1 = gaussian_parameters[4]
-
+                        #S/N estimation
                         sn1, sn2 = check_error_on_residual(c0, c1, lam_rest, residual, error, logwave)
+                        # resolution corrected velocity dispersion (should be greater than 0)
+                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
 
-                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2:
+                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0:
                             pure_z_abs[m] = z_abs[m]
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]

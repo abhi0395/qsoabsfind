@@ -219,7 +219,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     else:
         return combined_final_our_z
 
-@jit(nopython=False)
+#@jit(nopython=False)
 def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix):
     """
     Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case of 2796, 2803 when using Fe kernel line
@@ -285,7 +285,7 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
 
     return match_abs
 
-@jit(nopython=False)
+#@jit(nopython=False)
 def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII'):
     """
     Remove any absorber that arises due to the 2803 line but has already been detected for the 2796 line,
@@ -336,7 +336,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
     return match_abs
 
-@jit(nopython=False)
+#@jit(nopython=False)
 def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
     """
     Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR) for absorbers.

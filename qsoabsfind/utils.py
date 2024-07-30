@@ -1,7 +1,7 @@
 import time
 #import logging
 import numpy as np
-from .config import lines, amplitude_dict
+from .config import lines, amplitude_dict, speed_of_light
 import matplotlib.pyplot as plt
 import os
 
@@ -187,6 +187,36 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
         # raise
     return bad_conv
 
+def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
+    """
+    Calculates velocity dispersion using Gaussian quadrature
+
+    Parameters:
+    c1 (float): fitted line center 1 (in Ang).
+    c2 (float): fitted line center 2 (in Ang).
+    sigma1 (float): fitted width 1 (in Ang).
+    sigma2 (float): fitted width 2 (in Ang).
+    resoultion (float): instrumental resolution (in km/s).
+
+    Returns:
+    resolution corrected velocity dispersion
+    """
+
+    v1_sig = sigma1 / c1 * speed_of_light
+    v2_sig = sigma2 / c2 * speed_of_light
+
+    del_v1_sq = v1_sig**2 - resolution**2
+    del_v2_sq = v2_sig**2 - resolution**2
+
+    # Correct for instrumental resolution
+    if del_v1_sq > 0 and del_v2_sq > 0:
+        corr_del_v1_sq = np.sqrt(del_v1_sq)
+        corr_del_v2_sq = np.sqrt(del_v2_sq)
+    else:
+        corr_del_v1_sq  = 0.0  # Set to 0 if the observed width is less than instrumental width
+        corr_del_v2_sq  = 0.0
+
+    return corr_del_v1_sq, corr_del_v2_sq
 
 def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
     """
