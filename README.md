@@ -8,7 +8,7 @@ qsoabsfind
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
 [![arXiv-2103.15842](http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat)](https://arxiv.org/abs/2103.15842)
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar spectra. This tool identifies potential absorbers using vonvolution-based adaptive S/N approach, applies Gaussian fitting and extensive checks to reject false positives, and computes equivalent widths (EWs) of the lines using a simple double gaussian.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar spectra. This tool identifies potential absorbers using a convolution-based adaptive S/N approach, applies Gaussian fitting and extensive checks to reject false positives, and computes equivalent widths (EWs) of the lines using a simple double Gaussian.
 
 Currently, the package only works for **MgII 2796,2803** and **CIV 1548,1550** doublets.
 
@@ -98,7 +98,7 @@ License
 
 Copyright (c) 2021-2025 Abhijeet Anand.  
 
-**qsoabsfind** is free software made available under the MIT License. For details, see the LICENSE file.
+**qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
 
 Thanks,  
