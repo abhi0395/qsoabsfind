@@ -51,8 +51,8 @@ Please cite `Anand, Nelson & Kauffmann 2021 <https://arxiv.org/abs/2103.15842>`_
 Contact
 -------
 
-Abhijeet Anand \
-Lawrence Berkeley National Lab \
+Abhijeet Anand  \
+Lawrence Berkeley National Lab  
 
 If you have any questions/suggestions, please feel free to write to abhijeetanand2011 [at] gmail.com
 

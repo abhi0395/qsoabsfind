@@ -39,10 +39,5 @@ napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
 
-# Path to the _static directory
-html_static_path = ['_static']
-
-# Add custom.js to the list of scripts to include
-html_js_files = [
-    'custom.js',
-]
+def setup(app):
+    app.add_js_file('_static/custom.js')
