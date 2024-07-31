@@ -1,4 +1,4 @@
-name: Build and Deploy Documentation
+name: Build and Deploy Docs
 
 on:
   push:
@@ -28,10 +28,9 @@ jobs:
           cd docs
           make html
 
-      - name: Update ./docs/_build/html/index.html
-      run: |
-        python update_index_html.py
-      working-directory: ./docs/_build/html/
+      - name: Update index.html
+        run: |
+          python update_index_html.py
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
