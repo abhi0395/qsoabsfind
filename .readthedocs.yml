@@ -1,15 +1,18 @@
-# .readthedocs.yml
-
 version: 2
 
-# Optionally set the version of Python and requirements required to build your docs
+# Set the version of Python and install requirements
 python:
-  version: 3.8  # Specify the Python version
+  version: "3.10"  # Specify the Python version
   install:
     - requirements: requirements.txt
     - method: pip
       path: .
 
+# Sphinx configuration
 sphinx:
-  builder: html
   configuration: docs/conf.py
+
+# Optionally, you can add build.os if you need to specify the operating system
+# This key might not be necessary for your use case
+build:
+  os: "ubuntu-22.04"
