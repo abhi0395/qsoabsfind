@@ -43,7 +43,7 @@ napoleon_use_rtype = True
 def run_custom_script(app, exception):
     if exception is None:
         # Path to your custom script
-        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'update_index_html.py'))
+        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'update_index.py'))
         # Running the script
         subprocess.run(['python', script_path], check=True)
 
