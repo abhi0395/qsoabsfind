@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy scipy astropy numba matplotlib pytest sphinx sphinx_rtd_theme
+          pip install numpy scipy astropy numba matplotlib pytest sphinx sphinx_rtd_theme sphinx-autodoc-typehints
 
       - name: Build Sphinx documentation
         run: |
