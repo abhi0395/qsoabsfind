@@ -30,7 +30,7 @@ jobs:
 
       - name: Update index.html
         run: |
-          python update_index_html.py
+          python ../../docs/update_index_html.py
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
