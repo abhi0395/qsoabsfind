@@ -28,10 +28,12 @@ jobs:
           cd docs
           make html
 
+      - name: Check path of update_index_html.py
+        run: ls -la docs/update_index_html.py
+
       - name: Update index.html
-        working-directory: docs
         run: |
-          python update_index_html.py
+          python docs/update_index_html.py
 
 
       - name: Deploy to GitHub Pages
