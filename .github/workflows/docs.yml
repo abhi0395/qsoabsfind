@@ -31,7 +31,7 @@ jobs:
       - name: Update index.html
         run: |
           cd docs
-          python update_index_html.py
+          python update_index.py
 
 
       - name: Deploy to GitHub Pages
