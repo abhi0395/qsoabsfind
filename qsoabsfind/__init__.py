@@ -1,3 +1,1 @@
-"""
-qsoabsfind module initialization.
-"""
+"""Qsoabsfind module initialization."""

@@ -15,12 +15,12 @@ def elapsed(start, msg):
     """
     Prints the elapsed time since `start`.
 
-    Parameters:
-    start (float): The start time.
-    msg (str): The message to print with the elapsed time.
+    Args:
+        start (float): The start time.
+        msg (str): The message to print with the elapsed time.
 
     Returns:
-    float: The current time.
+        float: The current time.
     """
     end = time.time()
     if start is not None:
@@ -31,12 +31,12 @@ def gauss_two_lines_kernel(x, a):
     """
     Defines the kernel function using double gaussian only.
 
-    Parameters:
-    x (numpy.ndarray): Kernel lambda array (user defined),
-    a (numpy.ndarray): Kernel parameters, 6 parameters (amp, mean, and sigma for two Gaussian),
+    Args:
+        x (numpy.ndarray): Kernel lambda array (user defined),
+        a (numpy.ndarray): Kernel parameters, 6 parameters (amp, mean, and sigma for two Gaussian),
 
     Returns:
-    numpy.ndarray: The kernel function (array of numbers).
+        numpy.ndarray: The kernel function (array of numbers).
     """
     a1 = a[0]
     a2 = a[3]
@@ -49,16 +49,16 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
     """
     Convolves the spectrum with a Gaussian kernel.
 
-    Parameters:
-    absorber (str): Type of absorber (e.g., 'MgII', 'CIV').
-    residual_arr_after_mask (numpy.ndarray): Final residual array after masking.
-    width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).
-    amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
-    log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)
-    index (int): QSO index
+    Args:
+        absorber (str): Type of absorber (e.g., 'MgII', 'CIV').
+        residual_arr_after_mask (numpy.ndarray): Final residual array after masking.
+        width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).
+        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
+        log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)
+        index (int): QSO index
 
     Returns:
-    numpy.ndarray: The convolved residual array.
+        numpy.ndarray: The convolved residual array.
     """
     if absorber not in amplitude_dict:
         raise ValueError(f"Unsupported absorber type. Available types are: {list(amplitude_dict.keys())}")
@@ -75,7 +75,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
         lam_ker_start = lines['CIV_1548']-ct*width # +/- 5sigma , #rest-frame
         lam_ker_end = lines['CIV_1550']+ct*width #
     else:
-        raise ValueError(f"Unsupported absorber type for specific parameters: {absorber}")
+        raise ValueError(f"Unsupported absorber type for specific Args: {absorber}")
     if log:
         lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), 0.0001) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
@@ -97,47 +97,50 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
 
 def double_gaussian(x, amp1, mean1, sigma1, amp2, mean2, sigma2):
     """
-    Generates a double Gaussian function to fit absorption features in a given spectrum.
+    Generates a double Gaussian function to fit absorption features in a
+    given spectrum.
 
-    Parameters:
-    x (numpy.ndarray): List of wavelength points where the user wants to fit the model.
-    amp1: Amplitude of the first Gaussian.
-    mean1: Mean (center) of the first Gaussian.
-    sigma1: Standard deviation (width) of the first Gaussian.
-    amp2: Amplitude of the second Gaussian.
-    mean2: Mean (center) of the second Gaussian.
-    sigma2: Standard deviation (width) of the second Gaussian.
+    Args:
+        x (numpy.ndarray): List of wavelength points where the user wants to fit the model.
+        amp1: Amplitude of the first Gaussian.
+        mean1: Mean (center) of the first Gaussian.
+        sigma1: Standard deviation (width) of the first Gaussian.
+        amp2: Amplitude of the second Gaussian.
+        mean2: Mean (center) of the second Gaussian.
+        sigma2: Standard deviation (width) of the second Gaussian.
 
     Returns:
-    numpy.ndarray: The function that fits the absorption feature using curve_fit.
+        numpy.ndarray: The function that fits the absorption feature using curve_fit.
     """
     return -amp1 * np.exp(-(x - mean1) ** 2 / (2 * sigma1 ** 2)) - amp2 * np.exp(-(x - mean2) ** 2 / (2 * sigma2 ** 2)) + 1
 
 def single_gaussian(x, params):
     """
-    Defines the fitting function to fit a single absorption line with a gaussian profile.
+    Defines the fitting function to fit a single absorption line with a
+    gaussian profile.
 
-    Parameters:
-    x (numpy.ndarray): Wavelength points where the user wants to fit the model.
-    params (list or numpy.ndarray): Array of parameters [amp, mean, sigma].
+    Args:
+        x (numpy.ndarray): Wavelength points where the user wants to fit the model.
+        params (list or numpy.ndarray): Array of parameters [amp, mean, sigma].
 
     Returns:
-    numpy.ndarray: The fitting function values.
+        numpy.ndarray: The fitting function values.
     """
     amp, mean, sigma = params
     return -amp * np.exp(-((x - mean) / sigma) ** 2 / 2) + 1
 
 def save_plot(x, y, plot_filename='qsoabsfind_plot.png', xlabel='X-axis', ylabel='Y-axis', title='Plot Title'):
     """
-    Saves a plot of x vs y in the current working directory. If y is a list of arrays, each will be plotted.
+    Saves a plot of x vs y in the current working directory. If y is a list
+    of arrays, each will be plotted.
 
-    Parameters:
-    x (array-like): The x data.
-    y (array-like or list of array-like): The y data or list of y data arrays.
-    plot_filename (str): The filename for the saved plot. Default is 'qsoabsfind_plot.png'.
-    xlabel (str): The label for the x-axis. Default is 'X-axis'.
-    ylabel (str): The label for the y-axis. Default is 'Y-axis'.
-    title (str): The title of the plot. Default is 'Plot Title'.
+    Args:
+        x (array-like): The x data.
+        y (array-like or list of array-like): The y data or list of y data arrays.
+        plot_filename (str): The filename for the saved plot. Default is 'qsoabsfind_plot.png'.
+        xlabel (str): The label for the x-axis. Default is 'X-axis'.
+        ylabel (str): The label for the y-axis. Default is 'Y-axis'.
+        title (str): The title of the plot. Default is 'Plot Title'.
     """
     # Create the plot
     plt.figure()
@@ -169,13 +172,13 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
     """
     Validate that all arrays have the same size.
 
-    Parameters:
-    conv_arr (np.ndarray): Convolved array.
-    unmsk_residual (np.ndarray): Unmasked residual array.
-    spec_index (int): QSO index
+    Args:
+        conv_arr (np.ndarray): Convolved array.
+        unmsk_residual (np.ndarray): Unmasked residual array.
+        spec_index (int): QSO index
 
     Returns:
-    assertion errors
+        assertion errors
     """
     bad_conv=0
     try:
@@ -189,17 +192,17 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
 
 def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
     """
-    Calculates velocity dispersion using Gaussian quadrature
+    Calculates velocity dispersion using Gaussian quadrature.
 
-    Parameters:
-    c1 (float): fitted line center 1 (in Ang).
-    c2 (float): fitted line center 2 (in Ang).
-    sigma1 (float): fitted width 1 (in Ang).
-    sigma2 (float): fitted width 2 (in Ang).
-    resoultion (float): instrumental resolution (in km/s).
+    Args:
+        c1 (float): fitted line center 1 (in Ang).
+        c2 (float): fitted line center 2 (in Ang).
+        sigma1 (float): fitted width 1 (in Ang).
+        sigma2 (float): fitted width 2 (in Ang).
+        resoultion (float): instrumental resolution (in km/s).
 
     Returns:
-    resolution corrected velocity dispersion
+        resolution corrected velocity dispersion
     """
 
     v1_sig = sigma1 / c1 * speed_of_light
@@ -222,15 +225,15 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
     """
     Saves a plot of spectra with absorber in the current working directory.
 
-    Parameters:
-    lam (array-like): observed wavelength.
-    residual (array-like): residual.
-    absorber (str): e.g. MgII, CIV
-    zabs(list): list of absorbers
-    xlabel (str): The label for the x-axis. Default is 'X-axis'.
-    ylabel (str): The label for the y-axis. Default is 'Y-axis'.
-    title (str): The title of the plot. Default is 'Plot Title'.
-    plot_filename (str): if provided, will save the plot
+    Args:
+        lam (array-like): observed wavelength.
+        residual (array-like): residual.
+        absorber (str): e.g. MgII, CIV
+        zabs(list): list of absorbers
+        xlabel (str): The label for the x-axis. Default is 'X-axis'.
+        ylabel (str): The label for the y-axis. Default is 'Y-axis'.
+        title (str): The title of the plot. Default is 'Plot Title'.
+        plot_filename (str): if provided, will save the plot
     """
     # Create the plot
     plt.figure(figsize=(12,4))

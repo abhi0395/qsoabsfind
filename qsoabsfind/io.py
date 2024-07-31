@@ -3,14 +3,15 @@ import numpy as np
 
 def read_fits_file(fits_file, index=None):
     """
-    Reads the FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions from the FITS file.
+    Reads the FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions from the
+    FITS file.
 
-    Parameters:
-    fits_file (str): Path to the FITS file containing QSO spectra.
-    index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.
+    Args:
+        fits_file (str): Path to the FITS file containing QSO spectra.
+        index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.
 
     Returns:
-    tuple: A tuple containing the flux, error, wavelength, and tgtdetails data.
+        tuple: A tuple containing the flux, error, wavelength, and tgtdetails data.
     """
     with fits.open(fits_file, memmap=True) as hdul:
         if index is None:
@@ -34,11 +35,11 @@ def save_results_to_fits(results, output_file, headers, absorber):
     """
     Save the results to a FITS file.
 
-    Parameters:
-    results (dict): The results dictionary.
-    output_file (str): The path to the output FITS file.
-    headers (dict): The headers to include in the FITS file.
-    absorber (str): The absorber type (MgII or CIV).
+    Args:
+        results (dict): The results dictionary.
+        output_file (str): The path to the output FITS file.
+        headers (dict): The headers to include in the FITS file.
+        absorber (str): The absorber type (MgII or CIV).
     """
     EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
     if absorber == 'MgII':

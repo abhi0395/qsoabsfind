@@ -1,9 +1,7 @@
 # config.py
-
-"""
-This module handles dynamic loading of constants for the QSO absorber finder.
-It first loads the default constants from the constants module and then optionally
-overwrites them with user-provided constants from a specified file.
+"""This module handles dynamic loading of constants for the QSO absorber
+finder. It first loads the default constants from the constants module and then
+optionally overwrites them with user-provided constants from a specified file.
 
 If an environment variable 'QSO_CONSTANTS_FILE' is set and points to a valid file, the constants
 from that file will be loaded and used instead of the default ones.
@@ -20,8 +18,7 @@ import os
 from .constants import *
 
 def load_constants(constants_file):
-    """
-    Dynamically loads constants from a user-provided file.
+    """Dynamically loads constants from a user-provided file.
 
     Parameters:
     constants_file (str): Path to the file containing user-defined constants.

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qsoabsfind.ew &mdash; qsoabsfind 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            qsoabsfind
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">qsoabsfind</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">qsoabsfind.ew</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for qsoabsfind.ew</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">lines</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">double_gaussian</span>
+<span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">redshift_estimate</span>
+
+<span class="c1"># Example usage within double_curve_fit</span>
+<div class="viewcode-block" id="double_curve_fit">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.double_curve_fit">[docs]</a>
+<span class="k">def</span> <span class="nf">double_curve_fit</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">fun_to_run</span><span class="p">,</span> <span class="n">lam_fit_range</span><span class="p">,</span> <span class="n">nmf_resi_fit</span><span class="p">,</span> <span class="n">error_fit</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fits a double Gaussian function to the provided data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        index (int): Index of the spectrum being fitted.</span>
+<span class="sd">        fun_to_run (callable): The fitting function.</span>
+<span class="sd">        lam_fit_range (numpy.ndarray): Wavelength range for the fitting.</span>
+<span class="sd">        nmf_resi_fit (numpy.ndarray): Residual array for the fitting.</span>
+<span class="sd">        error_fit (numpy.ndarray): Error array for the fitting.</span>
+<span class="sd">        bounds (tuple): Bounds for the fitting parameters.</span>
+<span class="sd">        init_cond (list or numpy.ndarray): Initial conditions for the fitting parameters.</span>
+<span class="sd">        iter_n (int): Maximum number of iterations for the fitting algorithm.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Contains the following elements:</span>
+<span class="sd">            - save_param_array (numpy.ndarray): Fitted parameters.</span>
+<span class="sd">            - save_param_error (numpy.ndarray): Errors of the fitted parameters.</span>
+<span class="sd">            - EW_first (float): Equivalent width of the first Gaussian.</span>
+<span class="sd">            - EW_second (float): Equivalent width of the second Gaussian.</span>
+<span class="sd">            - EW_total (float): Total equivalent width of both Gaussians.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nparm</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_cond</span><span class="p">)</span>
+    <span class="n">save_param_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+    <span class="n">save_param_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+    <span class="n">EW_first</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">EW_second</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">EW_total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
+            <span class="n">fun_to_run</span><span class="p">,</span> <span class="n">lam_fit_range</span><span class="p">,</span> <span class="n">nmf_resi_fit</span><span class="p">,</span>
+            <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">error_fit</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span>
+            <span class="n">maxfev</span><span class="o">=</span><span class="n">iter_n</span><span class="p">,</span> <span class="n">absolute_sigma</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">EW_first</span> <span class="o">=</span> <span class="n">popt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">popt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">EW_second</span> <span class="o">=</span> <span class="n">popt</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">popt</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">EW_total</span> <span class="o">=</span> <span class="n">EW_first</span> <span class="o">+</span> <span class="n">EW_second</span>
+
+        <span class="n">save_param_array</span> <span class="o">=</span> <span class="n">popt</span>
+        <span class="n">save_param_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">pcov</span><span class="p">))</span>
+
+    <span class="k">except</span> <span class="p">(</span><span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;NMF resi fit size = </span><span class="si">{</span><span class="n">nmf_resi_fit</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">In Main Gaussian script: In double Gaussian fitting: Spec Index = </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1"> has issues, Check this please</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">save_param_array</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">save_param_error</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">return</span> <span class="n">save_param_array</span><span class="p">,</span> <span class="n">save_param_error</span><span class="p">,</span> <span class="n">EW_first</span><span class="p">,</span> <span class="n">EW_second</span><span class="p">,</span> <span class="n">EW_total</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_ew_errors">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.calculate_ew_errors">[docs]</a>
+<span class="k">def</span> <span class="nf">calculate_ew_errors</span><span class="p">(</span><span class="n">popt</span><span class="p">,</span> <span class="n">perr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the errors in the equivalent widths (EW) using the errors in</span>
+<span class="sd">    the optimized parameters.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        popt (numpy.ndarray): Optimized parameters from the curve fitting.</span>
+<span class="sd">        perr (numpy.ndarray): Errors of the optimized parameters from the curve fitting.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Contains the following elements:</span>
+<span class="sd">            - EW1_error (float): Error in the equivalent width of the first Gaussian.</span>
+<span class="sd">            - EW2_error (float): Error in the equivalent width of the second Gaussian.</span>
+<span class="sd">            - EW_total_error (float): Total error in the equivalent width of both Gaussians.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">amp1</span><span class="p">,</span> <span class="n">mean1</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">amp2</span><span class="p">,</span> <span class="n">mean2</span><span class="p">,</span> <span class="n">sigma2</span> <span class="o">=</span> <span class="n">popt</span>
+    <span class="n">amp1_err</span><span class="p">,</span> <span class="n">mean1_err</span><span class="p">,</span> <span class="n">sigma1_err</span><span class="p">,</span> <span class="n">amp2_err</span><span class="p">,</span> <span class="n">mean2_err</span><span class="p">,</span> <span class="n">sigma2_err</span> <span class="o">=</span> <span class="n">perr</span>
+
+    <span class="n">EW1</span> <span class="o">=</span> <span class="n">amp1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">EW2</span> <span class="o">=</span> <span class="n">amp2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">EW1_error</span> <span class="o">=</span> <span class="n">EW1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">amp1_err</span> <span class="o">/</span> <span class="n">amp1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma1_err</span> <span class="o">/</span> <span class="n">sigma1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">EW2_error</span> <span class="o">=</span> <span class="n">EW2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">amp2_err</span> <span class="o">/</span> <span class="n">amp2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma2_err</span> <span class="o">/</span> <span class="n">sigma2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">EW_total_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">EW1_error</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">EW2_error</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">EW1_error</span><span class="p">,</span> <span class="n">EW2_error</span><span class="p">,</span> <span class="n">EW_total_error</span></div>
+
+
+<div class="viewcode-block" id="full_covariance_ew_errors">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.full_covariance_ew_errors">[docs]</a>
+<span class="k">def</span> <span class="nf">full_covariance_ew_errors</span><span class="p">(</span><span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    With full covariance matrix Calculate the errors in the equivalent</span>
+<span class="sd">    widths (EW) using the errors in the optimized parameters.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        popt (numpy.ndarray): Optimized parameters from the curve fitting.</span>
+<span class="sd">        pcov (numpy.ndarray): Covariance matrix from the curve fitting.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Contains the following elements:</span>
+<span class="sd">            - EW1_error (float): Error in the equivalent width of the first Gaussian.</span>
+<span class="sd">            - EW2_error (float): Error in the equivalent width of the second Gaussian.</span>
+<span class="sd">            - EW_total_error (float): Total error in the equivalent width of both Gaussians.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Partial derivatives of EW with respect to each parameter</span>
+    <span class="k">def</span> <span class="nf">partial_derivatives</span><span class="p">(</span><span class="n">popt</span><span class="p">):</span>
+        <span class="n">amp1</span><span class="p">,</span> <span class="n">mean1</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">amp2</span><span class="p">,</span> <span class="n">mean2</span><span class="p">,</span> <span class="n">sigma2</span> <span class="o">=</span> <span class="n">popt</span>
+        <span class="n">dEW1_damp1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">dEW1_dsigma1</span> <span class="o">=</span> <span class="n">amp1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma1</span>
+
+        <span class="n">dEW2_damp2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">dEW2_dsigma2</span> <span class="o">=</span> <span class="n">amp2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma2</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">dEW1_damp1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dEW1_dsigma1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dEW2_damp2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dEW2_dsigma2</span><span class="p">]</span>
+
+    <span class="c1"># Calculate the partial derivatives</span>
+    <span class="n">partials_EW1</span><span class="p">,</span> <span class="n">partials_EW2</span> <span class="o">=</span> <span class="n">partial_derivatives</span><span class="p">(</span><span class="n">popt</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the variance of EW1 and EW2 using the covariance matrix</span>
+    <span class="n">EW1_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">partials_EW1</span><span class="p">,</span> <span class="n">pcov</span><span class="p">),</span> <span class="n">partials_EW1</span><span class="p">)</span>
+    <span class="n">EW2_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">partials_EW2</span><span class="p">,</span> <span class="n">pcov</span><span class="p">),</span> <span class="n">partials_EW2</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the errors in EW1 and EW2</span>
+    <span class="n">EW1_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">EW1_var</span><span class="p">)</span>
+    <span class="n">EW2_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">EW2_var</span><span class="p">)</span>
+
+    <span class="c1"># Total EW error (assuming independence)</span>
+    <span class="n">EW_total_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">EW1_var</span> <span class="o">+</span> <span class="n">EW2_var</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">EW1_error</span><span class="p">,</span> <span class="n">EW2_error</span><span class="p">,</span> <span class="n">EW_total_error</span></div>
+
+
+<div class="viewcode-block" id="measure_absorber_properties_double_gaussian">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.measure_absorber_properties_double_gaussian">[docs]</a>
+<span class="k">def</span> <span class="nf">measure_absorber_properties_double_gaussian</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">use_kernel</span><span class="o">=</span><span class="s1">&#39;Mg&#39;</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Measures the properties of each potential absorber by fitting a double</span>
+<span class="sd">    Gaussian to the absorption feature and measuring the equivalent width (EW)</span>
+<span class="sd">    and errors of absorption lines.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        index (int): Index of the spectrum being fitted.</span>
+<span class="sd">        wavelength (numpy.ndarray): Array containing common rest frame quasar wavelength.</span>
+<span class="sd">        flux (numpy.ndarray): Matrix containing the residual flux.</span>
+<span class="sd">        error (numpy.ndarray): Error array corresponding to the flux.</span>
+<span class="sd">        absorber_redshift (list): List of potential absorbers identified previously.</span>
+<span class="sd">        bound (tuple): Bounds for the fitting parameters.</span>
+<span class="sd">        use_kernel (str, optional): Kernel type (&#39;MgII, FeII, CIV). Default is &#39;MgII&#39;.</span>
+<span class="sd">        d_pix (float, optional): wavelength pixel for tolerance (default 0.6A)</span>
+<span class="sd">        use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Contains the following elements:</span>
+<span class="sd">            - z_abs_array (numpy.ndarray): Array of absorber redshifts.</span>
+<span class="sd">            - fitting_param_for_spectrum (numpy.ndarray): Array of fitting parameters for double Gaussian.</span>
+<span class="sd">            - fitting_param_std_for_spectrum (numpy.ndarray): Array of errors for fitting parameters.</span>
+<span class="sd">            - EW_first_line (numpy.ndarray): Mean equivalent width of the first line.</span>
+<span class="sd">            - EW_second_line (numpy.ndarray): Mean equivalent width of the second line.</span>
+<span class="sd">            - EW_total (numpy.ndarray): Mean total equivalent width of both lines.</span>
+<span class="sd">            - EW_first_line_error (numpy.ndarray): Error in the equivalent width of the first line.</span>
+<span class="sd">            - EW_second_line_error (numpy.ndarray): Error in the equivalent width of the second line.</span>
+<span class="sd">            - EW_total_error (numpy.ndarray): Total error in the equivalent width of both lines.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#np.random.seed(1234) # for reproducibility of initital condition</span>
+    <span class="n">z_abs_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">absorber_redshift</span><span class="p">)</span>
+
+    <span class="n">size_array</span> <span class="o">=</span> <span class="n">z_abs_array</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">nparm</span> <span class="o">=</span> <span class="mi">6</span> <span class="c1"># 6 parameter double Gaussian</span>
+    <span class="n">fitting_param_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span>
+    <span class="n">fitting_param_std_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span>
+    <span class="n">EW_first_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">EW_second_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">EW_first_line_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">EW_second_line_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">EW_total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">EW_total_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">z_abs_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">use_kernel</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+        <span class="n">line_centre1</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">]</span>
+        <span class="n">line_centre2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2803&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">use_kernel</span> <span class="o">==</span> <span class="s1">&#39;FeII&#39;</span><span class="p">:</span>
+        <span class="n">line_centre1</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;FeII_2586&#39;</span><span class="p">]</span>
+        <span class="n">line_centre2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;FeII_2600&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">use_kernel</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
+        <span class="n">line_centre1</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1548&#39;</span><span class="p">]</span>
+        <span class="n">line_centre2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1550&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported kernel type. Use &#39;Mg&#39;, &#39;Fe&#39;, or &#39;CIV&#39;.&quot;</span><span class="p">)</span>
+
+    <span class="c1">#defining wwavelength range for Gaussian fitting</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">d_pix</span><span class="o">*</span><span class="mi">15</span> <span class="c1"># assuming maximum line width of d_pix * 15, can be larger/smaller, but this is a reasonable assumption.</span>
+    <span class="n">ix0</span> <span class="o">=</span> <span class="n">line_centre1</span> <span class="o">-</span>  <span class="n">sigma</span>
+    <span class="n">ix1</span> <span class="o">=</span> <span class="n">line_centre2</span> <span class="o">+</span>  <span class="n">sigma</span>
+
+    <span class="k">if</span> <span class="n">size_array</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">z_abs_array</span><span class="p">,</span> <span class="n">fitting_param_for_spectrum</span><span class="p">,</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">,</span>
+            <span class="n">EW_first_line</span><span class="p">,</span> <span class="n">EW_second_line</span><span class="p">,</span> <span class="n">EW_total</span><span class="p">,</span>
+            <span class="n">EW_first_line_error</span><span class="p">,</span> <span class="n">EW_second_line_error</span><span class="p">,</span> <span class="n">EW_total_error</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size_array</span><span class="p">):</span>
+        <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># rest-frame conversion of wavelength</span>
+        <span class="n">lam_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">absorber_rest_lam</span> <span class="o">&gt;=</span> <span class="n">ix0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">absorber_rest_lam</span> <span class="o">&lt;=</span> <span class="n">ix1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">absorber_rest_lam</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+        <span class="n">nmf_resi</span> <span class="o">=</span> <span class="n">flux</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+        <span class="n">error_flux</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">nmf_resi</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">)):</span>
+            <span class="c1">#random initial condition</span>
+            <span class="n">amp_first_nmf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+            <span class="n">line_first</span> <span class="o">=</span> <span class="n">line_centre1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">)</span>
+            <span class="n">sigma1</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">sigma2</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">line_second</span> <span class="o">=</span> <span class="n">line_first</span> <span class="o">+</span> <span class="p">(</span><span class="n">line_centre2</span> <span class="o">-</span> <span class="n">line_centre1</span><span class="p">)</span> <span class="o">+</span>  <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">)</span>
+            <span class="n">init_cond</span> <span class="o">=</span> <span class="p">[</span><span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line_first</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="mf">0.54</span> <span class="o">*</span> <span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line_second</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">]</span>
+            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span> <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+
+            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># in observed frame</span>
+            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">redshift_estimate</span><span class="p">(</span><span class="n">fitted_l1</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">std_fitted_l1</span><span class="p">,</span> <span class="n">std_fitted_l2</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">)</span>
+
+            <span class="c1">#errors on EW</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">use_covariance</span><span class="p">:</span>
+                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">calculate_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_covariance_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">])):</span>
+                <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+                <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+                <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+            <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
+            <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">z_abs_array</span><span class="p">,</span> <span class="n">z_abs_err</span><span class="p">,</span> <span class="n">fitting_param_for_spectrum</span><span class="p">,</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">,</span>
+        <span class="n">EW_first_line</span><span class="p">,</span> <span class="n">EW_second_line</span><span class="p">,</span> <span class="n">EW_total</span><span class="p">,</span>
+        <span class="n">EW_first_line_error</span><span class="p">,</span> <span class="n">EW_second_line_error</span><span class="p">,</span> <span class="n">EW_total_error</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

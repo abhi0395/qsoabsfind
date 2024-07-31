@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qsoabsfind.utils &mdash; qsoabsfind 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            qsoabsfind
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">qsoabsfind</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">qsoabsfind.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for qsoabsfind.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="c1">#import logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">speed_of_light</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c1"># Configure logging</span>
+<span class="c1">#logging.basicConfig(level=logging.DEBUG, format=&#39;%(asctime)s - %(levelname)s - %(message)s&#39;)</span>
+
+<span class="c1"># Set the logging level for Matplotlib to WARNING to suppress DEBUG messages</span>
+<span class="c1">#logging.getLogger(&#39;matplotlib&#39;).setLevel(logging.WARNING)</span>
+
+<div class="viewcode-block" id="elapsed">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.elapsed">[docs]</a>
+<span class="k">def</span> <span class="nf">elapsed</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prints the elapsed time since `start`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        start (float): The start time.</span>
+<span class="sd">        msg (str): The message to print with the elapsed time.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: The current time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">end</span></div>
+
+
+<div class="viewcode-block" id="gauss_two_lines_kernel">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.gauss_two_lines_kernel">[docs]</a>
+<span class="k">def</span> <span class="nf">gauss_two_lines_kernel</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines the kernel function using double gaussian only.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (numpy.ndarray): Kernel lambda array (user defined),</span>
+<span class="sd">        a (numpy.ndarray): Kernel parameters, 6 parameters (amp, mean, and sigma for two Gaussian),</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The kernel function (array of numbers).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">a2</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="n">norm_constant</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="c1">#/((a1+a2)*(2*np.pi*a[1]**2)**0.5)</span>
+
+    <span class="k">return</span> <span class="n">norm_constant</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">a1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">a2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.5</span></div>
+
+
+<div class="viewcode-block" id="convolution_fun">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.convolution_fun">[docs]</a>
+<span class="k">def</span> <span class="nf">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convolves the spectrum with a Gaussian kernel.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        absorber (str): Type of absorber (e.g., &#39;MgII&#39;, &#39;CIV&#39;).</span>
+<span class="sd">        residual_arr_after_mask (numpy.ndarray): Final residual array after masking.</span>
+<span class="sd">        width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).</span>
+<span class="sd">        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).</span>
+<span class="sd">        log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)</span>
+<span class="sd">        index (int): QSO index</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The convolved residual array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">absorber</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">amplitude_dict</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type. Available types are: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">amplitude_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">A_main</span> <span class="o">=</span> <span class="n">amplitude_dict</span><span class="p">[</span><span class="n">absorber</span><span class="p">]</span>
+    <span class="n">A_secondary</span> <span class="o">=</span> <span class="n">A_main</span> <span class="o">*</span> <span class="n">amp_ratio</span>
+    <span class="n">ct</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+        <span class="n">ker_parm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">A_main</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">,</span> <span class="n">A_secondary</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2803&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">])</span>
+        <span class="n">lam_ker_start</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1"># +/- 5sigma , #rest-frame</span>
+        <span class="n">lam_ker_end</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2803&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span>
+    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
+        <span class="n">ker_parm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">A_main</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1548&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">,</span> <span class="n">A_secondary</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1550&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">])</span>
+        <span class="n">lam_ker_start</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1548&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1"># +/- 5sigma , #rest-frame</span>
+        <span class="n">lam_ker_end</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1550&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1">#</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type for specific Args: </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">log</span><span class="p">:</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_end</span><span class="p">),</span> <span class="mf">0.0001</span><span class="p">)</span> <span class="c1">#SDSS-like wavelength resolution</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="n">lam_ker</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">,</span> <span class="n">lam_ker_end</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span> <span class="c1"># DESI-like wavelength resolution</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lam_ker</span><span class="p">)</span><span class="o">&gt;</span><span class="nb">len</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">):</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">lam_ker</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">)]</span>
+
+    <span class="n">gauss_kernel</span> <span class="o">=</span> <span class="n">gauss_two_lines_kernel</span><span class="p">(</span><span class="n">lam_ker</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">ker_parm</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">gauss_kernel</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+
+    <span class="c1">#check if input and output array size are same</span>
+    <span class="n">bad_conv</span> <span class="o">=</span> <span class="n">validate_sizes</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">bad_conv</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: Size mismatch detected in spec_index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="double_gaussian">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.double_gaussian">[docs]</a>
+<span class="k">def</span> <span class="nf">double_gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">amp1</span><span class="p">,</span> <span class="n">mean1</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">amp2</span><span class="p">,</span> <span class="n">mean2</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a double Gaussian function to fit absorption features in a</span>
+<span class="sd">    given spectrum.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (numpy.ndarray): List of wavelength points where the user wants to fit the model.</span>
+<span class="sd">        amp1: Amplitude of the first Gaussian.</span>
+<span class="sd">        mean1: Mean (center) of the first Gaussian.</span>
+<span class="sd">        sigma1: Standard deviation (width) of the first Gaussian.</span>
+<span class="sd">        amp2: Amplitude of the second Gaussian.</span>
+<span class="sd">        mean2: Mean (center) of the second Gaussian.</span>
+<span class="sd">        sigma2: Standard deviation (width) of the second Gaussian.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The function that fits the absorption feature using curve_fit.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">amp1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span> <span class="n">amp2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="single_gaussian">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.single_gaussian">[docs]</a>
+<span class="k">def</span> <span class="nf">single_gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines the fitting function to fit a single absorption line with a</span>
+<span class="sd">    gaussian profile.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (numpy.ndarray): Wavelength points where the user wants to fit the model.</span>
+<span class="sd">        params (list or numpy.ndarray): Array of parameters [amp, mean, sigma].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The fitting function values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">amp</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">=</span> <span class="n">params</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">amp</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="save_plot">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.save_plot">[docs]</a>
+<span class="k">def</span> <span class="nf">save_plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="s1">&#39;qsoabsfind_plot.png&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X-axis&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y-axis&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Plot Title&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Saves a plot of x vs y in the current working directory. If y is a list</span>
+<span class="sd">    of arrays, each will be plotted.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (array-like): The x data.</span>
+<span class="sd">        y (array-like or list of array-like): The y data or list of y data arrays.</span>
+<span class="sd">        plot_filename (str): The filename for the saved plot. Default is &#39;qsoabsfind_plot.png&#39;.</span>
+<span class="sd">        xlabel (str): The label for the x-axis. Default is &#39;X-axis&#39;.</span>
+<span class="sd">        ylabel (str): The label for the y-axis. Default is &#39;Y-axis&#39;.</span>
+<span class="sd">        title (str): The title of the plot. Default is &#39;Plot Title&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create the plot</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">y_data</span> <span class="ow">in</span> <span class="n">y</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Get the current working directory</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="c1"># Define the full path for the plot</span>
+    <span class="n">plot_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="n">plot_filename</span><span class="p">)</span>
+
+    <span class="c1"># Save the plot</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_path</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved as </span><span class="si">{</span><span class="n">plot_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="validate_sizes">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.validate_sizes">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_sizes</span><span class="p">(</span><span class="n">conv_arr</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validate that all arrays have the same size.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        conv_arr (np.ndarray): Convolved array.</span>
+<span class="sd">        unmsk_residual (np.ndarray): Unmasked residual array.</span>
+<span class="sd">        spec_index (int): QSO index</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        assertion errors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bad_conv</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">conv_arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+        <span class="n">bad_conv</span><span class="o">=</span><span class="mi">1</span>
+        <span class="c1"># logging.error(f&quot;Size mismatch detected in spec_index {spec_index}&quot;)</span>
+        <span class="c1"># logging.debug(f&quot;conv_arr size: {conv_arr.size}, unmsk_residual size: {unmsk_residual.size}&quot;)</span>
+        <span class="c1"># raise</span>
+    <span class="k">return</span> <span class="n">bad_conv</span></div>
+
+
+<div class="viewcode-block" id="vel_dispersion">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.vel_dispersion">[docs]</a>
+<span class="k">def</span> <span class="nf">vel_dispersion</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">,</span> <span class="n">resolution</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates velocity dispersion using Gaussian quadrature.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        c1 (float): fitted line center 1 (in Ang).</span>
+<span class="sd">        c2 (float): fitted line center 2 (in Ang).</span>
+<span class="sd">        sigma1 (float): fitted width 1 (in Ang).</span>
+<span class="sd">        sigma2 (float): fitted width 2 (in Ang).</span>
+<span class="sd">        resoultion (float): instrumental resolution (in km/s).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        resolution corrected velocity dispersion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">v1_sig</span> <span class="o">=</span> <span class="n">sigma1</span> <span class="o">/</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">speed_of_light</span>
+    <span class="n">v2_sig</span> <span class="o">=</span> <span class="n">sigma2</span> <span class="o">/</span> <span class="n">c2</span> <span class="o">*</span> <span class="n">speed_of_light</span>
+
+    <span class="n">del_v1_sq</span> <span class="o">=</span> <span class="n">v1_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">resolution</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">del_v2_sq</span> <span class="o">=</span> <span class="n">v2_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">resolution</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="c1"># Correct for instrumental resolution</span>
+    <span class="k">if</span> <span class="n">del_v1_sq</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">del_v2_sq</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">corr_del_v1_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v1_sq</span><span class="p">)</span>
+        <span class="n">corr_del_v2_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v2_sq</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">corr_del_v1_sq</span>  <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># Set to 0 if the observed width is less than instrumental width</span>
+        <span class="n">corr_del_v2_sq</span>  <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">return</span> <span class="n">corr_del_v1_sq</span><span class="p">,</span> <span class="n">corr_del_v2_sq</span></div>
+
+
+<div class="viewcode-block" id="plot_absorber">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.plot_absorber">[docs]</a>
+<span class="k">def</span> <span class="nf">plot_absorber</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;obs wave (ang)&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;residual&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;QSO&#39;</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Saves a plot of spectra with absorber in the current working directory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lam (array-like): observed wavelength.</span>
+<span class="sd">        residual (array-like): residual.</span>
+<span class="sd">        absorber (str): e.g. MgII, CIV</span>
+<span class="sd">        zabs(list): list of absorbers</span>
+<span class="sd">        xlabel (str): The label for the x-axis. Default is &#39;X-axis&#39;.</span>
+<span class="sd">        ylabel (str): The label for the y-axis. Default is &#39;Y-axis&#39;.</span>
+<span class="sd">        title (str): The title of the plot. Default is &#39;Plot Title&#39;.</span>
+<span class="sd">        plot_filename (str): if provided, will save the plot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create the plot</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">absorber</span><span class="o">==</span><span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;MgII_2796&#39;</span><span class="p">,</span> <span class="s1">&#39;MgII_2803&#39;</span>
+    <span class="k">if</span> <span class="n">absorber</span><span class="o">==</span><span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;CIV_1548&#39;</span><span class="p">,</span> <span class="s1">&#39;CIV_1550&#39;</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zabs</span><span class="p">:</span>
+        <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">plot_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Get the current working directory</span>
+        <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+        <span class="c1"># Define the full path for the plot</span>
+        <span class="n">plot_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="n">plot_filename</span><span class="p">)</span>
+
+        <span class="c1"># Save the plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_path</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved as </span><span class="si">{</span><span class="n">plot_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

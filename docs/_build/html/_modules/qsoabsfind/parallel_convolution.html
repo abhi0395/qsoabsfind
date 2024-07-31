@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qsoabsfind.parallel_convolution &mdash; qsoabsfind 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            qsoabsfind
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">qsoabsfind</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">qsoabsfind.parallel_convolution</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for qsoabsfind.parallel_convolution</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">.absfinder</span> <span class="kn">import</span> <span class="n">convolution_method_absorber_finder_in_QSO_spectra</span>
+<span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">save_results_to_fits</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">qsoabsfind</span>
+
+<span class="c1"># Ensure config is imported first to set up the environment</span>
+<span class="kn">import</span> <span class="nn">qsoabsfind.config</span> <span class="k">as</span> <span class="nn">config</span>
+
+<span class="k">def</span> <span class="nf">get_package_versions</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the versions of qsoabsfind and other relevant packages.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the versions of the packages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">packages</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;qsoabsfind&#39;</span><span class="p">,</span> <span class="s1">&#39;numpy&#39;</span><span class="p">,</span> <span class="s1">&#39;astropy&#39;</span><span class="p">,</span> <span class="s1">&#39;scipy&#39;</span><span class="p">,</span> <span class="s1">&#39;numba&#39;</span><span class="p">,</span> <span class="s1">&#39;matplotlib&#39;</span><span class="p">]</span>
+    <span class="n">versions</span> <span class="o">=</span> <span class="p">{</span><span class="n">pkg</span><span class="p">:</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">get_distribution</span><span class="p">(</span><span class="n">pkg</span><span class="p">)</span><span class="o">.</span><span class="n">version</span> <span class="k">for</span> <span class="n">pkg</span> <span class="ow">in</span> <span class="n">packages</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">versions</span>
+
+
+<span class="k">def</span> <span class="nf">run_convolution_method_absorber_finder_QSO_spectra</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="p">,</span> <span class="n">coeff_sigma</span><span class="p">,</span> <span class="n">mult_resi</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span>
+                <span class="n">pm_pixel</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="p">,</span> <span class="n">logwave</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper function to unpack parameters and call the main convolution</span>
+<span class="sd">    method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">convolution_method_absorber_finder_in_QSO_spectra</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="p">,</span> <span class="n">coeff_sigma</span><span class="p">,</span> <span class="n">mult_resi</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span>
+                    <span class="n">pm_pixel</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">parse_qso_sequence</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse a bash-like sequence or a single integer to generate QSO indices.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        qso_sequence (str or int): Bash-like sequence (e.g., &#39;1-1000&#39;, &#39;1-1000:10&#39;) or an integer.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.array: Array of QSO indices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">)</span>
+
+    <span class="c1"># Handle string input</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">qso_sequence</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">))</span>
+
+        <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(\d+)-(\d+)(?::(\d+))?&quot;</span><span class="p">,</span> <span class="n">qso_sequence</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">step</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">)</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">step</span><span class="p">)</span> <span class="k">if</span> <span class="n">step</span> <span class="k">else</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+    <span class="c1"># If none of the conditions matched, raise an error</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid QSO sequence format: &#39;</span><span class="si">{</span><span class="n">qso_sequence</span><span class="si">}</span><span class="s2">&#39;. Use &#39;start-end[:step]&#39; or an integer.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="parallel_convolution_method_absorber_finder_QSO_spectra">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.parallel_convolution.parallel_convolution_method_absorber_finder_QSO_spectra">[docs]</a>
+<span class="k">def</span> <span class="nf">parallel_convolution_method_absorber_finder_QSO_spectra</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_indices</span><span class="p">,</span> <span class="n">absorber</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="n">coeff_sigma</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">mult_resi</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">pm_pixel</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">sn_line1</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">sn_line2</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run convolution_method_absorber_finder_in_QSO_spectra in parallel using</span>
+<span class="sd">    multiprocessing.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fits_file (str): Path to the FITS file containing Normalized QSO spectra.</span>
+<span class="sd">        spec_indices (list or numpy.array): Indices of quasars in the data matrix.</span>
+<span class="sd">        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is &#39;MgII&#39;.</span>
+<span class="sd">        ker_width_pixels (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].</span>
+<span class="sd">        coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.</span>
+<span class="sd">        mult_resi (float): Factor to shift the residual up or down. Default is 1.</span>
+<span class="sd">        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.</span>
+<span class="sd">        pm_pixel (int): Pixel parameter for local noise estimation (default 200).</span>
+<span class="sd">        sn_line1 (float): Signal-to-noise ratio for thresholding for line1.</span>
+<span class="sd">        sn_line2 (float): Signal-to-noise ratio for thresholding for line2.</span>
+<span class="sd">        use_covariance (bool): If want to use full covariance of scipy curve_fit for EW error calculation (default is False).</span>
+<span class="sd">        logwave (bool): If wavelength on logscale (default True for SDSS).</span>
+<span class="sd">        n_jobs (int): Number of parallel jobs to run.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing combined results from all parallel runs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="p">,</span> <span class="n">coeff_sigma</span><span class="p">,</span> <span class="n">mult_resi</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span>
+                    <span class="n">pm_pixel</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span> <span class="k">for</span> <span class="n">spec_index</span> <span class="ow">in</span> <span class="n">spec_indices</span><span class="p">]</span>
+
+    <span class="c1"># Run the jobs in parallel</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">run_convolution_method_absorber_finder_QSO_spectra</span><span class="p">,</span> <span class="n">params_list</span><span class="p">)</span>
+
+    <span class="c1"># Combine the results</span>
+    <span class="n">combined_results</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;index_spec&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;z_abs&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;gauss_fit&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;gauss_fit_std&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_1_mean&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_2_mean&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_total_mean&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_1_error&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_2_error&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;ew_total_error&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;z_abs_err&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;sn_1&#39;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s1">&#39;sn_2&#39;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">index_spec</span><span class="p">,</span> <span class="n">z_abs</span><span class="p">,</span> <span class="n">gauss_fit</span><span class="p">,</span> <span class="n">gauss_fit_std</span><span class="p">,</span> <span class="n">ew_1_mean</span><span class="p">,</span> <span class="n">ew_2_mean</span><span class="p">,</span> <span class="n">ew_total_mean</span><span class="p">,</span>
+         <span class="n">ew_1_error</span><span class="p">,</span> <span class="n">ew_2_error</span><span class="p">,</span> <span class="n">ew_total_error</span><span class="p">,</span> <span class="n">z_abs_err</span><span class="p">,</span> <span class="n">sn_1</span><span class="p">,</span> <span class="n">sn_2</span><span class="p">)</span> <span class="o">=</span> <span class="n">result</span>
+
+        <span class="n">valid_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z_abs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;index_spec&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">index_spec</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;z_abs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z_abs</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;gauss_fit&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gauss_fit</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;gauss_fit_std&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gauss_fit_std</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_1_mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_1_mean</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_2_mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_2_mean</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_total_mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_total_mean</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_1_error&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_1_error</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_2_error&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_2_error</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;ew_total_error&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ew_total_error</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;z_abs_err&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z_abs_err</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;sn_1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sn_1</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+        <span class="n">combined_results</span><span class="p">[</span><span class="s1">&#39;sn_2&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sn_2</span><span class="p">)[</span><span class="n">valid_indices</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">combined_results</span></div>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.parallel_convolution.main">[docs]</a>
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Run convolution-based adaptive S/N method to search for metal doublets in SDSS/DESI-like QSO spectra in parallel.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--input-fits-file&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to the input FITS file.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--n-qso&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of QSO spectra to process, or a bash-like sequence (e.g., &#39;1-1000&#39;, &#39;1-1000:10&#39;).&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--absorber&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Absorber name for searching doublets (MgII, CIV).&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--constant-file&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to the constants .py file, please follow the exact same structure as qsoabsfind.constants, i.e the default parameter that the code uses&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--output&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to the output FITS file.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--headers&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Headers for the output FITS file in the format NAME=VALUE.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--n-tasks&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of tasks.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--ncpus&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of CPUs per task.&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># Set the environment variable for the constants file</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">constant_file</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;QSO_CONSTANTS_FILE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">constant_file</span>
+
+    <span class="c1"># Prepare headers</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span>
+        <span class="n">headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+
+    <span class="c1"># Add search parameters and package versions to headers</span>
+    <span class="n">headers</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+        <span class="s1">&#39;ABSORBER&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Absorber name&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;KERWIDTH&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;ker_width_pixels&quot;</span><span class="p">]),</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Kernel width in pixels&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;COEFFSIG&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;coeff_sigma&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Coefficient for sigma threshold&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;MULTRE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;mult_resi&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Multiplicative factor for residuals&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;D_PIX&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;d_pix&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;toloerance for line separation (in Ang)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;PM_PIXEL&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;pm_pixel&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Pixel parameter for local noise estimation&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;sn_line1&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for first line&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;sn_line2&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for second line&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;EWCOVAR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;use_covariance&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use covariance for EW error calculation&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;LOGWAVE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;logwave&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use log wavelength scaling&#39;</span><span class="p">}</span>
+    <span class="p">})</span>
+
+    <span class="n">package_versions</span> <span class="o">=</span> <span class="n">get_package_versions</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">pkg</span><span class="p">,</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">package_versions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">headers</span><span class="p">[</span><span class="n">pkg</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">ver</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">pkg</span><span class="si">}</span><span class="s1"> version&#39;</span><span class="p">}</span>
+    <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;QSABFI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">headers</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;QSOABSFIND&#39;</span><span class="p">)</span>
+    <span class="n">headers</span><span class="p">[</span><span class="s1">&#39;MATPLOT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">headers</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;MATPLOTLIB&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Start timing</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="c1"># Parse the QSO sequence</span>
+    <span class="n">spec_indices</span> <span class="o">=</span> <span class="n">parse_qso_sequence</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_qso</span><span class="p">)</span>
+
+    <span class="c1"># Run the convolution method in parallel</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">parallel_convolution_method_absorber_finder_QSO_spectra</span><span class="p">(</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">input_fits_file</span><span class="p">,</span> <span class="n">spec_indices</span><span class="p">,</span> <span class="n">absorber</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span>
+        <span class="n">ker_width_pixels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;ker_width_pixels&quot;</span><span class="p">],</span>
+        <span class="n">coeff_sigma</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;coeff_sigma&quot;</span><span class="p">],</span>
+        <span class="n">mult_resi</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;mult_resi&quot;</span><span class="p">],</span>
+        <span class="n">d_pix</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;d_pix&quot;</span><span class="p">],</span>
+        <span class="n">pm_pixel</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;pm_pixel&quot;</span><span class="p">],</span>
+        <span class="n">sn_line1</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;sn_line1&quot;</span><span class="p">],</span>
+        <span class="n">sn_line2</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;sn_line2&quot;</span><span class="p">],</span>
+        <span class="n">use_covariance</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;use_covariance&quot;</span><span class="p">],</span>
+        <span class="n">logwave</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;logwave&quot;</span><span class="p">],</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">n_tasks</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">ncpus</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Save the results to a FITS file</span>
+    <span class="n">save_results_to_fits</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">)</span>
+
+    <span class="c1"># End timing</span>
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Elapsed time: </span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

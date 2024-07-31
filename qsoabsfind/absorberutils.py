@@ -1,6 +1,4 @@
 """
-metal_absorber_finder.py
-
 This script contains a function to find metal absorbers in QSO spectra.
 """
 
@@ -12,14 +10,15 @@ from numba import jit
 @jit(nopython=True)
 def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     """
-    Estimate the local standard deviation for each element in the convolution array over a window defined by pm_pixel.
+    Estimate the local standard deviation for each element in the
+    convolution array over a window defined by pm_pixel.
 
-    Parameters:
-    conv_array (numpy.ndarray): Input convolution array for which local standard deviations are to be calculated.
-    pm_pixel (int): Number of pixels defining the window size around each element for local standard deviation calculation.
+    Args:
+        conv_array (numpy.ndarray): Input convolution array for which local standard deviations are to be calculated.
+        pm_pixel (int): Number of pixels defining the window size around each element for local standard deviation calculation.
 
     Returns:
-    numpy.ndarray: Array of local standard deviations.
+        numpy.ndarray: Array of local standard deviations.
     """
     nsize = conv_array.size
     pivot = pm_pixel // 2
@@ -37,17 +36,17 @@ def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
     """
     Check the error on residuals around specified wavelengths.
 
-    Parameters:
-    l1 (float): First wavelength to check around.
-    l2 (float): Second wavelength to check around.
-    lam_rest (numpy.ndarray): Rest-frame wavelengths.
-    residual (numpy.ndarray): Residual flux values.
-    error (numpy.ndarray): Error values corresponding to the residuals.
-    log (bool): if wavelength bins are on log scale
+    Args:
+        l1 (float): First wavelength to check around.
+        l2 (float): Second wavelength to check around.
+        lam_rest (numpy.ndarray): Rest-frame wavelengths.
+        residual (numpy.ndarray): Residual flux values.
+        error (numpy.ndarray): Error values corresponding to the residuals.
+        log (bool): if wavelength bins are on log scale
 
     Returns:
-    tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.
-           Returns (mean_sn1, mean_sn2).
+        tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.
+               Returns (mean_sn1, mean_sn2).
     """
     dpix = 5
 
@@ -89,17 +88,18 @@ def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
 @jit(nopython=False)
 def group_contiguous_pixel(data, resi, avg):
     """
-    Arrange data into groups where successive elements differ by less than a given average difference.
+    Arrange data into groups where successive elements differ by less than a
+    given average difference.
 
-    Parameters:
-    data (numpy.ndarray): Array of absorber values for each spectrum.
-    resi (numpy.ndarray): Corresponding residual values.
-    avg (float): Average difference threshold for grouping contiguous pixels.
+    Args:
+        data (numpy.ndarray): Array of absorber values for each spectrum.
+        resi (numpy.ndarray): Corresponding residual values.
+        avg (float): Average difference threshold for grouping contiguous pixels.
 
     Returns:
-    tuple: A tuple containing:
-        - list of grouped data
-        - list of grouped residuals
+        tuple: A tuple containing:
+            - list of grouped data
+            - list of grouped residuals
     """
     ind_srt = np.argsort(data)
     sorted_data = data[ind_srt]
@@ -126,15 +126,16 @@ def group_contiguous_pixel(data, resi, avg):
 @jit(nopython=True)
 def weighted_mean(z_values, residuals, gamma):
     """
-    Calculate the weighted mean of z_values using residuals raised to the power of gamma.
+    Calculate the weighted mean of z_values using residuals raised to the
+    power of gamma.
 
-    Parameters:
-    z_values (numpy.ndarray): Array of z values.
-    residuals (numpy.ndarray): Array of residual values.
-    gamma (int): Exponent for weighting.
+    Args:
+        z_values (numpy.ndarray): Array of z values.
+        residuals (numpy.ndarray): Array of residual values.
+        gamma (int): Exponent for weighting.
 
     Returns:
-    float: Weighted mean of z values.
+        float: Weighted mean of z values.
     """
     weights = 1 / residuals**gamma
     weighted_z = (z_values / residuals**gamma)
@@ -142,15 +143,16 @@ def weighted_mean(z_values, residuals, gamma):
 
 def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, gamma=4):
     """
-    Perform grouping, splitting, and median selection from the list of all potentially identified absorbers.
+    Perform grouping, splitting, and median selection from the list of all
+    potentially identified absorbers.
 
-    Parameters:
-    master_list_of_pot_absorber (list): List of potential absorbers identified for each spectrum.
-    residual (numpy.ndarray): Residual values corresponding to the absorbers.
-    gamma (int, optional): Exponent for weighting. Default is 4.
+    Args:
+        master_list_of_pot_absorber (list): List of potential absorbers identified for each spectrum.
+        residual (numpy.ndarray): Residual values corresponding to the absorbers.
+        gamma (int, optional): Exponent for weighting. Default is 4.
 
     Returns:
-    list: List of unique absorbers for each spectrum.
+        list: List of unique absorbers for each spectrum.
     """
     if len(master_list_of_pot_absorber) <= 1:
         return master_list_of_pot_absorber
@@ -172,19 +174,20 @@ def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, resi
 
 def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix=0.6, gamma=4, use_kernel='MgII'):
     """
-    Perform grouping and weighted mean from the list of all potentially identified absorbers
-    after combining from all the runs with different kernel widths.
+    Perform grouping and weighted mean from the list of all potentially
+    identified absorbers after combining from all the runs with different
+    kernel widths.
 
-    Parameters:
-    combined_final_our_z (list): List of potential absorbers identified for each spectrum.
-    lam_search (numpy.ndarray): Wavelength search array.
-    residual (numpy.ndarray): Residual values corresponding to the absorbers.
-    d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
-    gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
-    use_kernel (str, optional): Kernel type (MgII). Default is 'MgII'.
+    Args:
+        combined_final_our_z (list): List of potential absorbers identified for each spectrum.
+        lam_search (numpy.ndarray): Wavelength search array.
+        residual (numpy.ndarray): Residual values corresponding to the absorbers.
+        d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
+        gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
+        use_kernel (str, optional): Kernel type (MgII). Default is 'MgII'.
 
     Returns:
-    list: List after grouping contiguous pixels for each spectrum.
+        list: List after grouping contiguous pixels for each spectrum.
     """
 
     if use_kernel=='MgII':thresh=lines['MgII_2796']
@@ -222,18 +225,19 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
 #@jit(nopython=False)
 def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix):
     """
-    Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case of 2796, 2803 when using Fe kernel line
-    but has already been detected for the 2796 line, i.e., false positive due to Fe lines.
+    Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case
+    of 2796, 2803 when using Fe kernel line but has already been detected for
+    the 2796 line, i.e., false positive due to Fe lines.
 
-    Parameters:
-    z_after_grouping (list): List of absorbers after grouping.
-    lam_obs (numpy.ndarray): Observed wavelengths.
-    residual (numpy.ndarray): Residual values.
-    error (numpy.ndarray): Error values corresponding to the residuals.
-    d_pix (float): Delta pixel value.
+    Args:
+        z_after_grouping (list): List of absorbers after grouping.
+        lam_obs (numpy.ndarray): Observed wavelengths.
+        residual (numpy.ndarray): Residual values.
+        error (numpy.ndarray): Error values corresponding to the residuals.
+        d_pix (float): Delta pixel value.
 
     Returns:
-    numpy.ndarray: Updated list of absorbers with false positives removed.
+        numpy.ndarray: Updated list of absorbers with false positives removed.
     """
     fe1 = 2586.649 #FeII absorption lines
     fe2 = 2600.117
@@ -288,19 +292,20 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
 #@jit(nopython=False)
 def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII'):
     """
-    Remove any absorber that arises due to the 2803 line but has already been detected for the 2796 line,
-    exploiting the doublet property of MgII to remove false positives.
+    Remove any absorber that arises due to the 2803 line but has already
+    been detected for the 2796 line, exploiting the doublet property of MgII to
+    remove false positives.
 
-    Parameters:
-    first_list_z (list): List of absorbers after grouping.
-    lam_obs (numpy.ndarray): Observed wavelengths.
-    residual (numpy.ndarray): Residual values.
-    error (numpy.ndarray): Error values corresponding to the residuals.
-    d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
-    use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
+    Args:
+        first_list_z (list): List of absorbers after grouping.
+        lam_obs (numpy.ndarray): Observed wavelengths.
+        residual (numpy.ndarray): Residual values.
+        error (numpy.ndarray): Error values corresponding to the residuals.
+        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
+        use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
 
     Returns:
-    numpy.ndarray: Updated list of absorbers with false positives removed.
+        numpy.ndarray: Updated list of absorbers with false positives removed.
     """
     if use_kernel=='MgII':
         mg1, mg2 = lines['MgII_2796'], lines['MgII_2803']
@@ -339,16 +344,17 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 #@jit(nopython=False)
 def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
     """
-    Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR) for absorbers.
+    Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR)
+    for absorbers.
 
-    Parameters:
-    abs_z (list or numpy.ndarray): List of absorber redshifts.
-    sn1_all (list or numpy.ndarray): List of SNR values for the first line.
-    sn2_all (list or numpy.ndarray): List of SNR values for the second line.
-    use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
+    Args:
+        abs_z (list or numpy.ndarray): List of absorber redshifts.
+        sn1_all (list or numpy.ndarray): List of SNR values for the first line.
+        sn2_all (list or numpy.ndarray): List of SNR values for the second line.
+        use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
 
     Returns:
-    list: Updated list of absorbers with false positives removed.
+        list: Updated list of absorbers with false positives removed.
     """
     if use_kernel=='MgII':
         thresh = (lines['MgII_2803']-lines['MgII_2796'])/lines['MgII_2796']
@@ -382,20 +388,21 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
 @jit(nopython=True)
 def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitted_obs_l2, line1, line2):
     """
-    Estimate the redshift and its error from Gaussian fitting parameters for two spectral lines.
+    Estimate the redshift and its error from Gaussian fitting parameters for
+    two spectral lines.
 
-    Parameters:
-    fitted_obs_l1 (float): Gaussian fitted line centre 1 (obs frame).
-    fitted_obs_l2 (float): Gaussian fitted line centre 2 (obs frame).
-    std_fitted_obs_l1 (float): error on Gaussian fitted line centre 1 (obs frame).
-    std_fitted_obs_l2 (float): error on Gaussian fitted line centre 2 (obs frame).
-    line1 (float): first line centre of metal spectral line.
-    line2 (float): second line centre of metal spectral line.
+    Args:
+        fitted_obs_l1 (float): Gaussian fitted line centre 1 (obs frame).
+        fitted_obs_l2 (float): Gaussian fitted line centre 2 (obs frame).
+        std_fitted_obs_l1 (float): error on Gaussian fitted line centre 1 (obs frame).
+        std_fitted_obs_l2 (float): error on Gaussian fitted line centre 2 (obs frame).
+        line1 (float): first line centre of metal spectral line.
+        line2 (float): second line centre of metal spectral line.
 
     Returns:
-    tuple: A tuple containing:
-        - z_corr (float): mean redshift estimated from the Gaussian fitting parameters.
-        - z_err (float): Estimated error in the corrected redshift.
+        tuple: A tuple containing:
+            - z_corr (float): mean redshift estimated from the Gaussian fitting parameters.
+            - z_err (float): Estimated error in the corrected redshift.
     """
     z1 = (fitted_obs_l1 / line1) - 1
     z2 = (fitted_obs_l2 / line2) - 1
@@ -411,20 +418,21 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
 
 def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, verbose=False):
     """
-    Wrapper function to return the most basic wavelength window for absorber search.
+    Wrapper function to return the most basic wavelength window for absorber
+    search.
 
-    Parameters:
-    wavelength (numpy.ndarray): The wavelength array of the QSO spectrum.
-    residual (numpy.ndarray): The residual array of the QSO spectrum.
-    err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
-    zqso (float): The redshift of the QSO.
-    absorber (str): Options 'CIV', 'MgII'.
-    min_wave (float): minimum wavelength edge (in Ang)
-    max_wave (float): maximum wavelength edge (in Ang)
-    verbose (bool, optional): If True will print time info. Default is False.
+    Args:
+        wavelength (numpy.ndarray): The wavelength array of the QSO spectrum.
+        residual (numpy.ndarray): The residual array of the QSO spectrum.
+        err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
+        zqso (float): The redshift of the QSO.
+        absorber (str): Options 'CIV', 'MgII'.
+        min_wave (float): minimum wavelength edge (in Ang)
+        max_wave (float): maximum wavelength edge (in Ang)
+        verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
-    tuple: A tuple containing unmasked wavelength, residual, and errors.
+        tuple: A tuple containing unmasked wavelength, residual, and errors.
     """
     start = elapsed(None, "")
 

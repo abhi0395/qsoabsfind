@@ -18,20 +18,20 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
     """
     Find valid indices based on thresholding in the convolved array.
 
-    Parameters:
-    our_z (array): Array of redshift values.
-    residual_our_z (array): Array of residual values at the redshift positions.
-    lam_search (array): Array of wavelengths.
-    conv_arr (array): Convolved array.
-    sigma_cr (array): Local sigma values.
-    coeff_sigma (float): Coefficient for sigma.
-    d_pix (float): Pixel distance for line separation.
-    beta (float): Oscillator strength ratio.
-    line1 (float): First line wavelength.
-    line2 (float): Second line wavelength.
+    Args:
+        our_z (array): Array of redshift values.
+        residual_our_z (array): Array of residual values at the redshift positions.
+        lam_search (array): Array of wavelengths.
+        conv_arr (array): Convolved array.
+        sigma_cr (array): Local sigma values.
+        coeff_sigma (float): Coefficient for sigma.
+        d_pix (float): Pixel distance for line separation.
+        beta (float): Oscillator strength ratio.
+        line1 (float): First line wavelength.
+        line2 (float): Second line wavelength.
 
     Returns:
-    Tuple: Arrays of new redshift values and new residual values.
+        Tuple: Arrays of new redshift values and new residual values.
     """
     new_our_z = []
     new_res_arr = []
@@ -60,30 +60,28 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
 
 def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True):
     """
-    Detect absorbers with doublet properties in SDSS quasar spectra using a convolution method. This function identifies
-    potential absorbers based on user-defined threshold criteria, applies Gaussian fitting to reject false positives,
-    and computes the equivalent widths (EWs) of the lines, returning the redshifts, EWs, and fitting parameters.
+    Detect absorbers with doublet properties in SDSS quasar spectra using a
+    convolution method. This function identifies potential absorbers based on
+    user-defined threshold criteria, applies Gaussian fitting to reject false
+    positives, and computes the equivalent widths (EWs) of the lines, returning
+    the redshifts, EWs, and fitting parameters.
 
-    Parameters:
-    fits_file (str): Path to the FITS file containing Normalized QSO spectra
-    (i.e. flux/continuum), must contain FLUX, ERROR (i.e. error/continuum),
-    WAVELENGTH, and TGTDETAILS extensions.
-    In TGTDETAILS, must contain keywords like RA_QSO, DEC_QSO, Z_QSO.
-
-    spec_index (int): Index of quasar in the spectra matrix.
-    absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
-    ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
-    coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
-    mult_resi (float): Factor to shift the residual up or down. Default is 1.
-    d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
-    pm_pixel (int): Pixel parameter for local noise estimation (default 200).
-    sn_line1 (float): Signal-to-noise ratio for thresholding for line1.
-    sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
-    use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
-    logwave (bool): if wavelength on log scale
+    Args:
+        fits_file (str): Path to the FITS file containing Normalized QSO spectra (i.e. flux/continuum), must contain FLUX, ERROR (i.e. error/continuum), WAVELENGTH, and TGTDETAILS extensions. In TGTDETAILS, must contain keywords like RA_QSO, DEC_QSO, Z_QSO.
+        spec_index (int): Index of quasar in the spectra matrix.
+        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
+        coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
+        mult_resi (float): Factor to shift the residual up or down. Default is 1.
+        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
+        pm_pixel (int): Pixel parameter for local noise estimation (default 200).
+        sn_line1 (float): Signal-to-noise ratio for thresholding for line1.
+        sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
+        use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
+        logwave (bool): if wavelength on log scale
 
     Returns:
-    tuple: Contains lists of various parameters related to detected absorbers.
+        tuple: Contains lists of various parameters related to detected absorbers.
     """
 
     # Constants
