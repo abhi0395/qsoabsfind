@@ -1,9 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Replace "View page source" with "Custom Name"
-    document.querySelectorAll('a[href="_sources/index.rst.txt"]').forEach(function(link) {
-        link.textContent = 'Edit on GitHub';
-        link.href = 'https://github.com/abhi0395/qsoabsfind/blob/gh-pages/_sources/index.rst.txt';
-    });
+    // Replace the specific HTML element in index.html
+    var breadcrumbsAside = document.querySelector('li.wy-breadcrumbs-aside');
+    if (breadcrumbsAside) {
+        var link = breadcrumbsAside.querySelector('a[href="_sources/index.rst.txt"]');
+        if (link) {
+            link.textContent = 'Edit on Github';
+            link.href = 'https://github.com/abhi0395/qsoabsfind/blob/main/docs/index.rst';
+        }
+    }
 
     // Add custom copyright notice
     var footer = document.querySelector('footer');
