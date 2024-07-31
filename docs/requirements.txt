@@ -1,5 +1,12 @@
+numpy
+scipy
+astropy
+numba
+matplotlib
+pytest
 setuptools>60
 Sphinx>6,<7
 sphinx-rtd-theme>1
 urllib3<2
 sphinx-autodoc-typehints
+sphinx sphinx_rtd_theme
