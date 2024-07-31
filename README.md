@@ -81,7 +81,7 @@ Citation
 Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) if you find this code useful in your research. The BibTeX entry for the paper is:
 
     @ARTICLE{2021MNRAS.504...65A,
-       author = {{Anand}, Abhijeet and {Nelson}, Dylan and {Kauffmann}, Guinevere},
+       author = {{ Anand }, Abhijeet and { Nelson }, Dylan and { Kauffmann }, Guinevere },
         title = "{Characterizing the abundance, properties, and kinematics of the cool circumgalactic medium of galaxies in absorption with SDSS DR16}",
       journal = {\mnras},
      keywords = {galaxies: evolution, galaxies: formation, large-scale structure of Universe, Astrophysics - Astrophysics of Galaxies},
