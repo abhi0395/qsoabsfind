@@ -48,6 +48,15 @@ Please cite `Anand, Nelson & Kauffmann 2021 <https://arxiv.org/abs/2103.15842>`_
        adsnote = {Provided by the SAO/NASA Astrophysics Data System}
      }
 
+Contact
+-------
+
+Abhijeet Anand \
+Lawrence Berkeley National Lab \
+
+If you have any questions/suggestions, please feel free to write to abhijeetanand2011 [at] gmail.com
+
+
 Indices and tables
 ==================
 
