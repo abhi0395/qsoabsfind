@@ -26,6 +26,11 @@ jobs:
         run: |
           cd docs
           make html
+          
+      - name: Update index.html
+      run: |
+        python update_index_html.py
+      working-directory: docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
