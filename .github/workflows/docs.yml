@@ -26,7 +26,6 @@ jobs:
         run: |
           cd docs
           make html
-          
       - name: Update index.html
       run: |
         python update_index_html.py
