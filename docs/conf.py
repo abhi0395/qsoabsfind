@@ -3,6 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 import qsoabsfind
 from datetime import datetime
+import subprocess
 
 project = 'qsoabsfind'
 author = 'Abhijeet Anand'
