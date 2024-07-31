@@ -22,14 +22,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
+
       - name: Build Sphinx documentation
         run: |
           cd docs
           make html
-      - name: Update index.html
+
+      - name: Update ./docs/_build/html/index.html
       run: |
         python update_index_html.py
-      working-directory: docs
+      working-directory: ./docs/_build/html/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
