@@ -4,9 +4,12 @@ This script contains a function to fit a given absorption profile with a double 
 
 import numpy as np
 from scipy.optimize import curve_fit
-from .config import lines
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
+from .config import load_constants
+
+constants = load_constants()
+lines = constants.lines
 
 # Example usage within double_curve_fit
 def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, bounds, init_cond, iter_n):

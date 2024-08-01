@@ -12,25 +12,31 @@ Usage:
 3. Import constants from this module in other parts of the application to use the loaded constants.
 """
 
-import importlib.util
 import os
+import importlib.util
+import qsoabsfind.constants as default_constants
 
-from .constants import *
-
-def load_constants(constants_file):
-    """Dynamically loads constants from a user-provided file.
-
-    Parameters:
-    constants_file (str): Path to the file containing user-defined constants.
+def load_constants():
     """
-    spec = importlib.util.spec_from_file_location("user_constants", constants_file)
-    user_constants = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(user_constants)
+    Load constants from the user-provided file if specified, otherwise use the default constants (qsoabsfind.constants).
+    If user provides a constant file, this function will read QSO_CONSTANTS_FILE environment
+    variable, initially set when user provides a constant file.
 
-    # Update the globals dictionary with the user-defined constants
-    globals().update(user_constants.__dict__)
+    Returns:
+        module: The module containing the constants.
+    """
+    constants_file = os.environ.get('QSO_CONSTANTS_FILE')
 
-# Check if the environment variable for the constants file is set
-constants_file = os.getenv('QSO_CONSTANTS_FILE')
-if constants_file and os.path.isfile(constants_file):
-    load_constants(constants_file)
+    # Check if the environment variable for the constants file is set
+    if constants_file and os.path.isfile(constants_file):
+        try:
+            spec = importlib.util.spec_from_file_location("user_constants", constants_file)
+            user_constants = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(user_constants)
+            return user_constants
+        except Exception as e:
+            print(f"Error loading user constants: {e}. Falling back to default constants.")
+            return default_constants
+    else:
+        print("Using default constants.")
+        return default_constants

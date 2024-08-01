@@ -5,7 +5,7 @@ This script contains some utility functions.
 import time
 #import logging
 import numpy as np
-from .config import lines, amplitude_dict, speed_of_light
+from .config import load_constants
 import matplotlib.pyplot as plt
 import os
 
@@ -14,6 +14,9 @@ import os
 
 # Set the logging level for Matplotlib to WARNING to suppress DEBUG messages
 #logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
+constants = load_constants()
+lines, amplitude_dict, speed_of_light = constants.lines, constants.amplitude_dict, constants.speed_of_light
 
 def elapsed(start, msg):
     """

@@ -23,10 +23,12 @@ The input `fits file` must have the following HDU extensions:
 - **FLUX**: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).
 - **WAVELENGTH**: Observed wavelength (in Angstroms).
 - **ERROR**: Error on residuals.
-- **TGTDETAILS**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
+- **METADATA**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
 Constant File (Optional)
 ------------------------
+
+Before using your own constant file, please set an environment variable `QSO_CONSTANTS_FILE` in your `bashrc` or `zshrc` file and point it to the `qsoabsfind.constants` file. As the code loads the constants from new file dynamically, it is important to define this environment variable.
 
 The user-defined **constant-file** must follow the same structure as the `qsoabsfind.constants` file, otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
 
@@ -57,6 +59,6 @@ The **output** `fits file` will have the `ABSORBER` HDU, containing arrays such 
 - **${metal}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${metal}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
 
-Thanks,  
+Thanks,
 Abhijeet Anand
 Lawrence Berkeley National Lab

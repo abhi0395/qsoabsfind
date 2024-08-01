@@ -13,9 +13,12 @@ from .absorberutils import (
     contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window
 )
 from .ew import measure_absorber_properties_double_gaussian
-from .config import lines, speed_of_light, oscillator_parameters
+from .config import load_constants
 from .spec import QSOSpecRead
 from numba import jit
+
+constants = load_constants()
+lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):

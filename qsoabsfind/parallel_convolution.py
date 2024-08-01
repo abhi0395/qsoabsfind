@@ -11,9 +11,7 @@ from .io import save_results_to_fits
 import re
 import os
 import pkg_resources
-
-# Ensure config is imported first to set up the environment
-import qsoabsfind.config as config
+from .config import load_constants
 
 def get_package_versions():
     """
@@ -158,7 +156,14 @@ def main():
 
     # Set the environment variable for the constants file
     if args.constant_file:
-        os.environ['QSO_CONSTANTS_FILE'] = args.constant_file
+        if not os.path.isabs(args.constant_file):
+            args.constant_file = os.path.abspath(os.path.join(os.getcwd(), args.constant_file))
+            os.environ['QSO_CONSTANTS_FILE'] = args.constant_file
+            print(f"INFO: Using user-provided constants from: {args.constant_file}")
+
+    print(f"INFO: QSO_CONSTANTS_FILE: {os.environ['QSO_CONSTANTS_FILE']}")
+    # set the new constants
+    constants = load_constants()
 
     # Prepare headers
     headers = {}
@@ -169,15 +174,15 @@ def main():
     # Add search parameters and package versions to headers
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
-        'KERWIDTH': {"value": str(config.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels'},
-        'COEFFSIG': {"value": config.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold'},
-        'MULTRE': {"value": config.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals'},
-        'D_PIX': {"value": config.search_parameters[args.absorber]["d_pix"], "comment": 'toloerance for line separation (in Ang)'},
-        'PM_PIXEL': {"value": config.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation'},
-        'SN_LINE1': {"value": config.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line'},
-        'SN_LINE2': {"value": config.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line'},
-        'EWCOVAR': {"value": config.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation'},
-        'LOGWAVE': {"value": config.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling'}
+        'KERWIDTH': {"value": str(constants.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels'},
+        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold'},
+        'MULTRE': {"value": constants.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals'},
+        'D_PIX': {"value": constants.search_parameters[args.absorber]["d_pix"], "comment": 'toloerance for line separation (in Ang)'},
+        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation'},
+        'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line'},
+        'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line'},
+        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation'},
+        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling'}
     })
 
     package_versions = get_package_versions()
@@ -195,15 +200,15 @@ def main():
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        ker_width_pixels=config.search_parameters[args.absorber]["ker_width_pixels"],
-        coeff_sigma=config.search_parameters[args.absorber]["coeff_sigma"],
-        mult_resi=config.search_parameters[args.absorber]["mult_resi"],
-        d_pix=config.search_parameters[args.absorber]["d_pix"],
-        pm_pixel=config.search_parameters[args.absorber]["pm_pixel"],
-        sn_line1=config.search_parameters[args.absorber]["sn_line1"],
-        sn_line2=config.search_parameters[args.absorber]["sn_line2"],
-        use_covariance=config.search_parameters[args.absorber]["use_covariance"],
-        logwave=config.search_parameters[args.absorber]["logwave"], verbose=config.search_parameters[args.absorber]["verbose"], n_jobs=args.n_tasks * args.ncpus
+        ker_width_pixels=constants.search_parameters[args.absorber]["ker_width_pixels"],
+        coeff_sigma=constants.search_parameters[args.absorber]["coeff_sigma"],
+        mult_resi=constants.search_parameters[args.absorber]["mult_resi"],
+        d_pix=constants.search_parameters[args.absorber]["d_pix"],
+        pm_pixel=constants.search_parameters[args.absorber]["pm_pixel"],
+        sn_line1=constants.search_parameters[args.absorber]["sn_line1"],
+        sn_line2=constants.search_parameters[args.absorber]["sn_line2"],
+        use_covariance=constants.search_parameters[args.absorber]["use_covariance"],
+        logwave=constants.search_parameters[args.absorber]["logwave"], verbose=constants.search_parameters[args.absorber]["verbose"], n_jobs=args.n_tasks * args.ncpus
     )
 
     # Save the results to a FITS file

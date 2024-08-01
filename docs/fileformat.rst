@@ -14,6 +14,8 @@ The input `fits file` must have the following HDU extensions:
 Constant File (Optional)
 ------------------------
 
+Before using your own constant file, please set an environment variable `QSO_CONSTANTS_FILE` in your bashrc or zshrc file and point it to the qsoabsfind.constants file. As the code loads the constants from new file dynamically, it is important to define this environment variable.
+
 The user-defined **constant-file** must follow the same structure as the `qsoabsfind.constants` file, otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
 
 Then run `qsoabsfind` with the required FITS file. If using a custom constant file, include it in the command:

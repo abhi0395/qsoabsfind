@@ -3,9 +3,12 @@ This script contains a function to find metal absorbers in QSO spectra.
 """
 
 import numpy as np
-from .config import speed_of_light, lines
+from .config import load_constants
 from .utils import elapsed
 from numba import jit
+
+constants = load_constants()
+lines, speed_of_light = constants.lines, constants.speed_of_light
 
 @jit(nopython=True)
 def estimate_local_sigma_conv_array(conv_array, pm_pixel):

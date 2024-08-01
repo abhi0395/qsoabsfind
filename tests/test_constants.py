@@ -1,5 +1,8 @@
 import unittest
-from qsoabsfind.config import lines, search_parameters, speed_of_light
+from qsoabsfind.config import load_constants
+constants = load_constants()
+
+lines, search_parameters, speed_of_light = constants.lines, constants.search_parameters, constants.speed_of_light
 
 class TestConstants(unittest.TestCase):
     def test_line_data(self):
