@@ -6,7 +6,7 @@ import numpy as np
 import argparse
 import time
 from multiprocessing import Pool
-from .absfinder import convolution_method_absorber_finder_in_QSO_spectra
+from .absfinder import read_single_spectrum_and_find_absorber
 from .io import save_results_to_fits
 import re
 import os
@@ -28,14 +28,21 @@ def get_package_versions():
     return versions
 
 
-def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
-                pm_pixel, sn_line1, sn_line2, use_covariance, logwave):
+def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
     """
-    Wrapper function to unpack parameters and call the main convolution
-    method.
+    Wrapper function to unpack parameters and call the main convolution method.
+
+    Args:
+        fits_file (str): Path to the FITS file containing Normalized QSO spectra.
+        spec_indices (list or numpy.array): Indices of quasars in the data matrix.
+        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        kwargs (dictionary): search parameters as described in qsoabsfind.constants()
+
+    Returns:
+        tuples containing detected absorber details
+
     """
-    return convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
-                    pm_pixel, sn_line1, sn_line2, use_covariance, logwave)
+    return read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs)
 
 def parse_qso_sequence(qso_sequence):
     """
@@ -65,7 +72,7 @@ def parse_qso_sequence(qso_sequence):
     # If none of the conditions matched, raise an error
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
-def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, n_jobs=1):
+def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=False, n_jobs=1):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
     multiprocessing.
@@ -83,13 +90,16 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
         sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
         use_covariance (bool): If want to use full covariance of scipy curve_fit for EW error calculation (default is False).
         logwave (bool): If wavelength on logscale (default True for SDSS).
+        verbose (bool): if True will print lots of output for debugging
         n_jobs (int): Number of parallel jobs to run.
 
     Returns:
         dict: A dictionary containing combined results from all parallel runs.
     """
-    params_list = [(fits_file, spec_index, absorber, ker_width_pixels, coeff_sigma, mult_resi, d_pix,
-                    pm_pixel, sn_line1, sn_line2, use_covariance, logwave) for spec_index in spec_indices]
+
+    kwargs = {'ker_width_pixels': ker_width_pixels, 'coeff_sigma': coeff_sigma, 'mult_resi': mult_resi, 'd_pix': d_pix, 'pm_pixel': pm_pixel, 'sn_line1': sn_line1, 'sn_line2': sn_line2, 'use_covariance': use_covariance, 'logwave': logwave, 'verbose': verbose}
+
+    params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
     # Run the jobs in parallel
     with Pool(processes=n_jobs) as pool:
@@ -194,7 +204,7 @@ def main():
         sn_line1=config.search_parameters[args.absorber]["sn_line1"],
         sn_line2=config.search_parameters[args.absorber]["sn_line2"],
         use_covariance=config.search_parameters[args.absorber]["use_covariance"],
-        logwave=config.search_parameters[args.absorber]["logwave"], n_jobs=args.n_tasks * args.ncpus
+        logwave=config.search_parameters[args.absorber]["logwave"], verbose=config.search_parameters[args.absorber]["verbose"], n_jobs=args.n_tasks * args.ncpus
     )
 
     # Save the results to a FITS file

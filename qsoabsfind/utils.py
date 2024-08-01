@@ -1,3 +1,7 @@
+"""
+This script contains some utility functions.
+"""
+
 import time
 #import logging
 import numpy as np
@@ -221,37 +225,64 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     return corr_del_v1_sq, corr_del_v2_sq
 
-def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
+def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None, zoom=False):
     """
     Saves a plot of spectra with absorber in the current working directory.
 
     Args:
-        lam (array-like): observed wavelength.
-        residual (array-like): residual.
-        absorber (str): e.g. MgII, CIV
-        zabs(list): list of absorbers
-        xlabel (str): The label for the x-axis. Default is 'X-axis'.
-        ylabel (str): The label for the y-axis. Default is 'Y-axis'.
-        title (str): The title of the plot. Default is 'Plot Title'.
-        plot_filename (str): if provided, will save the plot
+        lam (array-like): Observed wavelength.
+        residual (array-like): Residual flux.
+        absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
+        zabs (list): List of absorber redshifts.
+        xlabel (str): The label for the x-axis. Default is 'obs wave (ang)'.
+        ylabel (str): The label for the y-axis. Default is 'residual'.
+        title (str): The title of the plot. Default is 'QSO'.
+        plot_filename (str): If provided, will save the plot to the given filename.
+        zoom (bool): If True, adds an inset plot to show a zoomed-in version of the absorber lines.
     """
-    # Create the plot
-    plt.figure(figsize=(12,4))
+    # Create the main plot
+    plt.figure(figsize=(12, 4))
     plt.plot(lam, residual, ls='-', lw=1.5)
-    if absorber=='MgII':
+
+    # Determine the absorber line labels
+    if absorber == 'MgII':
         l1, l2 = 'MgII_2796', 'MgII_2803'
-    if absorber=='CIV':
+    elif absorber == 'CIV':
         l1, l2 = 'CIV_1548', 'CIV_1550'
+    else:
+        raise ValueError(f"Unsupported absorber type: {absorber}")
+
+    # Plot vertical lines for the absorber lines
     for z in zabs:
-        x1, x2 = lines[l1]*(1+z), lines[l2]*(1+z)
-        plt.axvline(x = x1, color='r', ls='--')
-        plt.axvline(x = x2, color='r', ls='--')
+        x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
+        plt.axvline(x=x1, color='r', ls='--', label=f'{l1} z={z:.3f}')
+        plt.axvline(x=x2, color='r', ls='--', label=f'{l2} z={z:.3f}')
+
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.grid(True)
     plt.ylim(-1, 2)
 
+    # Add inset zoomed plot if requested
+    if zoom:
+        sep = 25
+        ax_inset = plt.gca().inset_axes([0.6, 0.15, 0.35, 0.4])  # position: [x0, y0, width, height]
+        for z in zabs:
+            x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
+            mask = (lam > x1 - sep) & (lam < x2 + sep)  # zoom range around the lines
+            ax_inset.plot(lam[mask], residual[mask], ls='-', lw=1.5)
+            ax_inset.axvline(x=x1, color='r', ls='--')
+            ax_inset.axvline(x=x2, color='r', ls='--')
+        ax_inset.set_xlim([x1 - sep, x2 + sep])
+        #Determine appropriate y-limits for inset based on data
+        y_min, y_max = residual[mask].min(), residual[mask].max()
+        y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
+        ax_inset.set_ylim(y_min - y_margin, y_max + y_margin)
+        ax_inset.set_title(f'Zoomed-In {absorber} Lines')
+        ax_inset.grid(True)
+
+    # Save or display the plot
     if plot_filename is not None:
         # Get the current working directory
         current_dir = os.getcwd()

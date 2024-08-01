@@ -22,7 +22,7 @@ class QSOSpecRead:
         self.flux = None
         self.error = None
         self.wavelength = None
-        self.tgtdetails = None
+        self.metadata = None
         self.index = index
         self.read_fits()
 
@@ -32,7 +32,7 @@ class QSOSpecRead:
         operation.
         """
         start_time = time.time()
-        self.flux, self.error, self.wavelength, self.tgtdetails = read_fits_file(self.fits_file, self.index)
+        self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
         elapsed(start_time, "\nTime taken to read FITS file")
 
     def get_tgtdetails(self):
@@ -42,5 +42,5 @@ class QSOSpecRead:
         Returns:
             dict: The tgtdetails data with keywords.
         """
-        details_dict = {key: self.tgtdetails[key] for key in self.tgtdetails.dtype.names}
+        details_dict = {key: self.metadata[key] for key in self.metadata.dtype.names}
         return details_dict

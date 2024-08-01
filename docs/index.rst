@@ -26,7 +26,7 @@ Features
 GitHub repository
 -----------------
 
-The source code is available at Please see the `qsoabsfind repo <https://github.com/abhi0395/qsoabsfind>`_.
+The source code is available on GitHub. Please see the `qsoabsfind repo <https://github.com/abhi0395/qsoabsfind>`_.
 
 
 Citation

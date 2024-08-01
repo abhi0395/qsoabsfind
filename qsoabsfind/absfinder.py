@@ -10,7 +10,7 @@ from .absorberutils import (
     estimate_local_sigma_conv_array, group_and_weighted_mean_selection_function,
     median_selection_after_combining,
     remove_Mg_falsely_identified_as_Fe_absorber, z_abs_from_same_metal_absorber,
-    contiguous_pixel_remover, check_error_on_residual, absorber_search_window
+    contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import lines, speed_of_light, oscillator_parameters
@@ -62,7 +62,77 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
 
     return new_our_z, new_res_arr
 
-def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True):
+def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
+    """
+    This function retrieves a single QSO spectrum from a FITS file, processes the data to remove NaNs,
+    and prepares the spectrum for absorber search within specified wavelength regions
+    and runs the convolution based adaptive S/N method to detect absorbers in the spectrum.
+
+    Args:
+        fits_file (str): Path to the FITS file containing normalized QSO spectra.
+                         The file must include extensions for FLUX, ERROR, WAVELENGTH
+                         and METADATA which must contain keyword Z_QSO.
+        spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
+        absorber (str): Name of the absorber to search for (e.g., 'MgII', 'CIV').
+        kwargs (dictionary): search parameters used in convolution_method_absorber_finder_in_QSO_spectra()
+
+    Returns:
+        tuple: Contains lists of various parameters related to detected absorbers.
+            - index (list): QSO spec index searched
+            - zabs (list of floats): redshifts of absorbers detected
+            - params (list of arrays): gaussian fit parameters for each absorber
+            - errror params (list of arrays): errors on gaussian fit parameters for each absorber
+            - EW1 (list of floats): Equivalent width of line 1 for each absorber
+            - EW2 (list of floats): Equivalent width of line 2 for each absorber
+            - EW total (list of floats): Total Equivalent width of line 1 and line 2 for each absorber
+            - errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber
+            - errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber
+            - errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber
+
+    Raises:
+        AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.
+
+    Notes:
+        - This function assumes that the input spectra are already normalized (i.e., flux divided by continuum).
+        - The wavelength search region is determined dynamically based on the observed wavelength range.
+    """
+
+    # Read the specified QSO spectrum from the FITS file
+    spectra = QSOSpecRead(fits_file, spec_index)
+    z_qso = spectra.metadata['Z_QSO']
+    lam_obs = spectra.wavelength
+
+    # Define the wavelength range for searching the absorber
+    min_wave, max_wave = lam_obs.min() + 500, lam_obs.max() - 500
+
+    # Retrieve flux and error data, ensuring consistent dtype for Numba compatibility
+    residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
+    lam_obs = lam_obs.astype('float64')
+
+    # Remove NaN values from the arrays
+    non_nan_indices = ~np.isnan(residual)
+    lam_obs, residual, error = lam_obs[non_nan_indices], residual[non_nan_indices], error[non_nan_indices]
+
+    # Identify the wavelength region for searching the specified absorber
+    lam_search, unmsk_residual, unmsk_error = absorber_search_window(
+        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, verbose=kwargs['verbose'])
+
+    # Verify that the arrays are of equal size
+    assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
+
+    # Print progress for every 5000th spectrum processed
+    if spec_index % 5000 == 0:
+        print(f'Detection finished up to spec index = {spec_index}', flush=True)
+
+
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
+
+    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all)
+
+
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
+lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
+mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=False):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -71,21 +141,37 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
     the redshifts, EWs, and fitting parameters.
 
     Args:
-        fits_file (str): Path to the FITS file containing Normalized QSO spectra (i.e. flux/continuum), must contain FLUX, ERROR (i.e. error/continuum), WAVELENGTH, and TGTDETAILS extensions. In TGTDETAILS, must contain keywords like RA_QSO, DEC_QSO, Z_QSO.
-        spec_index (int): Index of quasar in the spectra matrix.
+        spec_index (int): Index of quasar in the spectra 2D array.
         absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        lam_obs (numpy.array): observed wavelength array.
+        residual (numpy.array): residual (i.e. flux/continuum) array
+        error (numpy.array): error on residuals
+        lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).
+        unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)
+        unmsk_error (numpy.array): error on residuals array in search wavelength region
         ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
         coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
         mult_resi (float): Factor to shift the residual up or down. Default is 1.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
         pm_pixel (int): Pixel parameter for local noise estimation (default 200).
-        sn_line1 (float): Signal-to-noise ratio for thresholding for line1.
-        sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
+        sn_line1 (float): Signal-to-noise ratio for thresholding for line1 (default 3).
+        sn_line2 (float): Signal-to-noise ratio for thresholding for line2 (default 3).
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
-        logwave (bool): if wavelength on log scale
+        logwave (bool): if wavelength on log scale (default True for SDSS)
+        verbose (bool): if want to print a lot of outputs for debugging (default False)
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
+            - index (list): QSO spec index searched
+            - zabs (list): redshifts of absorbers detected
+            - params (list of arrays): gaussian fit parameters for each absorber
+            - errror params (list of arrays): errors on gaussian fit parameters for each absorber
+            - EW1 (list): Equivalent width of line 1 for each absorber
+            - EW2 (list): Equivalent width of line 2 for each absorber
+            - EW total (list): Total Equivalent width of line 1 and line 2 for each absorber
+            - errors EW1 (list): errors on Equivalent width of line 1 for each absorber
+            - errors EW2 (list): errors on Equivalent width of line 2 for each absorber
+            - errors EW total (list): errors on Total Equivalent width of line 1 and line 2 for each absorber
     """
 
     # Constants
@@ -98,11 +184,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
     else:
         raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
 
-    spectra = QSOSpecRead(fits_file, spec_index)
-    z_qso = spectra.tgtdetails['Z_QSO']
-    lam_obs = spectra.wavelength
-    min_wave, max_wave = lam_obs.min() + 500, lam_obs.max() - 500
-
     line_sep = line2 - line1
     resolution = 69  # km/s for SDSS or DESI
 
@@ -112,23 +193,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
 
     bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
              (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma])))
-
-    # Print progress
-    if spec_index % 5000 == 0:
-        print(f'Detection finished up to spec index = {spec_index}', flush=True)
-
-    # Retrieve quasar data
-    residual, error = spectra.flux, spectra.error
-    lam_obs, residual, error = lam_obs.astype('float64'), residual.astype('float64'), error.astype('float64') # to  make consistent with numba dtype
-    ind_nonan = ~np.isnan(residual)
-    residual, error = residual[ind_nonan], error[ind_nonan]
-    lam_obs = lam_obs[ind_nonan]
-
-    lam_search, unmsk_residual, unmsk_error = absorber_search_window(
-        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, verbose=False)
-
-    # Assert that the sizes of the arrays are equal
-    assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual and unmsk_error"
 
     # Kernel width computation
     width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pixels])
@@ -142,7 +206,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
             conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=logwave, index=spec_index)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
-
 
             conv_arr[np.isnan(conv_arr)] = 1e5
             our_z_ind = conv_arr < thr
@@ -190,7 +253,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
                     lower_del_lam = line_sep - d_pix
                     upper_del_lam = line_sep + d_pix
 
-                    _, _, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
+                    z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
                         index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix)
 
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
@@ -199,12 +262,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
                         c0 = gaussian_parameters[1]
                         c1 = gaussian_parameters[4]
                         #S/N estimation
-                        sn1, sn2 = check_error_on_residual(c0, c1, lam_rest, residual, error, logwave)
+                        sn1, sn2 = estimate_snr_for_lines(c0, c1, lam_rest, residual, error, logwave)
                         # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
 
                         if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0:
-                            pure_z_abs[m] = z_abs[m]
+                            pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
                             pure_ew_first_line_mean[m] = EW_first_temp_mean[0]
@@ -213,7 +276,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(fits_file, spec_index, abs
                             pure_ew_first_line_error[m] = EW_first_error_temp[0]
                             pure_ew_second_line_error[m] = EW_second_error_temp[0]
                             pure_ew_total_error[m] = EW_total_error_temp[0]
-                            redshift_err[m] = z_err[m]
+                            redshift_err[m] = z_new_error
                             sn1_all[m] = sn1
                             sn2_all[m] = sn2
 

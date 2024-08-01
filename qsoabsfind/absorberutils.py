@@ -32,9 +32,9 @@ def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     return sigma_cr
 
 @jit(nopython=True)
-def check_error_on_residual(l1, l2, lam_rest, residual, error, log):
+def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
     """
-    Check the error on residuals around specified wavelengths.
+    Estimate S/N of the doublet lines.
 
     Args:
         l1 (float): First wavelength to check around.
@@ -271,10 +271,10 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
 
                 if n_new > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_fe1, sn_fe2 = check_error_on_residual(fe1, fe2, lam_rest, residual, error)
+                    sn_fe1, sn_fe2 = estimate_snr_for_lines(fe1, fe2, lam_rest, residual, error)
                     for k in range(n_new):
                         lam_rest = lam_obs / (1 + z[ind_fin[k]])
-                        sn_mg1, sn_mg2 = check_error_on_residual(mg1, mg2, lam_rest, residual, error)
+                        sn_mg1, sn_mg2 = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error)
                         if (sn_fe1 > sn_mg1) or (sn_fe1 > sn_mg2) or (sn_fe2 > sn_mg1) or (sn_fe2 > sn_mg2):
                             match_abs[ind_fin[k]] = 1  # False positive MgII absorber due to FeII lines
                         else:
@@ -327,11 +327,11 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
                 if ind_del.size > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_mg0, _ = check_error_on_residual(mg1, mg2, lam_rest, residual, error)
+                    sn_mg0, _ = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error)
 
                     for k in ind_del:
                         lam_rest1 = lam_obs / (1 + z[k])
-                        sn_mg1, _ = check_error_on_residual(mg1, mg2, lam_rest1, residual, error)
+                        sn_mg1, _ = estimate_snr_for_lines(mg1, mg2, lam_rest1, residual, error)
 
                         if sn_mg0 > sn_mg1:
                             match_abs[k] = 1  # Matched within limits, not true absorbers
@@ -406,8 +406,8 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
     z1 = (fitted_obs_l1 / line1) - 1
     z2 = (fitted_obs_l2 / line2) - 1
 
-    err1 = (std_fitted_obs_l1 / line1) * z1
-    err2 = (std_fitted_obs_l2 / line2) * z2
+    err1 = (std_fitted_obs_l1 / line1)
+    err2 = (std_fitted_obs_l2 / line2) 
 
     z_corr = 0.5 * (z1 + z2)  # New redshifts computed using line centers of the first and second Gaussian
     z_err = np.sqrt(0.25 * (err1**2 + err2**2))

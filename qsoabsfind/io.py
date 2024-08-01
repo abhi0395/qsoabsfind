@@ -7,7 +7,7 @@ import numpy as np
 
 def read_fits_file(fits_file, index=None):
     """
-    Reads the FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions from the
+    Reads the FLUX, ERROR, WAVELENGTH, and METADATA extensions from the
     FITS file.
 
     Args:
@@ -15,25 +15,25 @@ def read_fits_file(fits_file, index=None):
         index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.
 
     Returns:
-        tuple: A tuple containing the flux, error, wavelength, and tgtdetails data.
+        tuple: A tuple containing the flux, error, wavelength, and metadata data.
     """
     with fits.open(fits_file, memmap=True) as hdul:
         if index is None:
             flux = hdul['FLUX'].data
             error = hdul['ERROR'].data
             wavelength = hdul['WAVELENGTH'].data
-            tgtdetails = hdul['TGTDETAILS'].data
+            metadata = hdul['METADATA'].data
         else:
             if isinstance(index, int):
                 flux = hdul['FLUX'].data[index].flatten()
                 error = hdul['ERROR'].data[index].flatten()
-                tgtdetails = {name: hdul['TGTDETAILS'].data[index][name] for name in hdul['TGTDETAILS'].data.names}
+                metadata = {name: hdul['METADATA'].data[index][name] for name in hdul['METADATA'].data.names}
             else:
                 flux = hdul['FLUX'].data[index]
                 error = hdul['ERROR'].data[index]
-                tgtdetails = hdul['TGTDETAILS'].data[index]
+                metadata = hdul['METADATA'].data[index]
             wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
-    return flux, error, wavelength, tgtdetails
+    return flux, error, wavelength, metadata
 
 def save_results_to_fits(results, output_file, headers, absorber):
     """
