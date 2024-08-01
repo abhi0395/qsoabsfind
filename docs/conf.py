@@ -14,6 +14,13 @@ html_context = {
     'current_year': datetime.now().year,
 }
 
+html_context = {
+  "display_github": True, # Add 'Edit on Github' link instead of 'View page source'
+  "last_updated": True,
+  "commit": False,
+}
+
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -40,12 +47,12 @@ napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
 
-def run_custom_script(app, exception):
-    if exception is None:
-        # Path to your custom script
-        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'update_index.py'))
-        # Running the script
-        subprocess.run(['python', script_path], check=True)
-
-def setup(app):
-    app.connect('build-finished', run_custom_script)
+# def run_custom_script(app, exception):
+#     if exception is None:
+#         # Path to your custom script
+#         script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'update_index.py'))
+#         # Running the script
+#         subprocess.run(['python', script_path], check=True)
+#
+# def setup(app):
+#     app.connect('build-finished', run_custom_script)
