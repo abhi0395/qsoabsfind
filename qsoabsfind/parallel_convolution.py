@@ -11,7 +11,6 @@ from .io import save_results_to_fits
 import re
 import os
 import pkg_resources
-import qsoabsfind
 
 # Ensure config is imported first to set up the environment
 import qsoabsfind.config as config

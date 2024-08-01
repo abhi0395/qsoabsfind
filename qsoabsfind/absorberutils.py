@@ -85,40 +85,50 @@ def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
 
     return mean_sn1, mean_sn2
 
-@jit(nopython=False)
+@jit(nopython=True)
 def group_contiguous_pixel(data, resi, avg):
     """
-    Arrange data into groups where successive elements differ by less than a
-    given average difference.
+    Arrange data into groups where successive elements differ by less than the average difference.
 
     Args:
-        data (numpy.ndarray): Array of absorber values for each spectrum.
-        resi (numpy.ndarray): Corresponding residual values.
-        avg (float): Average difference threshold for grouping contiguous pixels.
+        data (np.ndarray): List of absorbers for each spectrum.
+        resi (np.ndarray): Corresponding residual.
+        avg (float): Maximum allowed difference to group data.
 
     Returns:
-        tuple: A tuple containing:
-            - list of grouped data
-            - list of grouped residuals
+        tuple: Final list with contiguous pixels grouped, and corresponding residuals if provided.
     """
+    # Check if resi is provided as an array
+    if resi is not None:
+        has_residuals = True
+    else:
+        has_residuals = False
+
+    # Sort the input data
     ind_srt = np.argsort(data)
     sorted_data = data[ind_srt]
-    sorted_resi = resi[ind_srt] if isinstance(resi, np.ndarray) else None
 
-    groups = [[sorted_data[0]]]
-    resi_groups = [[sorted_resi[0]]] if sorted_resi is not None else None
+    if has_residuals:
+        sorted_resi = resi[ind_srt]
+
+    groups = []
+    resi_groups = []
+
+    groups.append([sorted_data[0]])
+    if has_residuals:
+        resi_groups.append([sorted_resi[0]])
 
     for i in range(1, len(sorted_data)):
         if sorted_data[i] - groups[-1][-1] < avg:
             groups[-1].append(sorted_data[i])
-            if resi_groups is not None:
+            if has_residuals:
                 resi_groups[-1].append(sorted_resi[i])
         else:
             groups.append([sorted_data[i]])
-            if resi_groups is not None:
+            if has_residuals:
                 resi_groups.append([sorted_resi[i]])
 
-    if resi_groups is not None:
+    if has_residuals:
         return groups, resi_groups
     else:
         return groups
@@ -407,7 +417,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
     z2 = (fitted_obs_l2 / line2) - 1
 
     err1 = (std_fitted_obs_l1 / line1)
-    err2 = (std_fitted_obs_l2 / line2) 
+    err2 = (std_fitted_obs_l2 / line2)
 
     z_corr = 0.5 * (z1 + z2)  # New redshifts computed using line centers of the first and second Gaussian
     z_err = np.sqrt(0.25 * (err1**2 + err2**2))
