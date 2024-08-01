@@ -1,3 +1,7 @@
+"""
+This script contains a function to run convolution based absorber finder on a single spectrum.
+"""
+
 import numpy as np
 from functools import reduce
 from operator import add

@@ -13,7 +13,11 @@ copyright = f'2021-{datetime.now().year}, Abhijeet Anand'
 html_context = {
     'current_year': datetime.now().year,
     "display_github": True, # Add 'Edit on Github' link instead of 'View page source'
-    "last_updated": True,
+    "github_user": "abhi0395",  # Username
+    "github_repo": "qsoabsfind",  # Repo name
+    "github_version": "main",  # Version
+    "conf_py_path": "/docs/index.rst",  # Path in the checkout to the docs root
+    "last_updated": datetime.now(),
     "commit": False,
 }
 
@@ -42,13 +46,3 @@ napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
-
-# def run_custom_script(app, exception):
-#     if exception is None:
-#         # Path to your custom script
-#         script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'update_index.py'))
-#         # Running the script
-#         subprocess.run(['python', script_path], check=True)
-#
-# def setup(app):
-#     app.connect('build-finished', run_custom_script)

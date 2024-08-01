@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+"""
+This script contains a function that runs the absorber finder in parallel for many spectra.
+"""
 
 import numpy as np
 import argparse

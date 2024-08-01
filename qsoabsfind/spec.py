@@ -1,3 +1,7 @@
+"""
+This script contains a classes and functions to read a given spectra fits files.
+"""
+
 from .io import read_fits_file
 from .utils import elapsed
 import time

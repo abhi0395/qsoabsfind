@@ -1,3 +1,7 @@
+"""
+This script contains a function to fit a given absorption profile with a double gaussian and measure equivalent widths.
+"""
+
 import numpy as np
 from scipy.optimize import curve_fit
 from .config import lines
