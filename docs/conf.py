@@ -12,14 +12,10 @@ copyright = f'2021-{datetime.now().year}, Abhijeet Anand'
 
 html_context = {
     'current_year': datetime.now().year,
+    "display_github": True, # Add 'Edit on Github' link instead of 'View page source'
+    "last_updated": True,
+    "commit": False,
 }
-
-html_context = {
-  "display_github": True, # Add 'Edit on Github' link instead of 'View page source'
-  "last_updated": True,
-  "commit": False,
-}
-
 
 extensions = [
     'sphinx.ext.autodoc',
