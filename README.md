@@ -78,25 +78,7 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 Citation
 --------
 
-Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) if you find this code useful in your research. The BibTeX entry for the paper is:
-
-    @ARTICLE{2021MNRAS.504...65A,
-       author = {{ Anand }, Abhijeet and { Nelson }, Dylan and { Kauffmann }, Guinevere },
-        title = "{Characterizing the abundance, properties, and kinematics of the cool circumgalactic medium of galaxies in absorption with SDSS DR16}",
-      journal = {\mnras},
-     keywords = {galaxies: evolution, galaxies: formation, large-scale structure of Universe, Astrophysics - Astrophysics of Galaxies},
-         year = 2021,
-        month = jun,
-       volume = {504},
-       number = {1},
-        pages = {65-88},
-          doi = {10.1093/mnras/stab871},
-    archivePrefix = {arXiv},
-       eprint = {2103.15842},
-    primaryClass = {astro-ph.GA},
-       adsurl = {https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A},
-      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-    }
+Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) if you find this code useful in your research. The BibTeX entry for the paper can be found [here](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation).
 
 
 License
