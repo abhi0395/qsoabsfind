@@ -85,7 +85,6 @@ def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
 
     return mean_sn1, mean_sn2
 
-@jit(nopython=True)
 def group_contiguous_pixel(data, resi, avg):
     """
     Arrange data into groups where successive elements differ by less than the average difference.
