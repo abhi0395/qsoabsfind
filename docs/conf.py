@@ -16,7 +16,7 @@ html_context = {
     "github_user": "abhi0395",  # Username
     "github_repo": "qsoabsfind",  # Repo name
     "github_version": "main",  # Version
-    "conf_py_path": "/docs/index.rst",  # Path in the checkout to the docs root
+    "conf_py_path": "/docs/",  # Path in the checkout to the docs root
     "last_updated": datetime.now(),
     "commit": False,
 }
