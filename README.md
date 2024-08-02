@@ -75,18 +75,18 @@ Useful notes:
 
 Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
 
-    - **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
-
-    - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
-
-    - **Merge results at the end:** After processing, you can merge your results.
+- **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
+           
+- **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
+           
+- **Merge results at the end:** After processing, you can merge your results.
 
 In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
 
 Contribution
 ------------
 
-Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to abhijeetanand2011@gmail.com or, preferably, open a GitHub issue.
 
 Citation
 --------
@@ -105,5 +105,3 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 Thanks,  
 Abhijeet Anand  
 Lawrence Berkeley National Lab  
-
-If you have any questions/suggestions, please feel free to write to abhijeetanand2011@gmail.com or, preferably, open a GitHub issue..
