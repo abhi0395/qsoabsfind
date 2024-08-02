@@ -235,7 +235,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         return combined_final_our_z
 
 #@jit(nopython=False)
-def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix):
+def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix, logwave):
     """
     Remove any MgII absorber that arises falsley due to Fe 2586, 2600 doublet,
     i.e., false positive due to Fe lines.
@@ -246,6 +246,7 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
         residual (numpy.ndarray): Residual values.
         error (numpy.ndarray): Error values corresponding to the residuals.
         d_pix (float): Delta pixel value.
+        logwave (bool): if wavelength on log scale (default True for SDSS)
 
     Returns:
         numpy.ndarray: Updated list of absorbers with false positives removed.
@@ -283,10 +284,10 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
 
                 if n_new > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_fe1, sn_fe2 = estimate_snr_for_lines(fe1, fe2, lam_rest, residual, error)
+                    sn_fe1, sn_fe2 = estimate_snr_for_lines(fe1, fe2, lam_rest, residual, error, logwave)
                     for k in range(n_new):
                         lam_rest = lam_obs / (1 + z[ind_fin[k]])
-                        sn_mg1, sn_mg2 = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error)
+                        sn_mg1, sn_mg2 = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error, logwave)
                         if (sn_fe1 > sn_mg1) or (sn_fe1 > sn_mg2) or (sn_fe2 > sn_mg1) or (sn_fe2 > sn_mg2):
                             match_abs[ind_fin[k]] = 1  # False positive MgII absorber due to FeII lines
                         else:
@@ -301,7 +302,7 @@ def remove_Mg_falsely_identified_as_Fe_absorber(index, z_after_grouping, lam_obs
     return match_abs
 
 #@jit(nopython=False)
-def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII'):
+def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII', logwave=None):
     """
     Remove any absorber that arises due to the MgII2803 or CIV1550 line but has already
     been detected for the MgII2796 or CIV1548 line, exploiting the doublet property of MgII/CIV to
@@ -314,6 +315,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
         error (numpy.ndarray): Error values corresponding to the residuals.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
         use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
+        logwave (bool) – if wavelength bins are on log scale
 
     Returns:
         numpy.ndarray: Updated list of absorbers with false positives removed.
@@ -339,11 +341,11 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
                 if ind_del.size > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_mg0, _ = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error)
+                    sn_mg0, _ = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error, logwave)
 
                     for k in ind_del:
                         lam_rest1 = lam_obs / (1 + z[k])
-                        sn_mg1, _ = estimate_snr_for_lines(mg1, mg2, lam_rest1, residual, error)
+                        sn_mg1, _ = estimate_snr_for_lines(mg1, mg2, lam_rest1, residual, error, logwave)
 
                         if sn_mg0 > sn_mg1:
                             match_abs[k] = 1  # Matched within limits, not true absorbers
