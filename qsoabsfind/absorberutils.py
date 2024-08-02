@@ -315,7 +315,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
         error (numpy.ndarray): Error values corresponding to the residuals.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
         use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
-        logwave (bool) – if wavelength bins are on log scale
+        logwave (bool): if wavelength bins are on log scale
 
     Returns:
         numpy.ndarray: Updated list of absorbers with false positives removed.
