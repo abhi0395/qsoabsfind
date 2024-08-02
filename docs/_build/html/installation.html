@@ -50,6 +50,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#clone-the-repository">Clone the Repository</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-example">Running example:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#useful-notes">Useful notes:</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
@@ -72,7 +73,7 @@
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Installation</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com///blob/installation.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/abhi0395/qsoabsfind/blob/main/docs/installation.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -106,16 +107,28 @@ python<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w">
 </section>
 <section id="running-example">
 <h2>Running example:<a class="headerlink" href="#running-example" title="Link to this heading"></a></h2>
-<p>Before running, please read <a class="reference internal" href="fileformat.html"><span class="doc">File formats</span></a>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span>path_to_input_fits_file.fits<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--n-qso<span class="w"> </span><span class="m">1</span>-1000:10<span class="w"> </span><span class="se">\</span>
+<p>Before running, please read <a class="reference internal" href="fileformat.html"><span class="doc">File formats</span></a>. I have provided an example QSO spectra FITS file, <cite>data/qso_test.fits</cite>, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span>data/qso_test.fits<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--n-qso<span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--absorber<span class="w"> </span>MgII<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--output<span class="w"> </span>path_to_output_fits_file.fits<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--headers<span class="w"> </span><span class="nv">KEY1</span><span class="o">=</span>VALUE1<span class="w"> </span><span class="nv">KEY2</span><span class="o">=</span>VALUE2<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--output<span class="w"> </span>test_MgII.fits<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--headers<span class="w"> </span><span class="nv">SURVEY</span><span class="o">=</span>SDSS<span class="w"> </span><span class="nv">AUTHOR</span><span class="o">=</span>YOUR_NAME<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--n-tasks<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--ncpus<span class="w"> </span><span class="m">4</span>
 </pre></div>
 </div>
+</section>
+<section id="useful-notes">
+<h2>Useful notes:<a class="headerlink" href="#useful-notes" title="Link to this heading"></a></h2>
+<p>Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Divide your file into smaller chunks:</strong> Split the FITS file into several smaller files, each containing approximately <cite>N</cite> spectra. Then run the code on these smaller files.</p></li>
+<li><p><strong>Use a rule of thumb for file size:</strong> Ensure that the size of each individual file is no larger than <cite>total_memory/ncpu</cite> of your node or system. Based on this idea you can decide your <cite>N</cite>. I would suggest <cite>N = 1000</cite>.</p></li>
+<li><p><strong>Merge results at the end:</strong> After processing, you can merge your results.</p></li>
+</ul>
+</div></blockquote>
+<p>In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.</p>
 </section>
 </section>
 
@@ -131,7 +144,7 @@ python<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w">
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on True.
+      <span class="lastupdated">Last updated on 2024-08-01 23:30:26.821787.
       </span></p>
   </div>
 

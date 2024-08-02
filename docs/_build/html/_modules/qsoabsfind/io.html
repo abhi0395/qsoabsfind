@@ -73,14 +73,18 @@
            <div itemprop="articleBody">
              
   <h1>Source code for qsoabsfind.io</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">fits</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains a functions to read and write files.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">fits</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <div class="viewcode-block" id="read_fits_file">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.read_fits_file">[docs]</a>
 <span class="k">def</span> <span class="nf">read_fits_file</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Reads the FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions from the</span>
+<span class="sd">    Reads the FLUX, ERROR, WAVELENGTH, and METADATA extensions from the</span>
 <span class="sd">    FITS file.</span>
 
 <span class="sd">    Args:</span>
@@ -88,25 +92,25 @@
 <span class="sd">        index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        tuple: A tuple containing the flux, error, wavelength, and tgtdetails data.</span>
+<span class="sd">        tuple: A tuple containing the flux, error, wavelength, and metadata data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">memmap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
             <span class="n">wavelength</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;WAVELENGTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
-            <span class="n">tgtdetails</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;TGTDETAILS&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
                 <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
                 <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-                <span class="n">tgtdetails</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;TGTDETAILS&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;TGTDETAILS&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
+                <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
                 <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-                <span class="n">tgtdetails</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;TGTDETAILS&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="n">metadata</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
             <span class="n">wavelength</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;WAVELENGTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>  <span class="c1"># Assuming wavelength is common for all spectra</span>
-    <span class="k">return</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tgtdetails</span></div>
+    <span class="k">return</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">metadata</span></div>
 
 
 <div class="viewcode-block" id="save_results_to_fits">
@@ -167,7 +171,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -55,20 +55,33 @@ python -m unittest discover -s tests
 Instructions
 -------------
 
-Before you run, please read the `data/datamodel.rst` file. The instructions about the input and output file are provided there.
+Before running the program, please read the `data/datamodel.rst` file. The instructions for the input and output files are provided there. I have also provided an example QSO spectra FITS file, `data/qso_test.fits`, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 Running example:
 ----------------
 
 ```sh
-qsoabsfind --input-fits-file path_to_input_fits_file.fits \
-           --n-qso 1-1000:10 \
+qsoabsfind --input-fits-file data/qso_test.fits \
+           --n-qso 500 \
            --absorber MgII \
-           --output path_to_output_fits_file.fits \
-           --headers KEY1=VALUE1 KEY2=VALUE2 \
+           --output test_MgII.fits \
+           --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
            --n-tasks 16 \
            --ncpus 4
 ```
+
+Useful notes:
+-------------
+
+Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
+
+    - **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
+
+    - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
+
+    - **Merge results at the end:** After processing, you can merge your results.
+
+In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
 
 Contribution
 ------------
@@ -93,4 +106,4 @@ Thanks,
 Abhijeet Anand  
 Lawrence Berkeley National Lab  
 
-If you have any questions/suggestions, please feel free to write to abhijeetanand2011@gmail.com
+If you have any questions/suggestions, please feel free to write to abhijeetanand2011@gmail.com or, preferably, open a GitHub issue..

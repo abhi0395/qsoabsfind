@@ -27,14 +27,27 @@ First, clone the repository to your local machine:
 Running example:
 ----------------
 
-Before running, please read :doc:`File formats <fileformat>`.
+Before running, please read :doc:`File formats <fileformat>`. I have provided an example QSO spectra FITS file, `data/qso_test.fits`, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 .. code-block:: bash
 
-    qsoabsfind --input-fits-file path_to_input_fits_file.fits \
-               --n-qso 1-1000:10 \
+    qsoabsfind --input-fits-file data/qso_test.fits \
+               --n-qso 500 \
                --absorber MgII \
-               --output path_to_output_fits_file.fits \
-               --headers KEY1=VALUE1 KEY2=VALUE2 \
+               --output test_MgII.fits \
+               --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
                --n-tasks 16 \
                --ncpus 4
+
+Useful notes:
+-------------
+
+Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
+
+   - **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
+
+   - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
+
+   - **Merge results at the end:** After processing, you can merge your results.
+
+In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.

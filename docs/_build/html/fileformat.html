@@ -72,7 +72,7 @@
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">File formats</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com///blob/fileformat.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/abhi0395/qsoabsfind/blob/main/docs/fileformat.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -89,14 +89,23 @@
 <li><p><strong>FLUX</strong>: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).</p></li>
 <li><p><strong>WAVELENGTH</strong>: Observed wavelength (in Angstroms).</p></li>
 <li><p><strong>ERROR</strong>: Error on residuals.</p></li>
-<li><p><strong>TGTDETAILS</strong>: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).</p></li>
+<li><p><strong>METADATA</strong>: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).</p></li>
 </ul>
+<p>I have also provided an example QSO spectra FITS file, <cite>data/qso_test.fits</cite>, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
 </section>
 <section id="constant-file-optional">
 <h2>Constant File (Optional)<a class="headerlink" href="#constant-file-optional" title="Link to this heading"></a></h2>
-<p>The user-defined <strong>constant-file</strong> must follow the same structure as the <cite>qsoabsfind.constants</cite> file, otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the <cite>constant-file</cite> option.</p>
+<p>Before using your own constants file, please set an environment variable <cite>QSO_CONSTANTS_FILE</cite> in your <cite>bashrc</cite> or <cite>zshrc</cite> file, and point it to the <cite>qsoabsfind.constants</cite> file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.</p>
+<p>The user-defined <strong>constants file</strong> must follow the same structure as the <a class="reference external" href="https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/constants.py">qsoabsfind.constants</a> file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the <cite>constant-file</cite> option.</p>
 <p>Then run <cite>qsoabsfind</cite> with the required FITS file. If using a custom constant file, include it in the command:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">qsoabsfind</span> <span class="o">--</span><span class="nb">input</span> <span class="o">&lt;</span><span class="n">input_fits_file</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">--</span><span class="n">constant</span><span class="o">-</span><span class="n">file</span> <span class="o">&lt;</span><span class="n">constant_file</span><span class="o">&gt;</span><span class="p">]</span> <span class="o">--</span><span class="n">output</span> <span class="o">&lt;</span><span class="n">output_fits_file</span><span class="o">&gt;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">qsoabsfind</span> <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">fits</span><span class="o">-</span><span class="n">file</span> <span class="n">data</span><span class="o">/</span><span class="n">qso_test</span><span class="o">.</span><span class="n">fits</span> \
+           <span class="o">--</span><span class="n">n</span><span class="o">-</span><span class="n">qso</span> <span class="mi">500</span> \
+           <span class="o">--</span><span class="n">absorber</span> <span class="n">MgII</span> \
+           <span class="o">--</span><span class="n">output</span> <span class="n">test_MgII</span><span class="o">.</span><span class="n">fits</span> \
+           <span class="o">--</span><span class="n">headers</span> <span class="n">SURVEY</span><span class="o">=</span><span class="n">SDSS</span> <span class="n">AUTHOR</span><span class="o">=</span><span class="n">YOUR_NAME</span> \
+           <span class="o">--</span><span class="n">n</span><span class="o">-</span><span class="n">tasks</span> <span class="mi">16</span> \
+           <span class="o">--</span><span class="n">ncpus</span> <span class="mi">4</span>
+           <span class="o">--</span><span class="n">constant</span><span class="o">-</span><span class="n">file</span> <span class="n">path_to_your_file</span>
 </pre></div>
 </div>
 </section>
@@ -106,14 +115,14 @@
 <ul class="simple">
 <li><p><strong>INDEX_SPEC</strong>: Index of quasar (can be used to read the RA, DEC, and Z of QSOs).</p></li>
 <li><p><strong>Z_ABS</strong>: Redshift of absorber.</p></li>
-<li><p><strong>${METAL}_${line}_EW</strong>: Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.</p></li>
-<li><p><strong>${METAL}_${line}_EW_ERROR</strong>: Uncertainties in rest-frame EWs of absorber lines in Angstroms.</p></li>
+<li><p><strong>${METAL}_${LINE}_EW</strong>: Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.</p></li>
+<li><p><strong>${METAL}_${LINE}_EW_ERROR</strong>: Uncertainties in rest-frame EWs of absorber lines in Angstroms.</p></li>
 <li><p><strong>Z_ABS_ERR</strong>: Measured error in the redshift of the absorber.</p></li>
 <li><p><strong>GAUSS_FIT</strong>: Rest-frame fitting parameters of double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).</p></li>
 <li><p><strong>GAUSS_FIT_STD</strong>: Uncertainties in rest-frame fitting parameters of double Gaussian to the absorber doublet.</p></li>
-<li><p><strong>SN_${METAL}_${line}</strong>: Signal-to-noise ratio of the lines.</p></li>
-<li><p><strong>${metal}_EW_TOTAL</strong>: Total EW of the lines in Angstroms.</p></li>
-<li><p><strong>${metal}_EW_TOTAL_ERROR</strong>: Uncertainties in total EW of the lines in Angstroms.</p></li>
+<li><p><strong>SN_${METAL}_${LINE}</strong>: Signal-to-noise ratio of the lines.</p></li>
+<li><p><strong>${METAL}_EW_TOTAL</strong>: Total EW of the lines in Angstroms.</p></li>
+<li><p><strong>${METAL}_EW_TOTAL_ERROR</strong>: Uncertainties in total EW of the lines in Angstroms.</p></li>
 </ul>
 </section>
 </section>
@@ -130,7 +139,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on True.
+      <span class="lastupdated">Last updated on 2024-08-01 23:30:26.821787.
       </span></p>
   </div>
 

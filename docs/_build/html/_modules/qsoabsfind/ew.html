@@ -73,11 +73,18 @@
            <div itemprop="articleBody">
              
   <h1>Source code for qsoabsfind.ew</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains a function to fit a given absorption profile with a double gaussian and measure equivalent widths.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">lines</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">double_gaussian</span>
 <span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">redshift_estimate</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
+
+<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
+<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
 
 <span class="c1"># Example usage within double_curve_fit</span>
 <div class="viewcode-block" id="double_curve_fit">
@@ -350,7 +357,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

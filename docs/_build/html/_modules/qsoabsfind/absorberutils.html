@@ -78,9 +78,12 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">lines</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 <span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
+
+<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
+<span class="n">lines</span><span class="p">,</span> <span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
 
 <div class="viewcode-block" id="estimate_local_sigma_conv_array">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.estimate_local_sigma_conv_array">[docs]</a>
@@ -109,12 +112,12 @@
     <span class="k">return</span> <span class="n">sigma_cr</span></div>
 
 
-<div class="viewcode-block" id="check_error_on_residual">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.check_error_on_residual">[docs]</a>
+<div class="viewcode-block" id="estimate_snr_for_lines">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.estimate_snr_for_lines">[docs]</a>
 <span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">check_error_on_residual</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">log</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">estimate_snr_for_lines</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">log</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Check the error on residuals around specified wavelengths.</span>
+<span class="sd">    Estimate S/N of the doublet lines.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        l1 (float): First wavelength to check around.</span>
@@ -168,40 +171,49 @@
 
 <div class="viewcode-block" id="group_contiguous_pixel">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.group_contiguous_pixel">[docs]</a>
-<span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">group_contiguous_pixel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">resi</span><span class="p">,</span> <span class="n">avg</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Arrange data into groups where successive elements differ by less than a</span>
-<span class="sd">    given average difference.</span>
+<span class="sd">    Arrange data into groups where successive elements differ by less than the average difference.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        data (numpy.ndarray): Array of absorber values for each spectrum.</span>
-<span class="sd">        resi (numpy.ndarray): Corresponding residual values.</span>
-<span class="sd">        avg (float): Average difference threshold for grouping contiguous pixels.</span>
+<span class="sd">        data (np.ndarray): List of absorbers for each spectrum.</span>
+<span class="sd">        resi (np.ndarray): Corresponding residual.</span>
+<span class="sd">        avg (float): Maximum allowed difference to group data.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        tuple: A tuple containing:</span>
-<span class="sd">            - list of grouped data</span>
-<span class="sd">            - list of grouped residuals</span>
+<span class="sd">        tuple: Final list with contiguous pixels grouped, and corresponding residuals if provided.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check if resi is provided as an array</span>
+    <span class="k">if</span> <span class="n">resi</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">has_residuals</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">has_residuals</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Sort the input data</span>
     <span class="n">ind_srt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">sorted_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">ind_srt</span><span class="p">]</span>
-    <span class="n">sorted_resi</span> <span class="o">=</span> <span class="n">resi</span><span class="p">[</span><span class="n">ind_srt</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
 
-    <span class="n">groups</span> <span class="o">=</span> <span class="p">[[</span><span class="n">sorted_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span>
-    <span class="n">resi_groups</span> <span class="o">=</span> <span class="p">[[</span><span class="n">sorted_resi</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span> <span class="k">if</span> <span class="n">sorted_resi</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">has_residuals</span><span class="p">:</span>
+        <span class="n">sorted_resi</span> <span class="o">=</span> <span class="n">resi</span><span class="p">[</span><span class="n">ind_srt</span><span class="p">]</span>
+
+    <span class="n">groups</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">resi_groups</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sorted_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="k">if</span> <span class="n">has_residuals</span><span class="p">:</span>
+        <span class="n">resi_groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sorted_resi</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_data</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">sorted_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">groups</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">avg</span><span class="p">:</span>
             <span class="n">groups</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sorted_data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-            <span class="k">if</span> <span class="n">resi_groups</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">has_residuals</span><span class="p">:</span>
                 <span class="n">resi_groups</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sorted_resi</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sorted_data</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
-            <span class="k">if</span> <span class="n">resi_groups</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">has_residuals</span><span class="p">:</span>
                 <span class="n">resi_groups</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sorted_resi</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
 
-    <span class="k">if</span> <span class="n">resi_groups</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">has_residuals</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">groups</span><span class="p">,</span> <span class="n">resi_groups</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">groups</span></div>
@@ -316,13 +328,12 @@
 
 
 <span class="c1">#@jit(nopython=False)</span>
-<div class="viewcode-block" id="remove_Mg_falsely_identified_as_Fe_absorber">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.remove_Mg_falsely_identified_as_Fe_absorber">[docs]</a>
-<span class="k">def</span> <span class="nf">remove_Mg_falsely_identified_as_Fe_absorber</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">z_after_grouping</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">):</span>
+<div class="viewcode-block" id="remove_Mg_falsely_come_from_Fe_absorber">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber">[docs]</a>
+<span class="k">def</span> <span class="nf">remove_Mg_falsely_come_from_Fe_absorber</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">z_after_grouping</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">logwave</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case</span>
-<span class="sd">    of 2796, 2803 when using Fe kernel line but has already been detected for</span>
-<span class="sd">    the 2796 line, i.e., false positive due to Fe lines.</span>
+<span class="sd">    Remove any MgII absorber that arises falsley due to Fe 2586, 2600 doublet,</span>
+<span class="sd">    i.e., false positive due to Fe lines.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        z_after_grouping (list): List of absorbers after grouping.</span>
@@ -330,6 +341,7 @@
 <span class="sd">        residual (numpy.ndarray): Residual values.</span>
 <span class="sd">        error (numpy.ndarray): Error values corresponding to the residuals.</span>
 <span class="sd">        d_pix (float): Delta pixel value.</span>
+<span class="sd">        logwave (bool): if wavelength on log scale (default True for SDSS)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        numpy.ndarray: Updated list of absorbers with false positives removed.</span>
@@ -367,10 +379,10 @@
 
                 <span class="k">if</span> <span class="n">n_new</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">lam_rest</span> <span class="o">=</span> <span class="n">lam_obs</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
-                    <span class="n">sn_fe1</span><span class="p">,</span> <span class="n">sn_fe2</span> <span class="o">=</span> <span class="n">check_error_on_residual</span><span class="p">(</span><span class="n">fe1</span><span class="p">,</span> <span class="n">fe2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                    <span class="n">sn_fe1</span><span class="p">,</span> <span class="n">sn_fe2</span> <span class="o">=</span> <span class="n">estimate_snr_for_lines</span><span class="p">(</span><span class="n">fe1</span><span class="p">,</span> <span class="n">fe2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_new</span><span class="p">):</span>
                         <span class="n">lam_rest</span> <span class="o">=</span> <span class="n">lam_obs</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">ind_fin</span><span class="p">[</span><span class="n">k</span><span class="p">]])</span>
-                        <span class="n">sn_mg1</span><span class="p">,</span> <span class="n">sn_mg2</span> <span class="o">=</span> <span class="n">check_error_on_residual</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                        <span class="n">sn_mg1</span><span class="p">,</span> <span class="n">sn_mg2</span> <span class="o">=</span> <span class="n">estimate_snr_for_lines</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
                         <span class="k">if</span> <span class="p">(</span><span class="n">sn_fe1</span> <span class="o">&gt;</span> <span class="n">sn_mg1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">sn_fe1</span> <span class="o">&gt;</span> <span class="n">sn_mg2</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">sn_fe2</span> <span class="o">&gt;</span> <span class="n">sn_mg1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">sn_fe2</span> <span class="o">&gt;</span> <span class="n">sn_mg2</span><span class="p">):</span>
                             <span class="n">match_abs</span><span class="p">[</span><span class="n">ind_fin</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># False positive MgII absorber due to FeII lines</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -388,10 +400,10 @@
 <span class="c1">#@jit(nopython=False)</span>
 <div class="viewcode-block" id="z_abs_from_same_metal_absorber">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber">[docs]</a>
-<span class="k">def</span> <span class="nf">z_abs_from_same_metal_absorber</span><span class="p">(</span><span class="n">first_list_z</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">use_kernel</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">z_abs_from_same_metal_absorber</span><span class="p">(</span><span class="n">first_list_z</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">use_kernel</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Remove any absorber that arises due to the 2803 line but has already</span>
-<span class="sd">    been detected for the 2796 line, exploiting the doublet property of MgII to</span>
+<span class="sd">    Remove any absorber that arises due to the MgII2803 or CIV1550 line but has already</span>
+<span class="sd">    been detected for the MgII2796 or CIV1548 line, exploiting the doublet property of MgII/CIV to</span>
 <span class="sd">    remove false positives.</span>
 
 <span class="sd">    Args:</span>
@@ -401,6 +413,7 @@
 <span class="sd">        error (numpy.ndarray): Error values corresponding to the residuals.</span>
 <span class="sd">        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.</span>
 <span class="sd">        use_kernel (str, optional): Kernel type (MgII, CIV). Default is &#39;MgII&#39;.</span>
+<span class="sd">        logwave (bool): if wavelength bins are on log scale</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        numpy.ndarray: Updated list of absorbers with false positives removed.</span>
@@ -426,11 +439,11 @@
 
                 <span class="k">if</span> <span class="n">ind_del</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">lam_rest</span> <span class="o">=</span> <span class="n">lam_obs</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
-                    <span class="n">sn_mg0</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">check_error_on_residual</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                    <span class="n">sn_mg0</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">estimate_snr_for_lines</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
 
                     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ind_del</span><span class="p">:</span>
                         <span class="n">lam_rest1</span> <span class="o">=</span> <span class="n">lam_obs</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-                        <span class="n">sn_mg1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">check_error_on_residual</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest1</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                        <span class="n">sn_mg1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">estimate_snr_for_lines</span><span class="p">(</span><span class="n">mg1</span><span class="p">,</span> <span class="n">mg2</span><span class="p">,</span> <span class="n">lam_rest1</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
 
                         <span class="k">if</span> <span class="n">sn_mg0</span> <span class="o">&gt;</span> <span class="n">sn_mg1</span><span class="p">:</span>
                             <span class="n">match_abs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># Matched within limits, not true absorbers</span>
@@ -511,8 +524,8 @@
     <span class="n">z1</span> <span class="o">=</span> <span class="p">(</span><span class="n">fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="n">z2</span> <span class="o">=</span> <span class="p">(</span><span class="n">fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
-    <span class="n">err1</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span> <span class="o">*</span> <span class="n">z1</span>
-    <span class="n">err2</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span> <span class="o">*</span> <span class="n">z2</span>
+    <span class="n">err1</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span>
+    <span class="n">err2</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span>
 
     <span class="n">z_corr</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">z1</span> <span class="o">+</span> <span class="n">z2</span><span class="p">)</span>  <span class="c1"># New redshifts computed using line centers of the first and second Gaussian</span>
     <span class="n">z_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.25</span> <span class="o">*</span> <span class="p">(</span><span class="n">err1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">err2</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
@@ -598,7 +611,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

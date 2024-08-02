@@ -73,20 +73,27 @@
            <div itemprop="articleBody">
              
   <h1>Source code for qsoabsfind.absfinder</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains a function to run convolution based absorber finder on a single spectrum.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
 <span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">add</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">convolution_fun</span><span class="p">,</span> <span class="n">vel_dispersion</span>
 <span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">estimate_local_sigma_conv_array</span><span class="p">,</span> <span class="n">group_and_weighted_mean_selection_function</span><span class="p">,</span>
     <span class="n">median_selection_after_combining</span><span class="p">,</span>
-    <span class="n">remove_Mg_falsely_identified_as_Fe_absorber</span><span class="p">,</span> <span class="n">z_abs_from_same_metal_absorber</span><span class="p">,</span>
-    <span class="n">contiguous_pixel_remover</span><span class="p">,</span> <span class="n">check_error_on_residual</span><span class="p">,</span> <span class="n">absorber_search_window</span>
+    <span class="n">remove_Mg_falsely_come_from_Fe_absorber</span><span class="p">,</span> <span class="n">z_abs_from_same_metal_absorber</span><span class="p">,</span>
+    <span class="n">contiguous_pixel_remover</span><span class="p">,</span> <span class="n">estimate_snr_for_lines</span><span class="p">,</span> <span class="n">absorber_search_window</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">.ew</span> <span class="kn">import</span> <span class="n">measure_absorber_properties_double_gaussian</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">oscillator_parameters</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 <span class="kn">from</span> <span class="nn">.spec</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span>
 <span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
+
+<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
+<span class="n">lines</span><span class="p">,</span> <span class="n">oscillator_parameters</span><span class="p">,</span> <span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">oscillator_parameters</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
 
 <div class="viewcode-block" id="find_valid_indices">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absfinder.find_valid_indices">[docs]</a>
@@ -136,9 +143,82 @@
     <span class="k">return</span> <span class="n">new_our_z</span><span class="p">,</span> <span class="n">new_res_arr</span></div>
 
 
+<div class="viewcode-block" id="read_single_spectrum_and_find_absorber">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absfinder.read_single_spectrum_and_find_absorber">[docs]</a>
+<span class="k">def</span> <span class="nf">read_single_spectrum_and_find_absorber</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function retrieves a single QSO spectrum from a FITS file, processes the data to remove NaNs,</span>
+<span class="sd">    and prepares the spectrum for absorber search within specified wavelength regions</span>
+<span class="sd">    and runs the convolution based adaptive S/N method to detect absorbers in the spectrum.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fits_file (str): Path to the FITS file containing normalized QSO spectra.</span>
+<span class="sd">                         The file must include extensions for FLUX, ERROR, WAVELENGTH</span>
+<span class="sd">                         and METADATA which must contain keyword Z_QSO.</span>
+<span class="sd">        spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.</span>
+<span class="sd">        absorber (str): Name of the absorber to search for (e.g., &#39;MgII&#39;, &#39;CIV&#39;).</span>
+<span class="sd">        kwargs (dictionary): search parameters used in convolution_method_absorber_finder_in_QSO_spectra()</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: Contains lists of various parameters related to detected absorbers.</span>
+<span class="sd">            - index (list): QSO spec index searched</span>
+<span class="sd">            - zabs (list of floats): redshifts of absorbers detected</span>
+<span class="sd">            - params (list of arrays): gaussian fit parameters for each absorber</span>
+<span class="sd">            - errror params (list of arrays): errors on gaussian fit parameters for each absorber</span>
+<span class="sd">            - EW1 (list of floats): Equivalent width of line 1 for each absorber</span>
+<span class="sd">            - EW2 (list of floats): Equivalent width of line 2 for each absorber</span>
+<span class="sd">            - EW total (list of floats): Total Equivalent width of line 1 and line 2 for each absorber</span>
+<span class="sd">            - errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber</span>
+<span class="sd">            - errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber</span>
+<span class="sd">            - errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        - This function assumes that the input spectra are already normalized (i.e., flux divided by continuum).</span>
+<span class="sd">        - The wavelength search region is determined dynamically based on the observed wavelength range.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Read the specified QSO spectrum from the FITS file</span>
+    <span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">)</span>
+    <span class="n">z_qso</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;Z_QSO&#39;</span><span class="p">]</span>
+    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
+
+    <span class="c1"># Define the wavelength range for searching the absorber</span>
+    <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="mi">500</span><span class="p">,</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="mi">500</span>
+
+    <span class="c1"># Retrieve flux and error data, ensuring consistent dtype for Numba compatibility</span>
+    <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">),</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Remove NaN values from the arrays</span>
+    <span class="n">non_nan_indices</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span>
+    <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">],</span> <span class="n">residual</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">],</span> <span class="n">error</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">]</span>
+
+    <span class="c1"># Identify the wavelength region for searching the specified absorber</span>
+    <span class="n">lam_search</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">unmsk_error</span> <span class="o">=</span> <span class="n">absorber_search_window</span><span class="p">(</span>
+        <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">z_qso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">])</span>
+
+    <span class="c1"># Verify that the arrays are of equal size</span>
+    <span class="k">assert</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_error</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="s2">&quot;Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error&quot;</span>
+
+    <span class="c1"># Print progress for every 5000th spectrum processed</span>
+    <span class="k">if</span> <span class="n">spec_index</span> <span class="o">%</span> <span class="mi">5000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Detection finished up to spec index = </span><span class="si">{</span><span class="n">spec_index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+    <span class="p">(</span><span class="n">index_spec</span><span class="p">,</span> <span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">pure_gauss_fit</span><span class="p">,</span> <span class="n">pure_gauss_fit_std</span><span class="p">,</span> <span class="n">pure_ew_first_line_mean</span><span class="p">,</span> <span class="n">pure_ew_second_line_mean</span><span class="p">,</span> <span class="n">pure_ew_total_mean</span><span class="p">,</span> <span class="n">pure_ew_first_line_error</span><span class="p">,</span> <span class="n">pure_ew_second_line_error</span><span class="p">,</span> <span class="n">pure_ew_total_error</span><span class="p">,</span> <span class="n">redshift_err</span><span class="p">,</span> <span class="n">sn1_all</span><span class="p">,</span> <span class="n">sn2_all</span><span class="p">)</span> <span class="o">=</span> <span class="n">convolution_method_absorber_finder_in_QSO_spectra</span><span class="p">(</span><span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">lam_search</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">unmsk_error</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">index_spec</span><span class="p">,</span> <span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">pure_gauss_fit</span><span class="p">,</span> <span class="n">pure_gauss_fit_std</span><span class="p">,</span> <span class="n">pure_ew_first_line_mean</span><span class="p">,</span> <span class="n">pure_ew_second_line_mean</span><span class="p">,</span> <span class="n">pure_ew_total_mean</span><span class="p">,</span> <span class="n">pure_ew_first_line_error</span><span class="p">,</span> <span class="n">pure_ew_second_line_error</span><span class="p">,</span> <span class="n">pure_ew_total_error</span><span class="p">,</span> <span class="n">redshift_err</span><span class="p">,</span> <span class="n">sn1_all</span><span class="p">,</span> <span class="n">sn2_all</span><span class="p">)</span></div>
+
+
+
 <div class="viewcode-block" id="convolution_method_absorber_finder_in_QSO_spectra">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absfinder.convolution_method_absorber_finder_in_QSO_spectra">[docs]</a>
-<span class="k">def</span> <span class="nf">convolution_method_absorber_finder_in_QSO_spectra</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="n">coeff_sigma</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">mult_resi</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">pm_pixel</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">sn_line1</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">sn_line2</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">convolution_method_absorber_finder_in_QSO_spectra</span><span class="p">(</span><span class="n">spec_index</span><span class="p">,</span> <span class="n">absorber</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="n">lam_obs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">residual</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="n">lam_search</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unmsk_error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ker_width_pixels</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="n">coeff_sigma</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+<span class="n">mult_resi</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">pm_pixel</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">sn_line1</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">sn_line2</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Detect absorbers with doublet properties in SDSS quasar spectra using a</span>
 <span class="sd">    convolution method. This function identifies potential absorbers based on</span>
@@ -147,21 +227,37 @@
 <span class="sd">    the redshifts, EWs, and fitting parameters.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        fits_file (str): Path to the FITS file containing Normalized QSO spectra (i.e. flux/continuum), must contain FLUX, ERROR (i.e. error/continuum), WAVELENGTH, and TGTDETAILS extensions. In TGTDETAILS, must contain keywords like RA_QSO, DEC_QSO, Z_QSO.</span>
-<span class="sd">        spec_index (int): Index of quasar in the spectra matrix.</span>
+<span class="sd">        spec_index (int): Index of quasar in the spectra 2D array.</span>
 <span class="sd">        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is &#39;MgII&#39;.</span>
+<span class="sd">        lam_obs (numpy.array): observed wavelength array.</span>
+<span class="sd">        residual (numpy.array): residual (i.e. flux/continuum) array</span>
+<span class="sd">        error (numpy.array): error on residuals</span>
+<span class="sd">        lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).</span>
+<span class="sd">        unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)</span>
+<span class="sd">        unmsk_error (numpy.array): error on residuals array in search wavelength region</span>
 <span class="sd">        ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].</span>
 <span class="sd">        coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.</span>
 <span class="sd">        mult_resi (float): Factor to shift the residual up or down. Default is 1.</span>
 <span class="sd">        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.</span>
 <span class="sd">        pm_pixel (int): Pixel parameter for local noise estimation (default 200).</span>
-<span class="sd">        sn_line1 (float): Signal-to-noise ratio for thresholding for line1.</span>
-<span class="sd">        sn_line2 (float): Signal-to-noise ratio for thresholding for line2.</span>
+<span class="sd">        sn_line1 (float): Signal-to-noise ratio for thresholding for line1 (default 3).</span>
+<span class="sd">        sn_line2 (float): Signal-to-noise ratio for thresholding for line2 (default 3).</span>
 <span class="sd">        use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)</span>
-<span class="sd">        logwave (bool): if wavelength on log scale</span>
+<span class="sd">        logwave (bool): if wavelength on log scale (default True for SDSS)</span>
+<span class="sd">        verbose (bool): if want to print a lot of outputs for debugging (default False)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        tuple: Contains lists of various parameters related to detected absorbers.</span>
+<span class="sd">            - index (list): QSO spec index searched</span>
+<span class="sd">            - zabs (list): redshifts of absorbers detected</span>
+<span class="sd">            - params (list of arrays): gaussian fit parameters for each absorber</span>
+<span class="sd">            - errror params (list of arrays): errors on gaussian fit parameters for each absorber</span>
+<span class="sd">            - EW1 (list): Equivalent width of line 1 for each absorber</span>
+<span class="sd">            - EW2 (list): Equivalent width of line 2 for each absorber</span>
+<span class="sd">            - EW total (list): Total Equivalent width of line 1 and line 2 for each absorber</span>
+<span class="sd">            - errors EW1 (list): errors on Equivalent width of line 1 for each absorber</span>
+<span class="sd">            - errors EW2 (list): errors on Equivalent width of line 2 for each absorber</span>
+<span class="sd">            - errors EW total (list): errors on Total Equivalent width of line 1 and line 2 for each absorber</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Constants</span>
@@ -174,11 +270,6 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No support for </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">, only supports MgII and CIV&quot;</span><span class="p">)</span>
 
-    <span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">)</span>
-    <span class="n">z_qso</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">tgtdetails</span><span class="p">[</span><span class="s1">&#39;Z_QSO&#39;</span><span class="p">]</span>
-    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
-    <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="mi">500</span><span class="p">,</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="mi">500</span>
-
     <span class="n">line_sep</span> <span class="o">=</span> <span class="n">line2</span> <span class="o">-</span> <span class="n">line1</span>
     <span class="n">resolution</span> <span class="o">=</span> <span class="mi">69</span>  <span class="c1"># km/s for SDSS or DESI</span>
 
@@ -188,23 +279,6 @@
 
     <span class="n">bound</span> <span class="o">=</span> <span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">2e-2</span><span class="p">,</span> <span class="n">line1</span> <span class="o">-</span> <span class="n">bd_ct</span> <span class="o">*</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">del_sigma</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">2e-2</span><span class="p">,</span> <span class="n">line2</span> <span class="o">-</span> <span class="n">bd_ct</span> <span class="o">*</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">del_sigma</span><span class="o">-</span><span class="mf">0.1</span><span class="p">])),</span>
              <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.11</span><span class="p">,</span> <span class="n">line1</span> <span class="o">+</span> <span class="n">bd_ct</span> <span class="o">*</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">x_sep</span> <span class="o">*</span> <span class="n">del_sigma</span><span class="p">,</span> <span class="mf">1.11</span><span class="p">,</span> <span class="n">line2</span> <span class="o">+</span> <span class="n">bd_ct</span> <span class="o">*</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">x_sep</span> <span class="o">*</span> <span class="n">del_sigma</span><span class="p">])))</span>
-
-    <span class="c1"># Print progress</span>
-    <span class="k">if</span> <span class="n">spec_index</span> <span class="o">%</span> <span class="mi">5000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Detection finished up to spec index = </span><span class="si">{</span><span class="n">spec_index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Retrieve quasar data</span>
-    <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span>
-    <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">),</span> <span class="n">residual</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">),</span> <span class="n">error</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span> <span class="c1"># to  make consistent with numba dtype</span>
-    <span class="n">ind_nonan</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span>
-    <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="n">ind_nonan</span><span class="p">],</span> <span class="n">error</span><span class="p">[</span><span class="n">ind_nonan</span><span class="p">]</span>
-    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="p">[</span><span class="n">ind_nonan</span><span class="p">]</span>
-
-    <span class="n">lam_search</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">unmsk_error</span> <span class="o">=</span> <span class="n">absorber_search_window</span><span class="p">(</span>
-        <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">z_qso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-    <span class="c1"># Assert that the sizes of the arrays are equal</span>
-    <span class="k">assert</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_error</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="s2">&quot;Mismatch in array sizes of lam_search, unmsk_residual and unmsk_error&quot;</span>
 
     <span class="c1"># Kernel width computation</span>
     <span class="n">width_kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ker</span> <span class="o">*</span> <span class="n">resolution</span> <span class="o">*</span> <span class="p">((</span><span class="n">f1</span> <span class="o">*</span> <span class="n">line1</span> <span class="o">+</span> <span class="n">f2</span> <span class="o">*</span> <span class="n">line2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">f1</span> <span class="o">+</span> <span class="n">f2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">speed_of_light</span> <span class="o">*</span> <span class="mf">2.35</span><span class="p">)</span> <span class="k">for</span> <span class="n">ker</span> <span class="ow">in</span> <span class="n">ker_width_pixels</span><span class="p">])</span>
@@ -218,7 +292,6 @@
             <span class="n">conv_arr</span> <span class="o">=</span> <span class="n">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">mult_resi</span> <span class="o">*</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">sig_ker</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">logwave</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">spec_index</span><span class="p">)</span>
             <span class="n">sigma_cr</span> <span class="o">=</span> <span class="n">estimate_local_sigma_conv_array</span><span class="p">(</span><span class="n">conv_arr</span><span class="p">,</span> <span class="n">pm_pixel</span><span class="o">=</span><span class="n">pm_pixel</span><span class="p">)</span>
             <span class="n">thr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmedian</span><span class="p">(</span><span class="n">conv_arr</span><span class="p">)</span> <span class="o">-</span> <span class="n">coeff_sigma</span> <span class="o">*</span> <span class="n">sigma_cr</span>
-
 
             <span class="n">conv_arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">conv_arr</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">1e5</span>
             <span class="n">our_z_ind</span> <span class="o">=</span> <span class="n">conv_arr</span> <span class="o">&lt;</span> <span class="n">thr</span>
@@ -266,7 +339,7 @@
                     <span class="n">lower_del_lam</span> <span class="o">=</span> <span class="n">line_sep</span> <span class="o">-</span> <span class="n">d_pix</span>
                     <span class="n">upper_del_lam</span> <span class="o">=</span> <span class="n">line_sep</span> <span class="o">+</span> <span class="n">d_pix</span>
 
-                    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">fit_param_temp</span><span class="p">,</span> <span class="n">fit_param_std_temp</span><span class="p">,</span> <span class="n">EW_first_temp_mean</span><span class="p">,</span> <span class="n">EW_second_temp_mean</span><span class="p">,</span> <span class="n">EW_total_temp_mean</span><span class="p">,</span> <span class="n">EW_first_error_temp</span><span class="p">,</span> <span class="n">EW_second_error_temp</span><span class="p">,</span> <span class="n">EW_total_error_temp</span> <span class="o">=</span> <span class="n">measure_absorber_properties_double_gaussian</span><span class="p">(</span>
+                    <span class="n">z_new</span><span class="p">,</span> <span class="n">z_new_error</span><span class="p">,</span> <span class="n">fit_param_temp</span><span class="p">,</span> <span class="n">fit_param_std_temp</span><span class="p">,</span> <span class="n">EW_first_temp_mean</span><span class="p">,</span> <span class="n">EW_second_temp_mean</span><span class="p">,</span> <span class="n">EW_total_temp_mean</span><span class="p">,</span> <span class="n">EW_first_error_temp</span><span class="p">,</span> <span class="n">EW_second_error_temp</span><span class="p">,</span> <span class="n">EW_total_error_temp</span> <span class="o">=</span> <span class="n">measure_absorber_properties_double_gaussian</span><span class="p">(</span>
                         <span class="n">index</span><span class="o">=</span><span class="n">spec_index</span><span class="p">,</span> <span class="n">wavelength</span><span class="o">=</span><span class="n">lam_obs</span><span class="p">,</span> <span class="n">flux</span><span class="o">=</span><span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="o">=</span><span class="p">[</span><span class="n">z_abs</span><span class="p">[</span><span class="n">m</span><span class="p">]],</span> <span class="n">bound</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">use_kernel</span><span class="o">=</span><span class="n">absorber</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="n">d_pix</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fit_param_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">fit_param_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
@@ -275,12 +348,12 @@
                         <span class="n">c0</span> <span class="o">=</span> <span class="n">gaussian_parameters</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                         <span class="n">c1</span> <span class="o">=</span> <span class="n">gaussian_parameters</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
                         <span class="c1">#S/N estimation</span>
-                        <span class="n">sn1</span><span class="p">,</span> <span class="n">sn2</span> <span class="o">=</span> <span class="n">check_error_on_residual</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
+                        <span class="n">sn1</span><span class="p">,</span> <span class="n">sn2</span> <span class="o">=</span> <span class="n">estimate_snr_for_lines</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">lam_rest</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
                         <span class="c1"># resolution corrected velocity dispersion (should be greater than 0)</span>
                         <span class="n">vel1</span><span class="p">,</span> <span class="n">vel2</span> <span class="o">=</span> <span class="n">vel_dispersion</span><span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">gaussian_parameters</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">gaussian_parameters</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">resolution</span><span class="p">)</span>
 
                         <span class="k">if</span> <span class="p">(</span><span class="n">gaussian_parameters</span> <span class="o">&gt;</span> <span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.01</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">gaussian_parameters</span> <span class="o">&lt;</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.01</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">lower_del_lam</span> <span class="o">&lt;=</span> <span class="n">c1</span> <span class="o">-</span> <span class="n">c0</span> <span class="o">&lt;=</span> <span class="n">upper_del_lam</span> <span class="ow">and</span> <span class="n">sn1</span> <span class="o">&gt;</span> <span class="n">sn_line1</span> <span class="ow">and</span> <span class="n">sn2</span> <span class="o">&gt;</span> <span class="n">sn_line2</span> <span class="ow">and</span> <span class="n">vel1</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">vel2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                            <span class="n">pure_z_abs</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">z_abs</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+                            <span class="n">pure_z_abs</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">z_new</span>
                             <span class="n">pure_gauss_fit</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_param_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                             <span class="n">pure_gauss_fit_std</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_param_std_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                             <span class="n">pure_ew_first_line_mean</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">EW_first_temp_mean</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -289,7 +362,7 @@
                             <span class="n">pure_ew_first_line_error</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">EW_first_error_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                             <span class="n">pure_ew_second_line_error</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">EW_second_error_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                             <span class="n">pure_ew_total_error</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">EW_total_error_temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">redshift_err</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">z_err</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+                            <span class="n">redshift_err</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">z_new_error</span>
                             <span class="n">sn1_all</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">sn1</span>
                             <span class="n">sn2_all</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">sn2</span>
 
@@ -309,10 +382,10 @@
             <span class="n">sn2_all</span> <span class="o">=</span> <span class="n">sn2_all</span><span class="p">[</span><span class="n">valid_indices</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pure_z_abs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">absorber</span><span class="o">==</span><span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
-                    <span class="n">match_abs1</span> <span class="o">=</span> <span class="n">remove_Mg_falsely_identified_as_Fe_absorber</span><span class="p">(</span><span class="n">spec_index</span><span class="p">,</span> <span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="o">=</span><span class="n">d_pix</span><span class="p">)</span>
+                    <span class="n">match_abs1</span> <span class="o">=</span> <span class="n">remove_Mg_falsely_come_from_Fe_absorber</span><span class="p">(</span><span class="n">spec_index</span><span class="p">,</span> <span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">match_abs1</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pure_z_abs</span><span class="p">))</span>
-                <span class="n">match_abs2</span> <span class="o">=</span> <span class="n">z_abs_from_same_metal_absorber</span><span class="p">(</span><span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">use_kernel</span><span class="o">=</span><span class="n">absorber</span><span class="p">)</span>
+                <span class="n">match_abs2</span> <span class="o">=</span> <span class="n">z_abs_from_same_metal_absorber</span><span class="p">(</span><span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">logwave</span><span class="p">)</span>
                 <span class="n">ind_z</span> <span class="o">=</span> <span class="n">contiguous_pixel_remover</span><span class="p">(</span><span class="n">pure_z_abs</span><span class="p">,</span> <span class="n">sn1_all</span><span class="p">,</span> <span class="n">sn2_all</span><span class="p">)</span>
                 <span class="n">sel_indices</span> <span class="o">=</span> <span class="p">(</span><span class="n">match_abs1</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">match_abs2</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ind_z</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># pure final absorber candidates</span>
 
@@ -355,7 +428,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

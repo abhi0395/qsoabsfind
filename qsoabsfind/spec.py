@@ -8,7 +8,7 @@ import time
 
 class QSOSpecRead:
     """
-    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions."""
+    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions."""
 
     def __init__(self, fits_file, index=None):
         """
@@ -35,12 +35,12 @@ class QSOSpecRead:
         self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
         elapsed(start_time, "\nTime taken to read FITS file")
 
-    def get_tgtdetails(self):
+    def get_metadata(self):
         """
-        Returns the TGTDETAILS data with keyword handling.
+        Returns the METADATA data with keyword handling.
 
         Returns:
-            dict: The tgtdetails data with keywords.
+            dict: The metadata data with keywords.
         """
         details_dict = {key: self.metadata[key] for key in self.metadata.dtype.names}
         return details_dict

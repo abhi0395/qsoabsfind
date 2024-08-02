@@ -26,7 +26,7 @@ Features
 GitHub repository
 -----------------
 
-The source code is available on GitHub. Please see the `qsoabsfind repo <https://github.com/abhi0395/qsoabsfind>`_.
+The source code is available on GitHub. Please see the `qsoabsfind <https://github.com/abhi0395/qsoabsfind>`_ repo.
 
 
 Citation
@@ -38,9 +38,10 @@ Please cite `Anand, Nelson & Kauffmann 2021 <https://arxiv.org/abs/2103.15842>`_
 Contact
 -------
 
-Abhijeet Anand, LBNL
+| Abhijeet Anand
+| Lawrence Berkeley National Lab
 
-If you have any questions/suggestions, please feel free to write to abhijeetanand2011 [at] gmail.com
+If you have any questions/suggestions, please feel free to write to abhijeetanand2011 [at] gmail.com or, preferably, open a GitHub issue.
 
 
 Indices and tables

@@ -56,18 +56,19 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-qsoabsfind.absfinder">qsoabsfind.absfinder module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absfinder.convolution_method_absorber_finder_in_QSO_spectra"><code class="docutils literal notranslate"><span class="pre">convolution_method_absorber_finder_in_QSO_spectra()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absfinder.find_valid_indices"><code class="docutils literal notranslate"><span class="pre">find_valid_indices()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absfinder.read_single_spectrum_and_find_absorber"><code class="docutils literal notranslate"><span class="pre">read_single_spectrum_and_find_absorber()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-qsoabsfind.absorberutils">qsoabsfind.absorberutils module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.absorber_search_window"><code class="docutils literal notranslate"><span class="pre">absorber_search_window()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.check_error_on_residual"><code class="docutils literal notranslate"><span class="pre">check_error_on_residual()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.contiguous_pixel_remover"><code class="docutils literal notranslate"><span class="pre">contiguous_pixel_remover()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.estimate_local_sigma_conv_array"><code class="docutils literal notranslate"><span class="pre">estimate_local_sigma_conv_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.estimate_snr_for_lines"><code class="docutils literal notranslate"><span class="pre">estimate_snr_for_lines()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.group_and_weighted_mean_selection_function"><code class="docutils literal notranslate"><span class="pre">group_and_weighted_mean_selection_function()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.group_contiguous_pixel"><code class="docutils literal notranslate"><span class="pre">group_contiguous_pixel()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.median_selection_after_combining"><code class="docutils literal notranslate"><span class="pre">median_selection_after_combining()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.redshift_estimate"><code class="docutils literal notranslate"><span class="pre">redshift_estimate()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.remove_Mg_falsely_identified_as_Fe_absorber"><code class="docutils literal notranslate"><span class="pre">remove_Mg_falsely_identified_as_Fe_absorber()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber"><code class="docutils literal notranslate"><span class="pre">remove_Mg_falsely_come_from_Fe_absorber()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.weighted_mean"><code class="docutils literal notranslate"><span class="pre">weighted_mean()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber"><code class="docutils literal notranslate"><span class="pre">z_abs_from_same_metal_absorber()</span></code></a></li>
 </ul>
@@ -87,7 +88,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-qsoabsfind.spec">qsoabsfind.spec module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.spec.QSOSpecRead"><code class="docutils literal notranslate"><span class="pre">QSOSpecRead</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#qsoabsfind.spec.QSOSpecRead.__init__"><code class="docutils literal notranslate"><span class="pre">QSOSpecRead.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#qsoabsfind.spec.QSOSpecRead.get_tgtdetails"><code class="docutils literal notranslate"><span class="pre">QSOSpecRead.get_tgtdetails()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#qsoabsfind.spec.QSOSpecRead.get_metadata"><code class="docutils literal notranslate"><span class="pre">QSOSpecRead.get_metadata()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#qsoabsfind.spec.QSOSpecRead.read_fits"><code class="docutils literal notranslate"><span class="pre">QSOSpecRead.read_fits()</span></code></a></li>
 </ul>
 </li>
@@ -126,7 +127,7 @@
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Full qsoabsfind API reference</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com///blob/qsoabsfind.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/abhi0395/qsoabsfind/blob/main/docs/qsoabsfind.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -138,6 +139,7 @@
 <h1>Full qsoabsfind API reference<a class="headerlink" href="#full-qsoabsfind-api-reference" title="Link to this heading"></a></h1>
 <section id="module-qsoabsfind.parallel_convolution">
 <span id="qsoabsfind-parallel-convolution-module"></span><h2>qsoabsfind.parallel_convolution module<a class="headerlink" href="#module-qsoabsfind.parallel_convolution" title="Link to this heading"></a></h2>
+<p>This script contains a function that runs the absorber finder in parallel for many spectra.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.parallel_convolution.main">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.parallel_convolution.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/parallel_convolution.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.parallel_convolution.main" title="Link to this definition"></a></dt>
@@ -145,7 +147,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.parallel_convolution.parallel_convolution_method_absorber_finder_QSO_spectra">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.parallel_convolution.</span></span><span class="sig-name descname"><span class="pre">parallel_convolution_method_absorber_finder_QSO_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ker_width_pixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[3,</span> <span class="pre">4,</span> <span class="pre">5,</span> <span class="pre">6,</span> <span class="pre">7,</span> <span class="pre">8]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mult_resi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pm_pixel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/parallel_convolution.html#parallel_convolution_method_absorber_finder_QSO_spectra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.parallel_convolution.parallel_convolution_method_absorber_finder_QSO_spectra" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.parallel_convolution.</span></span><span class="sig-name descname"><span class="pre">parallel_convolution_method_absorber_finder_QSO_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ker_width_pixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[3,</span> <span class="pre">4,</span> <span class="pre">5,</span> <span class="pre">6,</span> <span class="pre">7,</span> <span class="pre">8]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mult_resi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pm_pixel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/parallel_convolution.html#parallel_convolution_method_absorber_finder_QSO_spectra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.parallel_convolution.parallel_convolution_method_absorber_finder_QSO_spectra" title="Link to this definition"></a></dt>
 <dd><p>Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
 multiprocessing.</p>
 <dl class="field-list simple">
@@ -163,6 +165,7 @@ multiprocessing.</p>
 <li><p><strong>sn_line2</strong> (<em>float</em>) – Signal-to-noise ratio for thresholding for line2.</p></li>
 <li><p><strong>use_covariance</strong> (<em>bool</em>) – If want to use full covariance of scipy curve_fit for EW error calculation (default is False).</p></li>
 <li><p><strong>logwave</strong> (<em>bool</em>) – If wavelength on logscale (default True for SDSS).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – if True will print lots of output for debugging</p></li>
 <li><p><strong>n_jobs</strong> (<em>int</em>) – Number of parallel jobs to run.</p></li>
 </ul>
 </dd>
@@ -178,9 +181,10 @@ multiprocessing.</p>
 </section>
 <section id="module-qsoabsfind.absfinder">
 <span id="qsoabsfind-absfinder-module"></span><h2>qsoabsfind.absfinder module<a class="headerlink" href="#module-qsoabsfind.absfinder" title="Link to this heading"></a></h2>
+<p>This script contains a function to run convolution based absorber finder on a single spectrum.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.absfinder.convolution_method_absorber_finder_in_QSO_spectra">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absfinder.</span></span><span class="sig-name descname"><span class="pre">convolution_method_absorber_finder_in_QSO_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ker_width_pixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[3,</span> <span class="pre">4,</span> <span class="pre">5,</span> <span class="pre">6,</span> <span class="pre">7,</span> <span class="pre">8]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mult_resi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pm_pixel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absfinder.html#convolution_method_absorber_finder_in_QSO_spectra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absfinder.convolution_method_absorber_finder_in_QSO_spectra" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absfinder.</span></span><span class="sig-name descname"><span class="pre">convolution_method_absorber_finder_in_QSO_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_obs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_search</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unmsk_residual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unmsk_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ker_width_pixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[3,</span> <span class="pre">4,</span> <span class="pre">5,</span> <span class="pre">6,</span> <span class="pre">7,</span> <span class="pre">8]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mult_resi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pm_pixel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sn_line2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absfinder.html#convolution_method_absorber_finder_in_QSO_spectra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absfinder.convolution_method_absorber_finder_in_QSO_spectra" title="Link to this definition"></a></dt>
 <dd><p>Detect absorbers with doublet properties in SDSS quasar spectra using a
 convolution method. This function identifies potential absorbers based on
 user-defined threshold criteria, applies Gaussian fitting to reject false
@@ -189,22 +193,43 @@ the redshifts, EWs, and fitting parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fits_file</strong> (<em>str</em>) – Path to the FITS file containing Normalized QSO spectra (i.e. flux/continuum), must contain FLUX, ERROR (i.e. error/continuum), WAVELENGTH, and TGTDETAILS extensions. In TGTDETAILS, must contain keywords like RA_QSO, DEC_QSO, Z_QSO.</p></li>
-<li><p><strong>spec_index</strong> (<em>int</em>) – Index of quasar in the spectra matrix.</p></li>
+<li><p><strong>spec_index</strong> (<em>int</em>) – Index of quasar in the spectra 2D array.</p></li>
 <li><p><strong>absorber</strong> (<em>str</em>) – Absorber name for searching doublets (MgII, CIV). Default is ‘MgII’.</p></li>
+<li><p><strong>lam_obs</strong> (<em>numpy.array</em>) – observed wavelength array.</p></li>
+<li><p><strong>residual</strong> (<em>numpy.array</em>) – residual (i.e. flux/continuum) array</p></li>
+<li><p><strong>error</strong> (<em>numpy.array</em>) – error on residuals</p></li>
+<li><p><strong>lam_search</strong> (<em>numpy.array</em>) – search observed wavelength array (i.e. region where absorber will be looked for).</p></li>
+<li><p><strong>unmsk_residual</strong> (<em>numpy.array</em>) – search residual array (residuals at search wavelength pixels)</p></li>
+<li><p><strong>unmsk_error</strong> (<em>numpy.array</em>) – error on residuals array in search wavelength region</p></li>
 <li><p><strong>ker_width_pix</strong> (<em>list</em>) – List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].</p></li>
 <li><p><strong>coeff_sigma</strong> (<em>float</em>) – Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.</p></li>
 <li><p><strong>mult_resi</strong> (<em>float</em>) – Factor to shift the residual up or down. Default is 1.</p></li>
 <li><p><strong>d_pix</strong> (<em>float</em>) – Pixel distance for line separation during Gaussian fitting. Default is 0.6.</p></li>
 <li><p><strong>pm_pixel</strong> (<em>int</em>) – Pixel parameter for local noise estimation (default 200).</p></li>
-<li><p><strong>sn_line1</strong> (<em>float</em>) – Signal-to-noise ratio for thresholding for line1.</p></li>
-<li><p><strong>sn_line2</strong> (<em>float</em>) – Signal-to-noise ratio for thresholding for line2.</p></li>
+<li><p><strong>sn_line1</strong> (<em>float</em>) – Signal-to-noise ratio for thresholding for line1 (default 3).</p></li>
+<li><p><strong>sn_line2</strong> (<em>float</em>) – Signal-to-noise ratio for thresholding for line2 (default 3).</p></li>
 <li><p><strong>use_covariance</strong> (<em>bool</em>) – if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)</p></li>
-<li><p><strong>logwave</strong> (<em>bool</em>) – if wavelength on log scale</p></li>
+<li><p><strong>logwave</strong> (<em>bool</em>) – if wavelength on log scale (default True for SDSS)</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – if want to print a lot of outputs for debugging (default False)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Contains lists of various parameters related to detected absorbers.</p>
+<dd class="field-even"><p><dl class="simple">
+<dt>Contains lists of various parameters related to detected absorbers.</dt><dd><ul class="simple">
+<li><p>index (list): QSO spec index searched</p></li>
+<li><p>zabs (list): redshifts of absorbers detected</p></li>
+<li><p>params (list of arrays): gaussian fit parameters for each absorber</p></li>
+<li><p>errror params (list of arrays): errors on gaussian fit parameters for each absorber</p></li>
+<li><p>EW1 (list): Equivalent width of line 1 for each absorber</p></li>
+<li><p>EW2 (list): Equivalent width of line 2 for each absorber</p></li>
+<li><p>EW total (list): Total Equivalent width of line 1 and line 2 for each absorber</p></li>
+<li><p>errors EW1 (list): errors on Equivalent width of line 1 for each absorber</p></li>
+<li><p>errors EW2 (list): errors on Equivalent width of line 2 for each absorber</p></li>
+<li><p>errors EW total (list): errors on Total Equivalent width of line 1 and line 2 for each absorber</p></li>
+</ul>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple</p>
@@ -240,6 +265,55 @@ the redshifts, EWs, and fitting parameters.</p>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="qsoabsfind.absfinder.read_single_spectrum_and_find_absorber">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absfinder.</span></span><span class="sig-name descname"><span class="pre">read_single_spectrum_and_find_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absfinder.html#read_single_spectrum_and_find_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absfinder.read_single_spectrum_and_find_absorber" title="Link to this definition"></a></dt>
+<dd><p>This function retrieves a single QSO spectrum from a FITS file, processes the data to remove NaNs,
+and prepares the spectrum for absorber search within specified wavelength regions
+and runs the convolution based adaptive S/N method to detect absorbers in the spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fits_file</strong> (<em>str</em>) – Path to the FITS file containing normalized QSO spectra.
+The file must include extensions for FLUX, ERROR, WAVELENGTH
+and METADATA which must contain keyword Z_QSO.</p></li>
+<li><p><strong>spec_index</strong> (<em>int</em>) – Index of the quasar spectrum to retrieve from the FITS file.</p></li>
+<li><p><strong>absorber</strong> (<em>str</em>) – Name of the absorber to search for (e.g., ‘MgII’, ‘CIV’).</p></li>
+<li><p><strong>kwargs</strong> (<em>dictionary</em>) – search parameters used in convolution_method_absorber_finder_in_QSO_spectra()</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Contains lists of various parameters related to detected absorbers.</dt><dd><ul class="simple">
+<li><p>index (list): QSO spec index searched</p></li>
+<li><p>zabs (list of floats): redshifts of absorbers detected</p></li>
+<li><p>params (list of arrays): gaussian fit parameters for each absorber</p></li>
+<li><p>errror params (list of arrays): errors on gaussian fit parameters for each absorber</p></li>
+<li><p>EW1 (list of floats): Equivalent width of line 1 for each absorber</p></li>
+<li><p>EW2 (list of floats): Equivalent width of line 2 for each absorber</p></li>
+<li><p>EW total (list of floats): Total Equivalent width of line 1 and line 2 for each absorber</p></li>
+<li><p>errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber</p></li>
+<li><p>errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber</p></li>
+<li><p>errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If the sizes of <cite>lam_search</cite>, <cite>unmsk_residual</cite>, and <cite>unmsk_error</cite> do not match.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This function assumes that the input spectra are already normalized (i.e., flux divided by continuum).</p></li>
+<li><p>The wavelength search region is determined dynamically based on the observed wavelength range.</p></li>
+</ul>
+</dd></dl>
+
 </section>
 <section id="module-qsoabsfind.absorberutils">
 <span id="qsoabsfind-absorberutils-module"></span><h2>qsoabsfind.absorberutils module<a class="headerlink" href="#module-qsoabsfind.absorberutils" title="Link to this heading"></a></h2>
@@ -264,34 +338,6 @@ search.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A tuple containing unmasked wavelength, residual, and errors.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="qsoabsfind.absorberutils.check_error_on_residual">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">check_error_on_residual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_rest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#check_error_on_residual"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.check_error_on_residual" title="Link to this definition"></a></dt>
-<dd><p>Check the error on residuals around specified wavelengths.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>l1</strong> (<em>float</em>) – First wavelength to check around.</p></li>
-<li><p><strong>l2</strong> (<em>float</em>) – Second wavelength to check around.</p></li>
-<li><p><strong>lam_rest</strong> (<em>numpy.ndarray</em>) – Rest-frame wavelengths.</p></li>
-<li><p><strong>residual</strong> (<em>numpy.ndarray</em>) – Residual flux values.</p></li>
-<li><p><strong>error</strong> (<em>numpy.ndarray</em>) – Error values corresponding to the residuals.</p></li>
-<li><p><strong>log</strong> (<em>bool</em>) – if wavelength bins are on log scale</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Mean signal-to-noise ratios (SNR) around the specified wavelengths.</dt><dd><p>Returns (mean_sn1, mean_sn2).</p>
-</dd>
-</dl>
-</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple</p>
@@ -344,6 +390,34 @@ convolution array over a window defined by pm_pixel.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="qsoabsfind.absorberutils.estimate_snr_for_lines">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">estimate_snr_for_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_rest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#estimate_snr_for_lines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.estimate_snr_for_lines" title="Link to this definition"></a></dt>
+<dd><p>Estimate S/N of the doublet lines.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>l1</strong> (<em>float</em>) – First wavelength to check around.</p></li>
+<li><p><strong>l2</strong> (<em>float</em>) – Second wavelength to check around.</p></li>
+<li><p><strong>lam_rest</strong> (<em>numpy.ndarray</em>) – Rest-frame wavelengths.</p></li>
+<li><p><strong>residual</strong> (<em>numpy.ndarray</em>) – Residual flux values.</p></li>
+<li><p><strong>error</strong> (<em>numpy.ndarray</em>) – Error values corresponding to the residuals.</p></li>
+<li><p><strong>log</strong> (<em>bool</em>) – if wavelength bins are on log scale</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Mean signal-to-noise ratios (SNR) around the specified wavelengths.</dt><dd><p>Returns (mean_sn1, mean_sn2).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.absorberutils.group_and_weighted_mean_selection_function">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">group_and_weighted_mean_selection_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">master_list_of_pot_absorber</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#group_and_weighted_mean_selection_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.group_and_weighted_mean_selection_function" title="Link to this definition"></a></dt>
 <dd><p>Perform grouping, splitting, and median selection from the list of all
@@ -368,25 +442,17 @@ potentially identified absorbers.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.absorberutils.group_contiguous_pixel">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">group_contiguous_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">avg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#group_contiguous_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.group_contiguous_pixel" title="Link to this definition"></a></dt>
-<dd><p>Arrange data into groups where successive elements differ by less than a
-given average difference.</p>
+<dd><p>Arrange data into groups where successive elements differ by less than the average difference.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>numpy.ndarray</em>) – Array of absorber values for each spectrum.</p></li>
-<li><p><strong>resi</strong> (<em>numpy.ndarray</em>) – Corresponding residual values.</p></li>
-<li><p><strong>avg</strong> (<em>float</em>) – Average difference threshold for grouping contiguous pixels.</p></li>
+<li><p><strong>data</strong> (<em>np.ndarray</em>) – List of absorbers for each spectrum.</p></li>
+<li><p><strong>resi</strong> (<em>np.ndarray</em>) – Corresponding residual.</p></li>
+<li><p><strong>avg</strong> (<em>float</em>) – Maximum allowed difference to group data.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A tuple containing:</dt><dd><ul class="simple">
-<li><p>list of grouped data</p></li>
-<li><p>list of grouped residuals</p></li>
-</ul>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>Final list with contiguous pixels grouped, and corresponding residuals if provided.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple</p>
@@ -453,11 +519,10 @@ two spectral lines.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="qsoabsfind.absorberutils.remove_Mg_falsely_identified_as_Fe_absorber">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">remove_Mg_falsely_identified_as_Fe_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_after_grouping</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_obs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#remove_Mg_falsely_identified_as_Fe_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.remove_Mg_falsely_identified_as_Fe_absorber" title="Link to this definition"></a></dt>
-<dd><p>Remove any absorber that arises due to Fe 2586, 2600 or vice-versa case
-of 2796, 2803 when using Fe kernel line but has already been detected for
-the 2796 line, i.e., false positive due to Fe lines.</p>
+<dt class="sig sig-object py" id="qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">remove_Mg_falsely_come_from_Fe_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_after_grouping</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_obs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#remove_Mg_falsely_come_from_Fe_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber" title="Link to this definition"></a></dt>
+<dd><p>Remove any MgII absorber that arises falsley due to Fe 2586, 2600 doublet,
+i.e., false positive due to Fe lines.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -466,6 +531,7 @@ the 2796 line, i.e., false positive due to Fe lines.</p>
 <li><p><strong>residual</strong> (<em>numpy.ndarray</em>) – Residual values.</p></li>
 <li><p><strong>error</strong> (<em>numpy.ndarray</em>) – Error values corresponding to the residuals.</p></li>
 <li><p><strong>d_pix</strong> (<em>float</em>) – Delta pixel value.</p></li>
+<li><p><strong>logwave</strong> (<em>bool</em>) – if wavelength on log scale (default True for SDSS)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -501,9 +567,9 @@ power of gamma.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.absorberutils.z_abs_from_same_metal_absorber">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">z_abs_from_same_metal_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">first_list_z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_obs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#z_abs_from_same_metal_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber" title="Link to this definition"></a></dt>
-<dd><p>Remove any absorber that arises due to the 2803 line but has already
-been detected for the 2796 line, exploiting the doublet property of MgII to
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">z_abs_from_same_metal_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">first_list_z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam_obs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_pix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MgII'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logwave</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#z_abs_from_same_metal_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber" title="Link to this definition"></a></dt>
+<dd><p>Remove any absorber that arises due to the MgII2803 or CIV1550 line but has already
+been detected for the MgII2796 or CIV1548 line, exploiting the doublet property of MgII/CIV to
 remove false positives.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -514,6 +580,7 @@ remove false positives.</p>
 <li><p><strong>error</strong> (<em>numpy.ndarray</em>) – Error values corresponding to the residuals.</p></li>
 <li><p><strong>d_pix</strong> (<em>float</em>) – Pixel distance for line separation during Gaussian fitting. Default is 0.6.</p></li>
 <li><p><strong>use_kernel</strong> (<em>str</em><em>, </em><em>optional</em>) – Kernel type (MgII, CIV). Default is ‘MgII’.</p></li>
+<li><p><strong>logwave</strong> (<em>bool</em>) – if wavelength bins are on log scale</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -528,6 +595,7 @@ remove false positives.</p>
 </section>
 <section id="module-qsoabsfind.ew">
 <span id="qsoabsfind-ew-module"></span><h2>qsoabsfind.ew module<a class="headerlink" href="#module-qsoabsfind.ew" title="Link to this heading"></a></h2>
+<p>This script contains a function to fit a given absorption profile with a double gaussian and measure equivalent widths.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.ew.calculate_ew_errors">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.ew.</span></span><span class="sig-name descname"><span class="pre">calculate_ew_errors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">popt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/ew.html#calculate_ew_errors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.ew.calculate_ew_errors" title="Link to this definition"></a></dt>
@@ -668,10 +736,11 @@ and errors of absorption lines.</p>
 </section>
 <section id="module-qsoabsfind.io">
 <span id="qsoabsfind-io-module"></span><h2>qsoabsfind.io module<a class="headerlink" href="#module-qsoabsfind.io" title="Link to this heading"></a></h2>
+<p>This script contains a functions to read and write files.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.io.read_fits_file">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.io.</span></span><span class="sig-name descname"><span class="pre">read_fits_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/io.html#read_fits_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.io.read_fits_file" title="Link to this definition"></a></dt>
-<dd><p>Reads the FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions from the
+<dd><p>Reads the FLUX, ERROR, WAVELENGTH, and METADATA extensions from the
 FITS file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -681,7 +750,7 @@ FITS file.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A tuple containing the flux, error, wavelength, and tgtdetails data.</p>
+<dd class="field-even"><p>A tuple containing the flux, error, wavelength, and metadata data.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple</p>
@@ -708,11 +777,12 @@ FITS file.</p>
 </section>
 <section id="module-qsoabsfind.spec">
 <span id="qsoabsfind-spec-module"></span><h2>qsoabsfind.spec module<a class="headerlink" href="#module-qsoabsfind.spec" title="Link to this heading"></a></h2>
+<p>This script contains a classes and functions to read a given spectra fits files.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="qsoabsfind.spec.QSOSpecRead">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">qsoabsfind.spec.</span></span><span class="sig-name descname"><span class="pre">QSOSpecRead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/spec.html#QSOSpecRead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.spec.QSOSpecRead" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions.</p>
+<p>A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="qsoabsfind.spec.QSOSpecRead.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fits_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/spec.html#QSOSpecRead.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.spec.QSOSpecRead.__init__" title="Link to this definition"></a></dt>
@@ -728,12 +798,12 @@ FITS file.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="qsoabsfind.spec.QSOSpecRead.get_tgtdetails">
-<span class="sig-name descname"><span class="pre">get_tgtdetails</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/spec.html#QSOSpecRead.get_tgtdetails"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.spec.QSOSpecRead.get_tgtdetails" title="Link to this definition"></a></dt>
-<dd><p>Returns the TGTDETAILS data with keyword handling.</p>
+<dt class="sig sig-object py" id="qsoabsfind.spec.QSOSpecRead.get_metadata">
+<span class="sig-name descname"><span class="pre">get_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/spec.html#QSOSpecRead.get_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.spec.QSOSpecRead.get_metadata" title="Link to this definition"></a></dt>
+<dd><p>Returns the METADATA data with keyword handling.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>The tgtdetails data with keywords.</p>
+<dd class="field-odd"><p>The metadata data with keywords.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>dict</p>
@@ -753,6 +823,7 @@ operation.</p>
 </section>
 <section id="module-qsoabsfind.utils">
 <span id="qsoabsfind-utils-module"></span><h2>qsoabsfind.utils module<a class="headerlink" href="#module-qsoabsfind.utils" title="Link to this heading"></a></h2>
+<p>This script contains some utility functions.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.utils.convolution_fun">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.utils.</span></span><span class="sig-name descname"><span class="pre">convolution_fun</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual_arr_after_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/utils.html#convolution_fun"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.utils.convolution_fun" title="Link to this definition"></a></dt>
@@ -845,19 +916,20 @@ given spectrum.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.utils.plot_absorber">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.utils.</span></span><span class="sig-name descname"><span class="pre">plot_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lam</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zabs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obs</span> <span class="pre">wave</span> <span class="pre">(ang)'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'residual'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'QSO'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/utils.html#plot_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.utils.plot_absorber" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.utils.</span></span><span class="sig-name descname"><span class="pre">plot_absorber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lam</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zabs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xlabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obs</span> <span class="pre">wave</span> <span class="pre">(ang)'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylabel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'residual'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'QSO'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/utils.html#plot_absorber"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.utils.plot_absorber" title="Link to this definition"></a></dt>
 <dd><p>Saves a plot of spectra with absorber in the current working directory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lam</strong> (<em>array-like</em>) – observed wavelength.</p></li>
-<li><p><strong>residual</strong> (<em>array-like</em>) – residual.</p></li>
-<li><p><strong>absorber</strong> (<em>str</em>) – e.g. MgII, CIV</p></li>
-<li><p><strong>zabs</strong> (<em>list</em>) – list of absorbers</p></li>
-<li><p><strong>xlabel</strong> (<em>str</em>) – The label for the x-axis. Default is ‘X-axis’.</p></li>
-<li><p><strong>ylabel</strong> (<em>str</em>) – The label for the y-axis. Default is ‘Y-axis’.</p></li>
-<li><p><strong>title</strong> (<em>str</em>) – The title of the plot. Default is ‘Plot Title’.</p></li>
-<li><p><strong>plot_filename</strong> (<em>str</em>) – if provided, will save the plot</p></li>
+<li><p><strong>lam</strong> (<em>array-like</em>) – Observed wavelength.</p></li>
+<li><p><strong>residual</strong> (<em>array-like</em>) – Residual flux.</p></li>
+<li><p><strong>absorber</strong> (<em>str</em>) – Type of absorber, e.g., ‘MgII’, ‘CIV’.</p></li>
+<li><p><strong>zabs</strong> (<em>list</em>) – List of absorber redshifts.</p></li>
+<li><p><strong>xlabel</strong> (<em>str</em>) – The label for the x-axis. Default is ‘obs wave (ang)’.</p></li>
+<li><p><strong>ylabel</strong> (<em>str</em>) – The label for the y-axis. Default is ‘residual’.</p></li>
+<li><p><strong>title</strong> (<em>str</em>) – The title of the plot. Default is ‘QSO’.</p></li>
+<li><p><strong>plot_filename</strong> (<em>str</em>) – If provided, will save the plot to the given filename.</p></li>
+<li><p><strong>zoom</strong> (<em>bool</em>) – If True, adds an inset plot to show a zoomed-in version of the absorber lines.</p></li>
 </ul>
 </dd>
 </dl>
@@ -959,7 +1031,7 @@ gaussian profile.</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on True.
+      <span class="lastupdated">Last updated on 2024-08-01 23:30:26.821787.
       </span></p>
   </div>
 

@@ -73,7 +73,11 @@
            <div itemprop="articleBody">
              
   <h1>Source code for qsoabsfind.spec</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">read_fits_file</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains a classes and functions to read a given spectra fits files.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">read_fits_file</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 <span class="kn">import</span> <span class="nn">time</span>
 
@@ -81,7 +85,7 @@
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead">[docs]</a>
 <span class="k">class</span> <span class="nc">QSOSpecRead</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and TGTDETAILS extensions.&quot;&quot;&quot;</span>
+<span class="sd">    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="QSOSpecRead.__init__">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.__init__">[docs]</a>
@@ -97,7 +101,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">flux</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tgtdetails</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">read_fits</span><span class="p">()</span></div>
 
@@ -110,20 +114,20 @@
 <span class="sd">        operation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgtdetails</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
         <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Time taken to read FITS file&quot;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="QSOSpecRead.get_tgtdetails">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.get_tgtdetails">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_tgtdetails</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="QSOSpecRead.get_metadata">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.get_metadata">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the TGTDETAILS data with keyword handling.</span>
+<span class="sd">        Returns the METADATA data with keyword handling.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict: The tgtdetails data with keywords.</span>
+<span class="sd">            dict: The metadata data with keywords.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgtdetails</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tgtdetails</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
+        <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">details_dict</span></div>
 </div>
 
@@ -136,7 +140,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -73,10 +73,14 @@
            <div itemprop="articleBody">
              
   <h1>Source code for qsoabsfind.utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains some utility functions.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
 <span class="c1">#import logging</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">speed_of_light</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">os</span>
 
@@ -85,6 +89,9 @@
 
 <span class="c1"># Set the logging level for Matplotlib to WARNING to suppress DEBUG messages</span>
 <span class="c1">#logging.getLogger(&#39;matplotlib&#39;).setLevel(logging.WARNING)</span>
+
+<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
+<span class="n">lines</span><span class="p">,</span> <span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
 
 <div class="viewcode-block" id="elapsed">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.elapsed">[docs]</a>
@@ -322,37 +329,64 @@
 
 <div class="viewcode-block" id="plot_absorber">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.plot_absorber">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_absorber</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;obs wave (ang)&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;residual&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;QSO&#39;</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">plot_absorber</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;obs wave (ang)&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;residual&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;QSO&#39;</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zoom</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Saves a plot of spectra with absorber in the current working directory.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        lam (array-like): observed wavelength.</span>
-<span class="sd">        residual (array-like): residual.</span>
-<span class="sd">        absorber (str): e.g. MgII, CIV</span>
-<span class="sd">        zabs(list): list of absorbers</span>
-<span class="sd">        xlabel (str): The label for the x-axis. Default is &#39;X-axis&#39;.</span>
-<span class="sd">        ylabel (str): The label for the y-axis. Default is &#39;Y-axis&#39;.</span>
-<span class="sd">        title (str): The title of the plot. Default is &#39;Plot Title&#39;.</span>
-<span class="sd">        plot_filename (str): if provided, will save the plot</span>
+<span class="sd">        lam (array-like): Observed wavelength.</span>
+<span class="sd">        residual (array-like): Residual flux.</span>
+<span class="sd">        absorber (str): Type of absorber, e.g., &#39;MgII&#39;, &#39;CIV&#39;.</span>
+<span class="sd">        zabs (list): List of absorber redshifts.</span>
+<span class="sd">        xlabel (str): The label for the x-axis. Default is &#39;obs wave (ang)&#39;.</span>
+<span class="sd">        ylabel (str): The label for the y-axis. Default is &#39;residual&#39;.</span>
+<span class="sd">        title (str): The title of the plot. Default is &#39;QSO&#39;.</span>
+<span class="sd">        plot_filename (str): If provided, will save the plot to the given filename.</span>
+<span class="sd">        zoom (bool): If True, adds an inset plot to show a zoomed-in version of the absorber lines.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Create the plot</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+    <span class="c1"># Create the main plot</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">absorber</span><span class="o">==</span><span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+
+    <span class="c1"># Determine the absorber line labels</span>
+    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
         <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;MgII_2796&#39;</span><span class="p">,</span> <span class="s1">&#39;MgII_2803&#39;</span>
-    <span class="k">if</span> <span class="n">absorber</span><span class="o">==</span><span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
         <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;CIV_1548&#39;</span><span class="p">,</span> <span class="s1">&#39;CIV_1550&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type: </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Plot vertical lines for the absorber lines</span>
     <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zabs</span><span class="p">:</span>
-        <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s1"> z=</span><span class="si">{</span><span class="n">z</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s1"> z=</span><span class="si">{</span><span class="n">z</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
     <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
+    <span class="c1"># Add inset zoomed plot if requested</span>
+    <span class="k">if</span> <span class="n">zoom</span><span class="p">:</span>
+        <span class="n">sep</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="n">ax_inset</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">inset_axes</span><span class="p">([</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">])</span>  <span class="c1"># position: [x0, y0, width, height]</span>
+        <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zabs</span><span class="p">:</span>
+            <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&gt;</span> <span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&lt;</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">)</span>  <span class="c1"># zoom range around the lines</span>
+            <span class="n">ax_inset</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+            <span class="n">ax_inset</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+            <span class="n">ax_inset</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">,</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">])</span>
+        <span class="c1">#Determine appropriate y-limits for inset based on data</span>
+        <span class="n">y_min</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">y_margin</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_max</span> <span class="o">-</span> <span class="n">y_min</span><span class="p">)</span>  <span class="c1"># Add a margin for better visibility</span>
+        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">y_min</span> <span class="o">-</span> <span class="n">y_margin</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">+</span> <span class="n">y_margin</span><span class="p">)</span>
+        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Zoomed-In </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s1"> Lines&#39;</span><span class="p">)</span>
+        <span class="n">ax_inset</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Save or display the plot</span>
     <span class="k">if</span> <span class="n">plot_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># Get the current working directory</span>
         <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
@@ -377,7 +411,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
