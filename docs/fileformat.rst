@@ -36,7 +36,9 @@ Then run `qsoabsfind` with the required FITS file. If using a custom constant fi
 Output FITS File Structure
 --------------------------
 
-The **output** `fits file` will have the `ABSORBER` HDU, containing arrays such as:
+The **output** `fits file` will have two HDUs `ABSORBER` and `MATADATA':
+
+**ABSORBER** HDU will contain following structured data:
 
 - **INDEX_SPEC**: Index of quasar (can be used to read the RA, DEC, and Z of QSOs).
 - **Z_ABS**: Redshift of absorber.
@@ -48,3 +50,5 @@ The **output** `fits file` will have the `ABSORBER` HDU, containing arrays such 
 - **SN_${METAL}_${LINE}**: Signal-to-noise ratio of the lines.
 - **${METAL}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
+
+**METADATA** HDU will contain every metadata (corresponding to each absorber) that is available in input spectra file.

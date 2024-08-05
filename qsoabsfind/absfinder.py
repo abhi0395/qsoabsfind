@@ -96,7 +96,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     Raises:
         AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.
 
-    Notes:
+    Note:
         - This function assumes that the input spectra are already normalized (i.e., flux divided by continuum).
         - The wavelength search region is determined dynamically based on the observed wavelength range.
     """

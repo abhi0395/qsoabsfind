@@ -7,7 +7,6 @@ from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
 from .config import load_constants
-from numba import jit
 
 constants = load_constants()
 lines = constants.lines

@@ -280,7 +280,8 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
 def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
     """
-    Saves a plot of spectra with absorber in the current working directory.
+    Saves a plot of spectra with absorber(s) (full spectrum + zoomed version)
+    in the current working directory.
 
     Args:
         lam (array-like): Observed wavelength.
