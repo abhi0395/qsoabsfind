@@ -16,7 +16,6 @@ from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
 from .spec import QSOSpecRead
 from numba import jit
-from astropy.table import Table
 
 constants = load_constants()
 lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light

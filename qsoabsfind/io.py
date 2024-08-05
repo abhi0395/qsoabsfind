@@ -88,6 +88,5 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
 
     _, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
-    import pdb;pdb.set_trace()
     hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
     hdul.writeto(output_file, overwrite=True)

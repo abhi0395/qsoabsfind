@@ -8,6 +8,7 @@ import numpy as np
 from .config import load_constants
 import matplotlib.pyplot as plt
 import os
+from astropy.io import fits
 
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -348,3 +349,35 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
+
+def read_nqso_from_header(file_path, hdu_name='METADATA'):
+    """
+    Read the NAXIS1 value from the header of a specified HDU in a FITS file.
+
+    Parameters:
+    - file_path: str, path to the FITS file.
+    - hdu_name: str, name of the HDU from which to read NAXIS1 (default: 'METADATA').
+
+    Returns:
+    - naxis1_value: int, value of NAXIS1 from the specified HDU header.
+    """
+    # Check if the file exists
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"The FITS file {file_path} does not exist.")
+
+    # Open the FITS file in read-only mode and load headers only
+    with fits.open(file_path, mode='readonly') as hdul:
+        # Attempt to access the specified HDU by name
+        try:
+            # Load only the header of the specified HDU
+            header = hdul[hdu_name].header
+
+            # Read the NAXIS1 value from the header
+            naxis1_value = header.get('NAXIS1', None)
+
+            if naxis1_value is None:
+                raise KeyError(f"NAXIS1 not found in the '{hdu_name}' HDU header.")
+            return naxis1_value
+
+        except KeyError:
+            raise ValueError(f"No '{hdu_name}' HDU found in {file_path}.")
