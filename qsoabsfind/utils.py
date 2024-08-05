@@ -352,14 +352,14 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
 
 def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """
-    Read the NAXIS1 value from the header of a specified HDU in a FITS file.
+    Read the NAXIS2 value from the header of a specified HDU in a FITS file.
 
     Parameters:
     - file_path: str, path to the FITS file.
     - hdu_name: str, name of the HDU from which to read NAXIS1 (default: 'METADATA').
 
     Returns:
-    - naxis1_value: int, value of NAXIS1 from the specified HDU header.
+    - naxis2_value: int, value of NAXIS2 from the specified HDU header.
     """
     # Check if the file exists
     if not os.path.isfile(file_path):
@@ -373,11 +373,11 @@ def read_nqso_from_header(file_path, hdu_name='METADATA'):
             header = hdul[hdu_name].header
 
             # Read the NAXIS1 value from the header
-            naxis1_value = header.get('NAXIS1', None)
+            naxis2_value = header.get('NAXIS2', None)
 
-            if naxis1_value is None:
-                raise KeyError(f"NAXIS1 not found in the '{hdu_name}' HDU header.")
-            return naxis1_value
+            if naxis2_value is None:
+                raise KeyError(f"NAXIS2 not found in the '{hdu_name}' HDU header.")
+            return naxis2_value
 
         except KeyError:
             raise ValueError(f"No '{hdu_name}' HDU found in {file_path}.")

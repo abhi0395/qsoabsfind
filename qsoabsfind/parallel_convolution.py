@@ -198,6 +198,7 @@ def main():
     if not args.n_qso:
         nqso = read_nqso_from_header(args.input_fits_file)
         args.n_qso = nqso
+        print(f'INFO:: Total quasars found in the input file = {args.n_qso}, will run on all of them..')
     # Parse the QSO sequence
     spec_indices = parse_qso_sequence(args.n_qso)
 
