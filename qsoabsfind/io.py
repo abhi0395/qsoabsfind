@@ -90,3 +90,4 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
     hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
     hdul.writeto(output_file, overwrite=True)
+    print(f'INFO: ouptut file {output_file} written.')

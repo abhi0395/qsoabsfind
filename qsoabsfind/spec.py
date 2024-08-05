@@ -10,13 +10,14 @@ class QSOSpecRead:
     """
     A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions."""
 
-    def __init__(self, fits_file, index=None):
+    def __init__(self, fits_file, index=None, verbose=False):
         """
         Initializes the QSOSpecRead class.
 
         Args:
             fits_file (str): Path to the FITS file containing QSO spectra.
             index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.
+            verbose (bool): if want to print time info
         """
         self.fits_file = fits_file
         self.flux = None
@@ -24,6 +25,7 @@ class QSOSpecRead:
         self.wavelength = None
         self.metadata = None
         self.index = index
+        self.verbose = verbose
         self.read_fits()
 
     def read_fits(self):
@@ -33,7 +35,8 @@ class QSOSpecRead:
         """
         start_time = time.time()
         self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
-        elapsed(start_time, "\nTime taken to read FITS file")
+        if self.verbose:
+            elapsed(start_time, "\nTime taken to read FITS file")
 
     def get_metadata(self):
         """

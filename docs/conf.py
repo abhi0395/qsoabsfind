@@ -17,7 +17,7 @@ html_context = {
     "github_repo": "qsoabsfind",  # Repo name
     "github_version": "main",  # Version
     "conf_py_path": "/docs/",  # Path in the checkout to the docs root
-    "last_updated": datetime.now(),
+    "last_updated": (datetime.now().date()),
     "commit": False,
 }
 

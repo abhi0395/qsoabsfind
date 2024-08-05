@@ -7,9 +7,32 @@ from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
 from .config import load_constants
+from numba import jit
 
 constants = load_constants()
 lines = constants.lines
+
+def return_line_centers(use_kernel):
+    """
+    Return line centers for a given absorber
+
+    Args:
+        use_kerne (str): absorber (e.g. MgII, CIV)
+
+    Returns:
+        line centers (floats)
+    """
+
+    if use_kernel == 'MgII':
+        line_centre1 = lines['MgII_2796']
+        line_centre2 = lines['MgII_2803']
+    elif use_kernel == 'CIV':
+        line_centre1 = lines['CIV_1548']
+        line_centre2 = lines['CIV_1550']
+    else:
+        raise ValueError("Unsupported kernel type. Use 'MgII', or 'CIV'.")
+
+    return line_centre1, line_centre2
 
 # Example usage within double_curve_fit
 def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, bounds, init_cond, iter_n):
@@ -134,6 +157,7 @@ def full_covariance_ew_errors(popt, pcov):
 
     return EW1_error, EW2_error, EW_total_error
 
+
 def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel='Mg', d_pix=0.6, use_covariance=False):
     """
     Measures the properties of each potential absorber by fitting a double
@@ -180,17 +204,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     EW_total_error = np.zeros(size_array, dtype='float32')
     z_abs_err = np.zeros(size_array, dtype='float32')
 
-    if use_kernel == 'MgII':
-        line_centre1 = lines['MgII_2796']
-        line_centre2 = lines['MgII_2803']
-    elif use_kernel == 'FeII':
-        line_centre1 = lines['FeII_2586']
-        line_centre2 = lines['FeII_2600']
-    elif use_kernel == 'CIV':
-        line_centre1 = lines['CIV_1548']
-        line_centre2 = lines['CIV_1550']
-    else:
-        raise ValueError("Unsupported kernel type. Use 'Mg', 'Fe', or 'CIV'.")
+    line_centre1, line_centre2 = return_line_centers(use_kernel)
 
     #defining wwavelength range for Gaussian fitting
     sigma = d_pix*15 # assuming maximum line width of d_pix * 15, can be larger/smaller, but this is a reasonable assumption.
@@ -228,6 +242,16 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+absorber_redshift[k])
 
             z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
+
+            #best-fit corresponding to this best redshift
+            absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
+            lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
+            lam_fit = absorber_rest_lam[lam_ind]
+            nmf_resi = flux[lam_ind]
+            error_flux = error[lam_ind]
+
+            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k] = double_curve_fit(
+                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
 
             #errors on EW
             if not use_covariance:

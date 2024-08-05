@@ -9,6 +9,7 @@ from .config import load_constants
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
+from astropy.table import Table
 
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -277,7 +278,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     return corr_del_v1_sq, corr_del_v2_sq
 
-def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None, zoom=False):
+def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
     """
     Saves a plot of spectra with absorber in the current working directory.
 
@@ -285,16 +286,36 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
         lam (array-like): Observed wavelength.
         residual (array-like): Residual flux.
         absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
-        zabs (list): List of absorber redshifts.
+        zabs (list, array, or Table): Absorber redshifts, or a Table with 'Z_ABS' and 'GAUSS_FIT' columns.
         xlabel (str): The label for the x-axis. Default is 'obs wave (ang)'.
         ylabel (str): The label for the y-axis. Default is 'residual'.
-        title (str): The title of the plot. Default is 'QSO'.
+        title (str): The super title of the plot. Default is 'QSO'.
         plot_filename (str): If provided, will save the plot to the given filename.
-        zoom (bool): If True, adds an inset plot to show a zoomed-in version of the absorber lines.
     """
-    # Create the main plot
-    plt.figure(figsize=(12, 4))
-    plt.plot(lam, residual, ls='-', lw=1.5)
+    # If zabs is a Table or structured array, extract redshifts and fit parameters
+    if isinstance(zabs, (Table, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
+        redshifts = zabs['Z_ABS']
+        fit_params = zabs['GAUSS_FIT']
+    else:
+        redshifts = zabs
+        fit_params = None
+
+    if isinstance(redshifts, float):
+        redshifts = [redshifts]
+
+    num_absorbers = len(redshifts)
+
+    # Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots
+    fig = plt.figure(figsize=(6 * num_absorbers, 8))
+    fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
+
+    # Super title for the entire figure
+    fig.suptitle(title, fontsize=16)
+
+    # Create the main plot in the first row
+    ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
+    ax_main.plot(lam, residual, ls='-', lw=1.5)
+    ax_main.set_xlim(3800, 9200)
 
     # Determine the absorber line labels
     if absorber == 'MgII':
@@ -304,35 +325,54 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
     else:
         raise ValueError(f"Unsupported absorber type: {absorber}")
 
-    # Plot vertical lines for the absorber lines
-    for z in zabs:
+    # Plot vertical lines for the absorber lines in the main plot
+    for z in redshifts:
         x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
-        plt.axvline(x=x1, color='r', ls='--', label=f'{l1} z={z:.3f}')
-        plt.axvline(x=x2, color='r', ls='--', label=f'{l2} z={z:.3f}')
+        ax_main.axvline(x=x1, color='r', ls='--')
+        ax_main.axvline(x=x2, color='r', ls='--')
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.grid(True)
-    plt.ylim(-1, 2)
+    ax_main.set_xlabel(xlabel)
+    ax_main.set_ylabel(ylabel)
+    ax_main.grid(True)
+    ax_main.set_ylim(-1, 2)
 
-    # Add inset zoomed plot if requested
-    if zoom:
-        sep = 25
-        ax_inset = plt.gca().inset_axes([0.6, 0.15, 0.35, 0.4])  # position: [x0, y0, width, height]
-        for z in zabs:
-            x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
-            mask = (lam > x1 - sep) & (lam < x2 + sep)  # zoom range around the lines
-            ax_inset.plot(lam[mask], residual[mask], ls='-', lw=1.5)
-            ax_inset.axvline(x=x1, color='r', ls='--')
-            ax_inset.axvline(x=x2, color='r', ls='--')
-        ax_inset.set_xlim([x1 - sep, x2 + sep])
-        #Determine appropriate y-limits for inset based on data
+    # Add subplots for zoomed-in regions in the second row
+    sep = 25  # Set separation for zoomed plot ranges
+
+    for idx, z in enumerate(redshifts):
+        shift_z = 1 + z
+        ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
+        x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
+        mask = (lam > x1 - sep) & (lam < x2 + sep)  # Define zoom range around the lines
+
+        ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data')
+        ax_zoom.axvline(x=x1, color='r', ls='--')
+        ax_zoom.axvline(x=x2, color='r', ls='--')
+        ax_zoom.set_xlim([x1 - sep, x2 + sep])
+
+        # Determine appropriate y-limits for the subplot based on data
         y_min, y_max = residual[mask].min(), residual[mask].max()
         y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
-        ax_inset.set_ylim(y_min - y_margin, y_max + y_margin)
-        ax_inset.set_title(f'Zoomed-In {absorber} Lines')
-        ax_inset.grid(True)
+        ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
+
+        ax_zoom.set_title(f'{absorber} at z={z:.3f}')
+        ax_zoom.grid(True)
+        ax_zoom.set_xlabel(xlabel)
+        ax_zoom.set_ylabel(ylabel)
+
+        # Add Gaussian fit
+        if fit_params is not None:
+            params = fit_params[idx]
+            # Adjust fit parameters for the redshift
+            # Plot the Gaussian fit
+            lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
+            fit_curve = double_gaussian(lam_fit, params[0], shift_z * params[1], shift_z * params[2],
+            params[3], shift_z * params[4], shift_z * params[5])
+            ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit')
+        ax_zoom.legend()
+
+    # Use tight_layout to ensure there are no overlaps
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Reserve space for suptitle
 
     # Save or display the plot
     if plot_filename is not None:
@@ -349,6 +389,7 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
+
 
 def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """
