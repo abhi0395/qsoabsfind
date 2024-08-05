@@ -48,6 +48,6 @@ Parallel mode can be memory-intensive if the input FITS file is large in size. A
 
    - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
 
-   - **Merge results at the end:** After processing, you can merge your results.
+   - **Merge results at the end:** After processing, you can merge your results using `qsoabsfind.utils.combine_fits_files <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/utils.py>`_ function. Please read the description before using it.
 
 In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.

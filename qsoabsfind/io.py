@@ -35,15 +35,20 @@ def read_fits_file(fits_file, index=None):
             wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
     return flux, error, wavelength, metadata
 
-def save_results_to_fits(results, output_file, headers, absorber):
+def save_results_to_fits(results, input_file, output_file, headers, absorber):
     """
-    Save the results to a FITS file.
+    Save the absorber results to a FITS file along with the metadata of QSOs.
 
     Args:
         results (dict): The results dictionary.
+        intput_file (str): The path to the input spectra FITS file.
         output_file (str): The path to the output FITS file.
         headers (dict): The headers to include in the FITS file.
         absorber (str): The absorber type (MgII or CIV).
+
+    Returns:
+        A fits file containing detected absorber properties in 'ABSORBER' HDU and
+        corresponfing QSO metadata in 'METADATA' HDU.
     """
     EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
     if absorber == 'MgII':
@@ -79,5 +84,10 @@ def save_results_to_fits(results, output_file, headers, absorber):
     for key, header in headers.items():
         hdr[key] = (header["value"], header["comment"])
 
-    hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu])
+    # load the QSO METADATA
+
+    _, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
+    qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
+    import pdb;pdb.set_trace()
+    hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
     hdul.writeto(output_file, overwrite=True)

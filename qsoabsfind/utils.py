@@ -175,6 +175,54 @@ def save_plot(x, y, plot_filename='qsoabsfind_plot.png', xlabel='X-axis', ylabel
 
     print(f"Plot saved as {plot_path}")
 
+def combine_fits_files(directory, output_filename='combined.fits'):
+    """
+    Combine HDUs from all FITS files in a directory into a single FITS file, preserving headers
+    and saves the final combined file in the same directory.
+
+    Args:
+        directory: str, path to the directory containing FITS files (absorber file for each spectra file).
+        output_filename: str, name of the output combined FITS file (default: 'combined.fits').
+
+    Note:
+        This function assumes that all the corresponding absorber fits files are in the input directory,
+        and follow the same structure as the output of qsoabsfind. Also there should not be any other
+        FITS file there. Otherwise, script will fail.
+    """
+    # Ensure the directory exists
+    if not os.path.isdir(directory):
+        raise FileNotFoundError(f"The directory {directory} does not exist.")
+
+    # List to hold all HDUs for the combined FITS file
+    combined_hdul = fits.HDUList()
+
+    # Track added extension names to avoid duplicates
+    added_extnames = set()
+
+    # Iterate over all FITS files in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith(".fits"):
+            file_path = os.path.join(directory, filename)
+            print(f"Processing file: {file_path}")
+
+            # Open the FITS file
+            with fits.open(file_path, memmap=True) as hdul:
+                # Iterate through each HDU in the file
+                for hdu in hdul:
+                    # If it's the Primary HDU or a unique extension, add it to the combined list
+                    if isinstance(hdu, fits.PrimaryHDU) or hdu.name not in added_extnames:
+                        # Copy the HDU to preserve data and header
+                        combined_hdul.append(hdu.copy())
+                        added_extnames.add(hdu.name)
+                        print(f"Added HDU '{hdu.name}' from {filename}")
+
+    # Construct the output file path
+    output_file_path = os.path.join(directory, output_filename)
+
+    # Save the combined HDU list to a new FITS file
+    combined_hdul.writeto(output_file_path, overwrite=True)
+    print(f"Combined FITS file saved as {output_file_path}")
+
 def validate_sizes(conv_arr, unmsk_residual, spec_index):
     """
     Validate that all arrays have the same size.

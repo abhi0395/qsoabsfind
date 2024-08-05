@@ -212,7 +212,7 @@ def main():
     )
 
     # Save the results to a FITS file
-    save_results_to_fits(results, args.output, headers, args.absorber)
+    save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
 
     # End timing
     end_time = time.time()
