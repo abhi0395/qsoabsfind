@@ -157,10 +157,9 @@ def main():
 
     # Set the environment variable for the constants file
     if args.constant_file:
-        if not os.path.isabs(args.constant_file):
-            args.constant_file = os.path.abspath(os.path.join(os.getcwd(), args.constant_file))
-            os.environ['QSO_CONSTANTS_FILE'] = args.constant_file
-            print(f"INFO: Using user-provided constants from: {args.constant_file}")
+        print(f"INFO: Using user-provided constants from: {os.path.abspath(args.constant_file)}")
+        print(f'INFO: Overwriting QSO_CONSTANTS_FILE variable with this path')
+        os.environ['QSO_CONSTANTS_FILE'] = os.path.abspath(args.constant_file)
 
     print(f"INFO: QSO_CONSTANTS_FILE: {os.environ['QSO_CONSTANTS_FILE']}")
     # set the new constants
