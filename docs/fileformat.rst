@@ -36,7 +36,7 @@ Then run `qsoabsfind` with the required FITS file. If using a custom constant fi
 Output FITS File Structure
 --------------------------
 
-The **output** `fits file` will have two HDUs `ABSORBER` and `MATADATA':
+The **output** `fits file` will have two HDUs `ABSORBER` and `METADATA`:
 
 **ABSORBER** HDU will contain following structured data:
 
