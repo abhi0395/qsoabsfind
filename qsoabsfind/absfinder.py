@@ -78,7 +78,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
         absorber (str): Name of the absorber to search for (e.g., 'MgII', 'CIV').
-        kwargs (dictionary): search parameters used in convolution_method_absorber_finder_in_QSO_spectra()
+        kwargs (dictionary): search parameters as defined in constants.py
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -107,7 +107,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     lam_obs = spectra.wavelength
 
     # Define the wavelength range for searching the absorber
-    min_wave, max_wave = lam_obs.min() + 200, lam_obs.max() - 200  # avoiding edges
+    min_wave, max_wave = lam_obs.min() + kwargs["lam_edge_sep"], lam_obs.max() - kwargs["lam_edge_sep"]  # avoiding edges
 
     # Retrieve flux and error data, ensuring consistent dtype for Numba compatibility
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
@@ -123,6 +123,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
+
+    kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
 
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 

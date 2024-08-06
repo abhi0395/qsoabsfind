@@ -70,7 +70,7 @@ def parse_qso_sequence(qso_sequence):
     # If none of the conditions matched, raise an error
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
-def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber='MgII', ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=False, n_jobs=1):
+def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber, n_jobs, **kwargs):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
     multiprocessing.
@@ -79,23 +79,14 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_indices (list or numpy.array): Indices of quasars in the data matrix.
         absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
-        ker_width_pixels (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
-        coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
-        mult_resi (float): Factor to shift the residual up or down. Default is 1.
-        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
-        pm_pixel (int): Pixel parameter for local noise estimation (default 200).
-        sn_line1 (float): Signal-to-noise ratio for thresholding for line1.
-        sn_line2 (float): Signal-to-noise ratio for thresholding for line2.
-        use_covariance (bool): If want to use full covariance of scipy curve_fit for EW error calculation (default is False).
-        logwave (bool): If wavelength on logscale (default True for SDSS).
-        verbose (bool): if True will print lots of output for debugging
         n_jobs (int): Number of parallel jobs to run.
+        kwargs (dictionary): search parameters as defined in constants.py
 
     Returns:
         dict: A dictionary containing combined results from all parallel runs.
     """
 
-    kwargs = {'ker_width_pixels': ker_width_pixels, 'coeff_sigma': coeff_sigma, 'mult_resi': mult_resi, 'd_pix': d_pix, 'pm_pixel': pm_pixel, 'sn_line1': sn_line1, 'sn_line2': sn_line2, 'use_covariance': use_covariance, 'logwave': logwave, 'verbose': verbose}
+    #kwargs = {'ker_width_pixels': ker_width_pixels, 'coeff_sigma': coeff_sigma, 'mult_resi': mult_resi, 'd_pix': d_pix, 'pm_pixel': pm_pixel, 'sn_line1': sn_line1, 'sn_line2': sn_line2, 'use_covariance': use_covariance, 'logwave': logwave, 'verbose': verbose}
 
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
@@ -174,21 +165,21 @@ def main():
     # Add search parameters and package versions to headers
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
-        'KERWIDTH': {"value": str(constants.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels'},
-        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold'},
-        'MULTRE': {"value": constants.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals'},
-        'D_PIX': {"value": constants.search_parameters[args.absorber]["d_pix"], "comment": 'toloerance for line separation (in Ang)'},
-        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation'},
-        'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line'},
-        'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line'},
-        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation'},
-        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling'}
+        'KERWIDTH': {"value": str(constants.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
+        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold (coeff_sigma)'},
+        'MULTRE': {"value": constants.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
+        'D_PIX': {"value": constants.search_parameters[args.absorber]["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
+        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation (pm_pixel)'},
+        'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
+        'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
+        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation (use_covariance)'},
+        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'wavelength edges to avoid noisy regions (edges+/-lam_edge_sep)'}
     })
 
     package_versions = get_package_versions()
     for pkg, ver in package_versions.items():
         headers[pkg.upper()] = {"value": ver, "comment": f'{pkg} version'}
-    headers['QSABFI'] = headers.pop('QSOABSFIND')
+    headers['QSOABFI'] = headers.pop('QSOABSFIND')
     headers['MATPLOT'] = headers.pop('MATPLOTLIB')
 
     # Start timing
@@ -204,15 +195,7 @@ def main():
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        ker_width_pixels=constants.search_parameters[args.absorber]["ker_width_pixels"],
-        coeff_sigma=constants.search_parameters[args.absorber]["coeff_sigma"],
-        mult_resi=constants.search_parameters[args.absorber]["mult_resi"],
-        d_pix=constants.search_parameters[args.absorber]["d_pix"],
-        pm_pixel=constants.search_parameters[args.absorber]["pm_pixel"],
-        sn_line1=constants.search_parameters[args.absorber]["sn_line1"],
-        sn_line2=constants.search_parameters[args.absorber]["sn_line2"],
-        use_covariance=constants.search_parameters[args.absorber]["use_covariance"],
-        logwave=constants.search_parameters[args.absorber]["logwave"], verbose=constants.search_parameters[args.absorber]["verbose"], n_jobs=args.n_tasks * args.ncpus
+        n_jobs=args.n_tasks * args.ncpus, **constants.search_parameters[args.absorber]
     )
 
     # Save the results to a FITS file

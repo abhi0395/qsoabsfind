@@ -24,6 +24,7 @@ lines = {
 ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Pixel size for Gaussian convolution
 pm_pixel = 200  # Pixel size for error calculation to define the threshold for potential absorber features
 mult_resi = 1  # Coefficients to multiply the residual before Gaussian search
+lam_sep = 300 # wavelength shift from edges (in Ang), i.e., lam_min + lam_sep, lam_max - lam_sep, to avoid noisy edges of the spectrum
 
 search_parameters = {
     'MgII': {
@@ -37,6 +38,7 @@ search_parameters = {
         'use_covariance':False,
         'logwave':True,
         'verbose':False,
+        'lam_edge_sep':lam_sep,
     },
     'CIV': {
         'ker_width_pixels': ker_width_pixels,
@@ -49,6 +51,7 @@ search_parameters = {
         'use_covariance':False,
         'logwave':True,
         'verbose':False,
+        'lam_edge_sep':lam_sep,
     }
 }
 

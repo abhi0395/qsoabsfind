@@ -278,21 +278,23 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     return corr_del_v1_sq, corr_del_v2_sq
 
-def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
+def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
     """
     Saves a plot of spectra with absorber(s) (full spectrum + zoomed version)
     in the current working directory.
 
     Args:
-        lam (array-like): Observed wavelength.
-        residual (array-like): Residual flux.
+        spectra (object): spectra class, output of QSOSpecRead()
         absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
         zabs (list, array, or Table): Absorber redshifts, or a Table with 'Z_ABS' and 'GAUSS_FIT' columns.
+        show_error (bool): if error bars should be shown (default False)
         xlabel (str): The label for the x-axis. Default is 'obs wave (ang)'.
         ylabel (str): The label for the y-axis. Default is 'residual'.
         title (str): The super title of the plot. Default is 'QSO'.
         plot_filename (str): If provided, will save the plot to the given filename.
     """
+
+    lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
     if isinstance(zabs, (Table, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
         redshifts = zabs['Z_ABS']
@@ -307,7 +309,7 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
     num_absorbers = len(redshifts)
 
     # Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots
-    fig = plt.figure(figsize=(6 * num_absorbers, 8))
+    fig = plt.figure(figsize=(13.5, 8))
     fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
 
     # Super title for the entire figure
@@ -315,8 +317,11 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
 
     # Create the main plot in the first row
     ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
-    ax_main.plot(lam, residual, ls='-', lw=1.5)
+    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual')
+    if show_error:
+        ax_main.plot(lam, error, ls='-', lw=1.5, label='error')
     ax_main.set_xlim(3800, 9200)
+    ax_main.legend()
 
     # Determine the absorber line labels
     if absorber == 'MgII':
@@ -345,8 +350,10 @@ def plot_absorber(lam, residual, absorber, zabs, xlabel='obs wave (ang)', ylabel
         ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
         mask = (lam > x1 - sep) & (lam < x2 + sep)  # Define zoom range around the lines
-
-        ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data')
+        if not show_error:
+            ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data')
+        else:
+            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data')
         ax_zoom.axvline(x=x1, color='r', ls='--')
         ax_zoom.axvline(x=x2, color='r', ls='--')
         ax_zoom.set_xlim([x1 - sep, x2 + sep])

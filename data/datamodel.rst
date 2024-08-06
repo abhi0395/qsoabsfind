@@ -41,7 +41,7 @@ Run `qsoabsfind` with the required FITS file. If using a custom constant file, i
 
     qsoabsfind --input <path_to_input_fits_file> [--constant-file <path_to_constant_file>] --output <path_to_output_fits_file>
 
-Replace `<path_to_input_fits_file>` with the path to your input FITS file, `<path_to_constant_file>` with the path to your constant file (if using), and `<path_to_output_fits_file>` with the desired path for your output FITS file. For a quick example run you can run the module on `data/qso_test.fits`. 
+Replace `<path_to_input_fits_file>` with the path to your input FITS file, `<path_to_constant_file>` with the path to your constant file (if using), and `<path_to_output_fits_file>` with the desired path for your output FITS file. For a quick example run you can run the module on `data/qso_test.fits`.
 
 Output FITS File Structure
 --------------------------
