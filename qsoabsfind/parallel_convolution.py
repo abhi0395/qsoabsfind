@@ -197,9 +197,13 @@ def main():
         args.input_fits_file, spec_indices, absorber=args.absorber,
         n_jobs=args.n_tasks * args.ncpus, **constants.search_parameters[args.absorber]
     )
-    
-    # Save the results to a FITS file
-    save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
+
+    # only save absorber file if there at least one absorber is detected
+    if len(results["index_spec"])>0:
+        # Save the results to a FITS file
+        save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
+    else:
+        print(f'INFO: No {args.absorber} absorbers found, no file saved..')
 
     # End timing
     end_time = time.time()

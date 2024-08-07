@@ -84,13 +84,10 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     for key, header in headers.items():
         hdr[key] = (header["value"], header["comment"])
 
-    # only save metadata if there at least one absorber is detected
-    if len(results['index_spec'])>0:
     # load the QSO METADATA
-        _, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
-        qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
-        hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
-    else:
-        hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu])
+    _, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
+    qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
+    hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
+
     hdul.writeto(output_file, overwrite=True)
     print(f'INFO: ouptut file {output_file} written.')
