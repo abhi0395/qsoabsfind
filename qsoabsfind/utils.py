@@ -311,8 +311,9 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
 def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
     """
-    Saves a plot of spectra with absorber(s) (full spectrum + zoomed version)
-    in the current working directory.
+    Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along
+    with its Gaussian fit in the current working directory or in the user-defined
+    directory.
 
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
@@ -419,7 +420,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
         current_dir = os.getcwd()
 
         # Define the full path for the plot
-        plot_path = os.path.join(current_dir, plot_filename)
+        plot_path = plot_filename
+        if not os.path.isabs(plot_filename):
+            plot_path = os.path.join(current_dir, plot_filename)
 
         # Save the plot
         plt.savefig(plot_path)
@@ -434,12 +437,12 @@ def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """
     Read the NAXIS2 value from the header of a specified HDU in a FITS file.
 
-    Parameters:
-    - file_path: str, path to the FITS file.
-    - hdu_name: str, name of the HDU from which to read NAXIS1 (default: 'METADATA').
+    Args:
+        file_path: str, path to the FITS file.
+        hdu_name: str, name of the HDU from which to read NAXIS1 (default: 'METADATA').
 
     Returns:
-    - naxis2_value: int, value of NAXIS2 from the specified HDU header.
+        naxis2_value: int, value of NAXIS2 from the specified HDU header.
     """
     # Check if the file exists
     if not os.path.isfile(file_path):

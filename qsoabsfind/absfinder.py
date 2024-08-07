@@ -78,7 +78,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
         absorber (str): Name of the absorber to search for (e.g., 'MgII', 'CIV').
-        kwargs (dictionary): search parameters as defined in constants.py
+        kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
