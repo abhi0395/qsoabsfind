@@ -179,27 +179,27 @@ def save_plot(x, y, plot_filename='qsoabsfind_plot.png', xlabel='X-axis', ylabel
 
 def combine_fits_files(directory, output_filename='combined.fits'):
     """
-    Combine HDUs from all FITS files in a directory into a single FITS file, preserving headers
-    and saves the final combined file in the same directory.
+    Combine data from specified HDUs in all FITS files in a directory into a single FITS file.
 
     Args:
         directory: str, path to the directory containing FITS files (absorber file for each spectra file).
         output_filename: str, name of the output combined FITS file (default: 'combined.fits').
 
     Note:
-        This function assumes that all the corresponding absorber fits files are in the input directory,
-        and follow the same structure as the output of qsoabsfind. Also there should not be any other
-        FITS file there. Otherwise, script will fail.
+        This function assumes that all the corresponding absorber FITS files are in the input directory,
+        and follow the same structure as the output of qsoabsfind. Also, there should not be any other
+        FITS files there. Otherwise, the script will fail.
     """
     # Ensure the directory exists
     if not os.path.isdir(directory):
         raise FileNotFoundError(f"The directory {directory} does not exist.")
 
-    # List to hold all HDUs for the combined FITS file
-    combined_hdul = fits.HDUList()
-
-    # Track added extension names to avoid duplicates
-    added_extnames = set()
+    # Initialize lists to hold data and headers for the HDUs
+    primary_hdu = None
+    absorber_data = []
+    absorber_headers = []
+    metadata_data = []
+    metadata_headers = []
 
     # Iterate over all FITS files in the directory
     for filename in os.listdir(directory):
@@ -209,14 +209,38 @@ def combine_fits_files(directory, output_filename='combined.fits'):
 
             # Open the FITS file
             with fits.open(file_path, memmap=True) as hdul:
-                # Iterate through each HDU in the file
-                for hdu in hdul:
-                    # If it's the Primary HDU or a unique extension, add it to the combined list
-                    if isinstance(hdu, fits.PrimaryHDU) or hdu.name not in added_extnames:
-                        # Copy the HDU to preserve data and header
-                        combined_hdul.append(hdu.copy())
-                        added_extnames.add(hdu.name)
-                        print(f"Added HDU '{hdu.name}' from {filename}")
+                # Assume HDU0 is the same for all files, use the first one encountered
+                if primary_hdu is None:
+                    primary_hdu = fits.PrimaryHDU(header=hdul[0].header)
+                    print(f"Set primary HDU from {filename}")
+
+                # Process the ABSORBER HDU
+                if 'ABSORBER' in hdul:
+                    absorber_hdu = hdul['ABSORBER']
+                    # Remove "INDEX_SPEC" column from absorber data
+                    absorber_table = fits.BinTableHDU(data=absorber_hdu.data).data
+                    absorber_table = absorber_table[[col for col in absorber_table.columns.names if col != "INDEX_SPEC"]]
+                    absorber_data.append(absorber_table)
+                    absorber_headers.append(absorber_hdu.header)
+                    print(f"Added data from 'ABSORBER' HDU of {filename} (without 'INDEX_SPEC')")
+
+                # Process the METADATA HDU
+                if 'METADATA' in hdul:
+                    metadata_hdu = hdul['METADATA']
+                    metadata_data.append(metadata_hdu.data)
+                    metadata_headers.append(metadata_hdu.header)
+                    print(f"Added data from 'METADATA' HDU of {filename}")
+
+    # Concatenate data for each HDU
+    combined_absorber_data = np.concatenate(absorber_data)
+    combined_metadata_data = np.concatenate(metadata_data)
+
+    # Create new HDUs with concatenated data
+    combined_absorber_hdu = fits.BinTableHDU(data=combined_absorber_data, header=absorber_headers[0], name='ABSORBER')
+    combined_metadata_hdu = fits.BinTableHDU(data=combined_metadata_data, header=metadata_headers[0], name='METADATA')
+
+    # Create HDU list for the combined file
+    combined_hdul = fits.HDUList([primary_hdu, combined_absorber_hdu, combined_metadata_hdu])
 
     # Construct the output file path
     output_file_path = os.path.join(directory, output_filename)
@@ -224,6 +248,7 @@ def combine_fits_files(directory, output_filename='combined.fits'):
     # Save the combined HDU list to a new FITS file
     combined_hdul.writeto(output_file_path, overwrite=True)
     print(f"Combined FITS file saved as {output_file_path}")
+
 
 def validate_sizes(conv_arr, unmsk_residual, spec_index):
     """
