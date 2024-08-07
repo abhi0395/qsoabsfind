@@ -10,7 +10,7 @@ class QSOSpecRead:
     """
     A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions."""
 
-    def __init__(self, fits_file, index=None, verbose=False):
+    def __init__(self, fits_file, index, verbose=False):
         """
         Initializes the QSOSpecRead class.
 
