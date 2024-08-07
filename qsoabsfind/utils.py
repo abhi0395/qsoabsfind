@@ -217,10 +217,16 @@ def combine_fits_files(directory, output_filename='combined.fits'):
                 # Process the ABSORBER HDU
                 if 'ABSORBER' in hdul:
                     absorber_hdu = hdul['ABSORBER']
+                    absorber_table = Table(absorber_hdu.data)
+
                     # Remove "INDEX_SPEC" column from absorber data
-                    absorber_table = fits.BinTableHDU(data=absorber_hdu.data).data
-                    absorber_table = absorber_table[[col for col in absorber_table.columns.names if col != "INDEX_SPEC"]]
-                    absorber_data.append(absorber_table)
+                    if "INDEX_SPEC" in absorber_table.dtype.names:
+                        columns_to_keep = [col for col in absorber_table.dtype.names if col != "INDEX_SPEC"]
+                        filtered_absorber_data = absorber_table[columns_to_keep]
+                    else:
+                        filtered_absorber_data = absorber_table
+
+                    absorber_data.append(filtered_absorber_data)
                     absorber_headers.append(absorber_hdu.header)
                     print(f"Added data from 'ABSORBER' HDU of {filename} (without 'INDEX_SPEC')")
 
@@ -232,8 +238,8 @@ def combine_fits_files(directory, output_filename='combined.fits'):
                     print(f"Added data from 'METADATA' HDU of {filename}")
 
     # Concatenate data for each HDU
-    combined_absorber_data = np.concatenate(absorber_data)
-    combined_metadata_data = np.concatenate(metadata_data)
+    combined_absorber_data = np.concatenate(absorber_data, axis=0)
+    combined_metadata_data = np.concatenate(metadata_data, axis=0)
 
     # Create new HDUs with concatenated data
     combined_absorber_hdu = fits.BinTableHDU(data=combined_absorber_data, header=absorber_headers[0], name='ABSORBER')
