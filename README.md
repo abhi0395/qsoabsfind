@@ -86,7 +86,7 @@ In order to decide the right size of the FITS file, consider the total available
 Example run
 -----------
 
-An [example jupyter notebook](https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/nb/example.ipynb) is also available.
+An [example jupyter notebook](https://github.com/abhi0395/qsoabsfind/blob/main/nb/example.ipynb) is also available.
 
 Contribution
 ------------
