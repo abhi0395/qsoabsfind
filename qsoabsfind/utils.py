@@ -221,7 +221,7 @@ def save_plot(x, y, plot_filename='qsoabsfind_plot.png', xlabel='X-axis', ylabel
 
 def combine_fits_files(directory, output_filename='combined.fits'):
     """
-    Combine data from specified HDUs in all FITS files in a directory into a single FITS file.
+    Combine data from specified HDUs in all FITS files in a directory (either same as input or user-provided) into a single FITS file.
 
     Args:
         directory: str, path to the directory containing FITS files (absorber file for each spectra file).
@@ -289,9 +289,11 @@ def combine_fits_files(directory, output_filename='combined.fits'):
 
     # Create HDU list for the combined file
     combined_hdul = fits.HDUList([primary_hdu, combined_absorber_hdu, combined_metadata_hdu])
-
-    # Construct the output file path
-    output_file_path = os.path.join(directory, output_filename)
+    
+    # Define the full output file path
+    output_file_path= output_filename
+    if not os.path.isabs(output_file_path):
+        output_file_path = os.path.join(directory, output_filename)
 
     # Save the combined HDU list to a new FITS file
     combined_hdul.writeto(output_file_path, overwrite=True)
