@@ -10,61 +10,16 @@ from .absorberutils import (
     estimate_local_sigma_conv_array, group_and_weighted_mean_selection_function,
     median_selection_after_combining,
     remove_Mg_falsely_come_from_Fe_absorber, z_abs_from_same_metal_absorber,
-    contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window
+    contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window,
+    find_valid_indices
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
 from .spec import QSOSpecRead
-from numba import jit
 import time
 
 constants = load_constants()
 lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light
-
-@jit(nopython=True)
-def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2):
-    """
-    Find valid indices based on thresholding in the convolved array.
-
-    Args:
-        our_z (array): Array of redshift values.
-        residual_our_z (array): Array of residual values at the redshift positions.
-        lam_search (array): Array of wavelengths.
-        conv_arr (array): Convolved array.
-        sigma_cr (array): Local sigma values.
-        coeff_sigma (float): Coefficient for sigma.
-        d_pix (float): Pixel distance for line separation.
-        beta (float): Oscillator strength ratio.
-        line1 (float): First line wavelength.
-        line2 (float): Second line wavelength.
-
-    Returns:
-        Tuple: Arrays of new redshift values and new residual values.
-    """
-    new_our_z = []
-    new_res_arr = []
-    ct = 5
-
-    for k in range(1, len(our_z)):
-        z_plus_one = (1 + our_z[k])
-        lam_check = (line1 - ct * d_pix) * z_plus_one
-        lam_check1 = (line2 + ct * d_pix) * z_plus_one
-        lam_check_thresh = d_pix * ct * z_plus_one
-        ind_check = (lam_search >= lam_check - lam_check_thresh) & (lam_search <= lam_check + lam_check_thresh)
-        ind_check1 = (lam_search >= lam_check1 - lam_check_thresh) & (lam_search <= lam_check1 + lam_check_thresh)
-
-        if not (np.all(np.isnan(conv_arr[ind_check])) and np.all(np.isnan(conv_arr[ind_check1]))):
-            conv_arr1 = conv_arr[ind_check]
-            conv_arr2 = conv_arr[ind_check1]
-
-            sec_thr1 = np.nanmedian(conv_arr) - coeff_sigma / beta * sigma_cr[ind_check]
-            sec_thr2 = np.nanmedian(conv_arr) - coeff_sigma / beta * sigma_cr[ind_check1]
-
-            if np.all(conv_arr1 <= sec_thr1) or np.all(conv_arr2 <= sec_thr2):
-                new_our_z.append(our_z[k])
-                new_res_arr.append(residual_our_z[k])
-
-    return new_our_z, new_res_arr
 
 def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
     """
@@ -136,7 +91,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
 def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
 lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
-mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=False):
+mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, resolution=69, logwave=True, verbose=False):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -161,6 +116,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         sn_line1 (float): Signal-to-noise ratio for thresholding for line1 (default 3).
         sn_line2 (float): Signal-to-noise ratio for thresholding for line2 (default 3).
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
+        resolution (float): wavelength resolution of spectrum (in km/s), e.g. SDSS: ~69, DESI: ~70 (also defined in constants)
         logwave (bool): if wavelength on log scale (default True for SDSS)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
 
@@ -189,14 +145,18 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
 
     line_sep = line2 - line1
-    resolution = 69  # km/s for SDSS or DESI
 
     del_sigma = line1 * resolution / speed_of_light  # in Ang
 
-    bd_ct, x_sep = 2.5, 10 # multiple for bound definition
+    bd_ct, x_sep = 2.5, 10 # multiple for bound definition (for line centres and widths of line)
 
+    # bounds for gaussian fitting, to avoid very bad candidates
     bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
-             (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma])))
+             (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma+0.1, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma+0.1])))
+
+    # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
+    lower_del_lam = line_sep - d_pix
+    upper_del_lam = line_sep + d_pix
 
     # Kernel width computation
     width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pixels])
@@ -218,12 +178,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
 
-            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2)
+            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
 
             final_our_z = group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr))
 
             combined_final_our_z.append(final_our_z)
-
 
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
@@ -254,8 +213,6 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
             for m in range(len(z_abs)):
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
-                    lower_del_lam = line_sep - d_pix
-                    upper_del_lam = line_sep + d_pix
 
                     z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
                         index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix)

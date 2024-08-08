@@ -187,7 +187,6 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             - EW_total_error (numpy.ndarray): Total error in the equivalent width of both lines.
     """
 
-    #np.random.seed(1234) # for reproducibility of initital condition
     z_abs_array = np.array(absorber_redshift)
 
     size_array = z_abs_array.size
@@ -217,6 +216,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             EW_first_line_error, EW_second_line_error, EW_total_error
         )
 
+    np.random.seed(1234) # for reproducibility of initital condition
     for k in range(size_array):
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]

@@ -83,6 +83,11 @@ Parallel mode can be memory-intensive if the input FITS file is large in size. A
 
 In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
 
+Example run
+-----------
+
+An [example jupyter notebook](https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/nb/example.ipynb) is also available.
+
 Contribution
 ------------
 

@@ -11,6 +11,60 @@ constants = load_constants()
 lines, speed_of_light = constants.lines, constants.speed_of_light
 
 @jit(nopython=True)
+def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2, logwave):
+    """
+    Find valid indices based on thresholding in the convolved array.
+
+    Args:
+        our_z (array): Array of redshift values.
+        residual_our_z (array): Array of residual values at the redshift positions.
+        lam_search (array): Array of wavelengths.
+        conv_arr (array): Convolved array.
+        sigma_cr (array): Local sigma values.
+        coeff_sigma (float): Coefficient for sigma.
+        d_pix (float): Pixel distance for line separation.
+        beta (float): Oscillator strength ratio.
+        line1 (float): First line wavelength.
+        line2 (float): Second line wavelength.
+        logwave (bool): if wavelength pixels are on fixed log-scale (e.g. SDSS)
+
+    Returns:
+        Tuple: Arrays of new redshift values and new residual values.
+    """
+    new_our_z = []
+    new_res_arr = []
+    npix = 3 # number of pixels around a line minima
+    del_lam = line2 - line1
+    line_centre = 0.5 * (line1 + line2)
+
+    for k in range(1, len(our_z)):
+        z_plus_one = (1 + our_z[k])
+        lam_check = (line_centre - del_lam) * z_plus_one
+        lam_check1 = (line_centre + del_lam) * z_plus_one
+        if logwave:
+            lam_check_thresh1 = np.abs(lam_check * (10**(npix * 0.0001) - 1))
+            lam_check_thresh2 = np.abs(lam_check1 * (10**(npix * 0.0001) - 1))
+        else:
+            lam_check_thresh1= npix * (lam_search[1]-lam_search[0])
+            lam_check_thresh2 = lam_check_thresh1
+
+        ind_check = (lam_search >= lam_check - lam_check_thresh1) & (lam_search <= lam_check + lam_check_thresh1)
+        ind_check1 = (lam_search >= lam_check1 - lam_check_thresh2) & (lam_search <= lam_check1 + lam_check_thresh2)
+
+        if not (np.all(np.isnan(conv_arr[ind_check])) and np.all(np.isnan(conv_arr[ind_check1]))):
+            conv_arr1 = conv_arr[ind_check]
+            conv_arr2 = conv_arr[ind_check1]
+
+            sec_thr1 = np.nanmedian(conv_arr) - coeff_sigma / beta * sigma_cr[ind_check]
+            sec_thr2 = np.nanmedian(conv_arr) - coeff_sigma / beta * sigma_cr[ind_check1]
+
+            if np.all(conv_arr1 <= sec_thr1) or np.all(conv_arr2 <= sec_thr2):
+                new_our_z.append(our_z[k])
+                new_res_arr.append(residual_our_z[k])
+
+    return new_our_z, new_res_arr
+
+@jit(nopython=True)
 def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     """
     Estimate the local standard deviation for each element in the
@@ -153,7 +207,7 @@ def weighted_mean(z_values, residuals, gamma):
     weighted_z = (z_values / residuals**gamma)
     return np.nansum(weighted_z) / np.nansum(weights)
 
-def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, gamma=4):
+def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, gamma=1):
     """
     Perform grouping, splitting, and median selection from the list of all
     potentially identified absorbers.
@@ -161,7 +215,7 @@ def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, resi
     Args:
         master_list_of_pot_absorber (list): List of potential absorbers identified for each spectrum.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
-        gamma (int, optional): Exponent for weighting. Default is 4.
+        gamma (int, optional): Exponent for weighting. Default is 1 (so weight would be 1/residual).
 
     Returns:
         list: List of unique absorbers for each spectrum.
