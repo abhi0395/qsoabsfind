@@ -59,6 +59,7 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
     nparm = len(init_cond)
     save_param_array = np.zeros(nparm)
     save_param_error = np.zeros(nparm)
+    save_param_cov = np.zeros((nparm, nparm))
     EW_first = np.nan
     EW_second = np.nan
     EW_total = np.nan
@@ -75,15 +76,16 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
 
         save_param_array = popt
         save_param_error = np.sqrt(np.diag(pcov))
-
+        save_param_cov = pcov
     except (RuntimeError, ValueError, TypeError) as e:
         if isinstance(e, TypeError):
             print(f'NMF resi fit size = {nmf_resi_fit.size}')
             print(f'\nIn Main Gaussian script: In double Gaussian fitting: Spec Index = {index} has issues, Check this please\n')
         save_param_array[:] = np.nan
         save_param_error[:] = np.nan
+        save_param_cov[:] = np.nan
 
-    return save_param_array, save_param_error, EW_first, EW_second, EW_total
+    return save_param_array, save_param_error, EW_first, EW_second, EW_total, save_param_cov
 
 
 def calculate_ew_errors(popt, perr):
@@ -116,7 +118,7 @@ def calculate_ew_errors(popt, perr):
 
 def full_covariance_ew_errors(popt, pcov):
     """
-    With full covariance matrix Calculate the errors in the equivalent
+    With full covariance matrix, calculate the errors in the equivalent
     widths (EW) using the errors in the optimized parameters.
 
     Args:
@@ -129,33 +131,33 @@ def full_covariance_ew_errors(popt, pcov):
             - EW2_error (float): Error in the equivalent width of the second Gaussian.
             - EW_total_error (float): Total error in the equivalent width of both Gaussians.
     """
-    # Partial derivatives of EW with respect to each parameter
-    def partial_derivatives(popt):
-        amp1, mean1, sigma1, amp2, mean2, sigma2 = popt
-        dEW1_damp1 = np.sqrt(np.pi * 2 * sigma1 ** 2)
-        dEW1_dsigma1 = amp1 * np.sqrt(np.pi * 2) * sigma1
+    # Extract optimized parameters
+    amp1, mean1, sigma1, amp2, mean2, sigma2 = popt
 
-        dEW2_damp2 = np.sqrt(np.pi * 2 * sigma2 ** 2)
-        dEW2_dsigma2 = amp2 * np.sqrt(np.pi * 2) * sigma2
+    # Calculate the partial derivatives of EW1 and EW2 with respect to the parameters
+    dEW1_damp1 = np.sqrt(2 * np.pi) * sigma1
+    dEW1_dsigma1 = amp1 * np.sqrt(2 * np.pi)
 
-        return [dEW1_damp1, 0, dEW1_dsigma1, 0, 0, 0], [0, 0, 0, dEW2_damp2, 0, dEW2_dsigma2]
+    dEW2_damp2 = np.sqrt(2 * np.pi) * sigma2
+    dEW2_dsigma2 = amp2 * np.sqrt(2 * np.pi)
 
-    # Calculate the partial derivatives
-    partials_EW1, partials_EW2 = partial_derivatives(popt)
+    # Derivatives arrays for covariance calculation
+    jacobian_EW1 = np.array([dEW1_damp1, 0, dEW1_dsigma1, 0, 0, 0])
+    jacobian_EW2 = np.array([0, 0, 0, dEW2_damp2, 0, dEW2_dsigma2])
 
-    # Calculate the variance of EW1 and EW2 using the covariance matrix
-    EW1_var = np.dot(np.dot(partials_EW1, pcov), partials_EW1)
-    EW2_var = np.dot(np.dot(partials_EW2, pcov), partials_EW2)
+    # Calculate the variance (square of the error) using the full covariance matrix
+    EW1_var = np.dot(jacobian_EW1, np.dot(pcov, jacobian_EW1.T))
+    EW2_var = np.dot(jacobian_EW2, np.dot(pcov, jacobian_EW2.T))
 
-    # Calculate the errors in EW1 and EW2
+    # The square root of the variance gives the error
     EW1_error = np.sqrt(EW1_var)
     EW2_error = np.sqrt(EW2_var)
 
-    # Total EW error (assuming independence)
-    EW_total_error = np.sqrt(EW1_var + EW2_var)
-
+    # Total EW error, including cross-terms
+    cross_term = 2 * np.dot(jacobian_EW1, np.dot(pcov, jacobian_EW2.T))
+    EW_total_error = np.sqrt(EW1_var + EW2_var + cross_term)
+    
     return EW1_error, EW2_error, EW_total_error
-
 
 def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel='Mg', d_pix=0.6, use_covariance=False):
     """
@@ -194,6 +196,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     nparm = 6 # 6 parameter double Gaussian
     fitting_param_for_spectrum = np.zeros((size_array, nparm))
     fitting_param_std_for_spectrum = np.zeros((size_array, nparm))
+    fitting_param_pcov_for_spectrum = np.zeros((size_array, nparm, nparm)) #covariance matrix from curve_fit
     EW_first_line = np.zeros(size_array, dtype='float32')
     EW_second_line = np.zeros(size_array, dtype='float32')
     EW_first_line_error = np.zeros(size_array, dtype='float32')
@@ -232,7 +235,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             sigma2 = 1.5 + np.random.normal(0, d_pix/2)
             line_second = line_first + (line_centre2 - line_centre1) +  np.random.normal(0, d_pix)
             init_cond = [amp_first_nmf, line_first, sigma1, 0.54 * amp_first_nmf, line_second, sigma2]
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k] = double_curve_fit(
+            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
 
             fitted_l1 = fitting_param_for_spectrum[k][1]*(1+absorber_redshift[k]) # in observed frame
@@ -249,14 +252,14 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             nmf_resi = flux[lam_ind]
             error_flux = error[lam_ind]
 
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k] = double_curve_fit(
+            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
 
             #errors on EW
             if not use_covariance:
                 EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = calculate_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])
             else:
-                EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = full_covariance_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])
+                EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = full_covariance_ew_errors(fitting_param_for_spectrum[k], fitting_param_pcov_for_spectrum[k])
 
             if np.all(np.isnan(EW_first_line[k])) or np.all(np.isnan(EW_second_line[k])) or np.all(np.isnan(EW_total[k])):
                 fitting_param_for_spectrum[k] = np.zeros(nparm)
