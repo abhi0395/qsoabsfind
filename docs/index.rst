@@ -26,7 +26,7 @@ Features
 GitHub repository
 -----------------
 
-The source code is available on GitHub. Please see the `qsoabsfind <https://github.com/abhi0395/qsoabsfind>`_ repo. An `example jupyter notebook `<https://github.com/abhi0395/qsoabsfind/blob/main/nb/example.ipynb>`_ is also available.
+The source code is available on GitHub. Please see the `qsoabsfind <https://github.com/abhi0395/qsoabsfind>`_ repo. An `example jupyter notebook <https://github.com/abhi0395/qsoabsfind/blob/main/nb/example.ipynb>`_ is also available.
 
 
 Citation
