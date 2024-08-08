@@ -53,7 +53,7 @@ cover/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-.virtual_documents
+.virtual_documents/nb
 
 # IPython
 profile_default/
@@ -77,6 +77,7 @@ env/
 .venv/
 env.bak/
 venv.bak/
+.virtual_documents/
 
 # Spyder project settings
 .spyderproject
