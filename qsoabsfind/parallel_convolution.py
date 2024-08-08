@@ -5,26 +5,12 @@ This script contains a function that runs the absorber finder in parallel for ma
 import numpy as np
 import argparse
 import time
+import os
 from multiprocessing import Pool
 from .absfinder import read_single_spectrum_and_find_absorber
 from .io import save_results_to_fits
-import re
-import os
-import pkg_resources
 from .config import load_constants
-from .utils import read_nqso_from_header
-
-def get_package_versions():
-    """
-    Get the versions of qsoabsfind and other relevant packages.
-
-    Returns:
-        dict: A dictionary containing the versions of the packages.
-    """
-    packages = ['qsoabsfind', 'numpy', 'astropy', 'scipy', 'numba', 'matplotlib']
-    versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
-    return versions
-
+from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
     """
@@ -41,34 +27,6 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
 
     """
     return read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs)
-
-def parse_qso_sequence(qso_sequence):
-    """
-    Parse a bash-like sequence or a single integer to generate QSO indices.
-
-    Args:
-        qso_sequence (str or int): Bash-like sequence (e.g., '1-1000', '1-1000:10') or an integer.
-
-    Returns:
-        numpy.array: Array of QSO indices.
-    """
-    if isinstance(qso_sequence, int):
-        return np.arange(qso_sequence)
-
-    # Handle string input
-    if isinstance(qso_sequence, str):
-        if qso_sequence.isdigit():
-            return np.arange(int(qso_sequence))
-
-        match = re.match(r"(\d+)-(\d+)(?::(\d+))?", qso_sequence)
-        if match:
-            start, end, step = match.groups()
-            start, end = int(start), int(end)
-            step = int(step) if step else 1
-            return np.arange(start, end + 1, step)
-
-    # If none of the conditions matched, raise an error
-    raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
 def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber, n_jobs, **kwargs):
     """

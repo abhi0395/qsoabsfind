@@ -18,7 +18,7 @@ Features
 
 - Convolution-based adaptive S/N approach for detecting absorbers in QSO spectra.
 - Gaussian fitting for accurate measurement of absorber properties (such as EW, line widths, and centers).
-- Parallel processing for efficient computation on a large number of spectra.
+- Parallel processing using multiprocessing for efficient computation on a large number of spectra.
 
 Documentation
 -------------
@@ -76,9 +76,9 @@ Useful notes:
 Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
 
 - **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
-           
+
 - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
-           
+
 - **Merge results at the end:** After processing, you can merge your results.
 
 In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.

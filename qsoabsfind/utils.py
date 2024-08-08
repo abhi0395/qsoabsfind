@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
 from astropy.table import Table
+import re
+import pkg_resources
 
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,6 +21,46 @@ from astropy.table import Table
 
 constants = load_constants()
 lines, amplitude_dict, speed_of_light = constants.lines, constants.amplitude_dict, constants.speed_of_light
+
+def get_package_versions():
+    """
+    Get the versions of qsoabsfind and other relevant packages.
+
+    Returns:
+        dict: A dictionary containing the versions of the packages.
+    """
+    packages = ['qsoabsfind', 'numpy', 'astropy', 'scipy', 'numba', 'matplotlib']
+    versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
+    return versions
+
+def parse_qso_sequence(qso_sequence):
+    """
+    Parse a bash-like sequence or a single integer to generate QSO indices.
+
+    Args:
+        qso_sequence (str or int): Bash-like sequence (e.g., '1-1000', '1-1000:10') or an integer.
+
+    Returns:
+        numpy.array: Array of QSO indices.
+    """
+    if isinstance(qso_sequence, int):
+        return np.arange(qso_sequence)
+
+    # Handle string input
+    if isinstance(qso_sequence, str):
+        if qso_sequence.isdigit():
+            return np.arange(int(qso_sequence))
+
+        match = re.match(r"(\d+)-(\d+)(?::(\d+))?", qso_sequence)
+        if match:
+            start, end, step = match.groups()
+            start, end = int(start), int(end)
+            step = int(step) if step else 1
+            return np.arange(start, end + 1, step)
+
+    # If none of the conditions matched, raise an error
+    raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
+
 
 def elapsed(start, msg):
     """

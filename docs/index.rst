@@ -12,7 +12,7 @@ Features
 
 - Convolution-based adaptive S/N approach for detecting absorbers in QSO spectra.
 - Gaussian fitting for accurate measurement of absorber properties (such as EW, line widths, and centers).
-- Parallel processing for efficient computation on a large number of spectra.
+- Parallel processing using multiprocessing for efficient computation on a large number of spectra.
 
 .. toctree::
    :maxdepth: 1
