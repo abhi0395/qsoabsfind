@@ -104,9 +104,6 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
             - doublet_ratio (float): The ratio of ew1 to ew2.
             - doublet_ratio_error (float): The propagated error for the doublet ratio.
     """
-    if ew2 == 0:
-        raise ValueError("ew2 cannot be zero, as it would result in division by zero.")
-
     # Calculate the doublet ratio
     doublet_ratio = ew1 / ew2
 
