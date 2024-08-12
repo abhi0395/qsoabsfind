@@ -89,6 +89,33 @@ def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     return sigma_cr
 
 @jit(nopython=True)
+def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
+    """
+    Calculate the doublet ratio and its associated error.
+
+    Args:
+        ew1 (float): Equivalent width of the first line.
+        ew2 (float): Equivalent width of the second line.
+        ew1_error (float): Error associated with the first equivalent width.
+        ew2_error (float): Error associated with the second equivalent width.
+
+    Returns:
+        tuple: A tuple containing:
+            - doublet_ratio (float): The ratio of ew1 to ew2.
+            - doublet_ratio_error (float): The propagated error for the doublet ratio.
+    """
+    if ew2 == 0:
+        raise ValueError("ew2 cannot be zero, as it would result in division by zero.")
+
+    # Calculate the doublet ratio
+    doublet_ratio = ew1 / ew2
+
+    # Propagate the error using standard error propagation formula for division
+    doublet_ratio_error = doublet_ratio * np.sqrt((ew1_error / ew1) ** 2 + (ew2_error / ew2) ** 2)
+
+    return doublet_ratio, doublet_ratio_error
+
+@jit(nopython=True)
 def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
     """
     Estimate S/N of the doublet lines.

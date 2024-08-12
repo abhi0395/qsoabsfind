@@ -11,7 +11,7 @@ from .absorberutils import (
     median_selection_after_combining,
     remove_Mg_falsely_come_from_Fe_absorber, z_abs_from_same_metal_absorber,
     contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window,
-    find_valid_indices
+    find_valid_indices, calculate_doublet_ratio
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
@@ -226,8 +226,12 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         sn1, sn2 = estimate_snr_for_lines(c0, c1, lam_rest, residual, error, logwave)
                         # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
+                        # calculate best -fit doublet ratio and errors and check if they are within the range.
+                        # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV)
+                        dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
+                        min_dr, max_dr = 1 - 2 * dr_error, f1/f2 + 2 * dr_error
 
-                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0:
+                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr <= dr <=max_dr:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
