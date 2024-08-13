@@ -146,6 +146,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     line_sep = line2 - line1
 
+    if not logwave:
+        # average resolution in case wavelength is on linear scale
+        wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
+        resolution  = np.nanmean(wave_pixel/lam_search) * speed_of_light
+
     del_sigma = line1 * resolution / speed_of_light  # in Ang
 
     bd_ct, x_sep = 2.5, 10 # multiple for bound definition (for line centres and widths of line)
@@ -230,11 +235,13 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV)
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
-                            min_dr, max_dr = 1 - 2 * dr_error, f1/f2 + 2 * dr_error
+                            min_dr, max_dr = 1 -  dr_error, f1/f2 +  dr_error
+                            ew1_snr, ew2_snr = EW_first_temp_mean[0] / EW_first_error_temp[0], EW_second_temp_mean[0] / EW_second_error_temp[0]
                         else:
-                            dr, min_dr, max_dr = -1, -1, -1 #failure case
+                            dr, min_dr, max_dr = 0, 0, -1 #failure case
+                            ew1_snr, ew2_snr = 0, 0 # failure case
 
-                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr <= dr <=max_dr:
+                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
