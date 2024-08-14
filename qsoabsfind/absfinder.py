@@ -91,7 +91,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
 def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
 lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
-mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, resolution=69, logwave=True, verbose=False):
+mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, resolution=69, logwave=True, wave_res=0.0001, verbose=False):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -118,6 +118,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
         resolution (float): wavelength resolution of spectrum (in km/s), e.g. SDSS: ~69, DESI: ~70 (also defined in constants)
         logwave (bool): if wavelength on log scale (default True for SDSS)
+        wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
 
     Returns:
@@ -134,45 +135,50 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             - errors EW total (list): errors on Total Equivalent width of line 1 and line 2 for each absorber
     """
 
-    # Constants
-    if absorber == 'MgII':
-        line1, line2 = lines['MgII_2796'], lines['MgII_2803']
-        f1, f2 = oscillator_parameters['MgII_f1'], oscillator_parameters['MgII_f2']
-    elif absorber == 'CIV':
-        line1, line2 = lines['CIV_1548'], lines['CIV_1550']
-        f1, f2 = oscillator_parameters['CIV_f1'], oscillator_parameters['CIV_f2']
+    # return if there are no wavelength pixels available to search for
+    if lam_search.size==0 or lam_obs.size==0:
+        print(f'INFO: zero wavelength pixels available in search region, spec index = {spec_index}')
+        return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+
     else:
-        raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
+        # Constants
+        if absorber == 'MgII':
+            line1, line2 = lines['MgII_2796'], lines['MgII_2803']
+            f1, f2 = oscillator_parameters['MgII_f1'], oscillator_parameters['MgII_f2']
+        elif absorber == 'CIV':
+            line1, line2 = lines['CIV_1548'], lines['CIV_1550']
+            f1, f2 = oscillator_parameters['CIV_f1'], oscillator_parameters['CIV_f2']
+        else:
+            raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
 
-    line_sep = line2 - line1
+        line_sep = line2 - line1
 
-    if not logwave:
-        # average resolution in case wavelength is on linear scale
-        wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
-        resolution  = np.nanmean(wave_pixel/lam_search) * speed_of_light
+        if not logwave:
+            # average resolution in case wavelength is on linear scale
+            wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
+            resolution  = np.nanmean(wave_pixel/lam_search) * speed_of_light
 
-    del_sigma = line1 * resolution / speed_of_light  # in Ang
+        del_sigma = line1 * resolution / speed_of_light  # in Ang
 
-    bd_ct, x_sep = 2.5, 10 # multiple for bound definition (for line centres and widths of line)
+        bd_ct, x_sep = 2.5, 10 # multiple for bound definition (for line centres and widths of line)
 
-    # bounds for gaussian fitting, to avoid very bad candidates
-    bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
-             (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma+0.1, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma+0.1])))
+        # bounds for gaussian fitting, to avoid very bad candidates
+        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
+                 (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma+0.1, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma+0.1])))
 
-    # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
-    lower_del_lam = line_sep - d_pix
-    upper_del_lam = line_sep + d_pix
+        # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
+        lower_del_lam = line_sep - d_pix
+        upper_del_lam = line_sep + d_pix
 
-    # Kernel width computation
-    width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pixels])
+        # Kernel width computation
+        width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pixels])
 
-    combined_final_our_z = []
+        combined_final_our_z = []
 
-    if len(unmsk_residual) > 0:
         for sig_ker in width_kernel:
             line_centre = (line1 + line2) / 2
 
-            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=logwave, index=spec_index)
+            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=logwave, wave_res=wave_res, index=spec_index)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
@@ -305,5 +311,3 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                     pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist())
         else:
             return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])
-    else:
-        return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])

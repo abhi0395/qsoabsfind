@@ -96,7 +96,7 @@ def gauss_two_lines_kernel(x, a):
 
     return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5
 
-def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log=True, index=None):
+def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log=True, wave_res=0.0001, index=None):
     """
     Convolves the spectrum with a Gaussian kernel.
 
@@ -106,6 +106,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
         width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).
         amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
         log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)
+        wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)
         index (int): QSO index
 
     Returns:
@@ -116,22 +117,22 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
 
     A_main = amplitude_dict[absorber]
     A_secondary = A_main * amp_ratio
-    ct = 5
+    ct = 10
     if absorber == 'MgII':
         ker_parm = np.array([A_main, lines['MgII_2796'], width, A_secondary, lines['MgII_2803'], width])
-        lam_ker_start = lines['MgII_2796']-ct*width # +/- 5sigma , #rest-frame
+        lam_ker_start = lines['MgII_2796']-ct*width # +/- 10sigma , #rest-frame
         lam_ker_end = lines['MgII_2803']+ct*width
     elif absorber == 'CIV':
         ker_parm = np.array([A_main, lines['CIV_1548'], width, A_secondary, lines['CIV_1550'], width])
-        lam_ker_start = lines['CIV_1548']-ct*width # +/- 5sigma , #rest-frame
+        lam_ker_start = lines['CIV_1548']-ct*width # +/- 10sigma , #rest-frame
         lam_ker_end = lines['CIV_1550']+ct*width #
     else:
         raise ValueError(f"Unsupported absorber type for specific Args: {absorber}")
     if log:
-        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), 0.0001) #SDSS-like wavelength resolution
+        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), wave_res) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
     else:
-        lam_ker = np.arange(lam_ker_start, lam_ker_end, 0.8) # DESI-like wavelength resolution
+        lam_ker = np.arange(lam_ker_start, lam_ker_end, wave_res) # DESI-like wavelength resolution
 
     if len(lam_ker)>len(residual_arr_after_mask):
         lam_ker = lam_ker[0: len(residual_arr_after_mask)]
@@ -289,7 +290,7 @@ def combine_fits_files(directory, output_filename='combined.fits'):
 
     # Create HDU list for the combined file
     combined_hdul = fits.HDUList([primary_hdu, combined_absorber_hdu, combined_metadata_hdu])
-    
+
     # Define the full output file path
     output_file_path= output_filename
     if not os.path.isabs(output_file_path):
