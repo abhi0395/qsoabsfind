@@ -9,7 +9,6 @@ import os
 from multiprocessing import Pool
 from .absfinder import read_single_spectrum_and_find_absorber
 from .io import save_results_to_fits
-from .config import load_constants
 from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
@@ -112,6 +111,7 @@ def main():
 
     print(f"INFO: QSO_CONSTANTS_FILE: {os.environ['QSO_CONSTANTS_FILE']}")
     # set the new constants
+    from .config import load_constants
     constants = load_constants()
 
     # Prepare headers
