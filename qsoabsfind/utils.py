@@ -243,6 +243,7 @@ def combine_fits_files(directory, output_filename='combined.fits'):
     absorber_headers = []
     metadata_data = []
     metadata_headers = []
+    units_dict = {}
 
     # Iterate over all FITS files in the directory
     for filename in os.listdir(directory):
@@ -263,14 +264,17 @@ def combine_fits_files(directory, output_filename='combined.fits'):
                     absorber_table = Table(absorber_hdu.data)
 
                     # Remove "INDEX_SPEC" column from absorber data
-                    if "INDEX_SPEC" in absorber_table.dtype.names:
-                        columns_to_keep = [col for col in absorber_table.dtype.names if col != "INDEX_SPEC"]
-                        filtered_absorber_data = absorber_table[columns_to_keep]
-                    else:
-                        filtered_absorber_data = absorber_table
+                    if "INDEX_SPEC" in absorber_table.colnames:
+                        absorber_table.remove_column("INDEX_SPEC")
 
-                    absorber_data.append(filtered_absorber_data)
+                    absorber_data.append(absorber_table.as_array())
                     absorber_headers.append(absorber_hdu.header)
+
+                    # Extract units from the ABSORBER HDU header
+                    for colname in absorber_table.colnames:
+                        unit_key = f'TUNIT{absorber_table.colnames.index(colname) + 1}'
+                        if unit_key in absorber_hdu.header:
+                            units_dict[colname] = absorber_hdu.header[unit_key]
                     print(f"Added data from 'ABSORBER' HDU of {filename} (without 'INDEX_SPEC')")
 
                 # Process the METADATA HDU
@@ -278,6 +282,12 @@ def combine_fits_files(directory, output_filename='combined.fits'):
                     metadata_hdu = hdul['METADATA']
                     metadata_data.append(metadata_hdu.data)
                     metadata_headers.append(metadata_hdu.header)
+
+                    # Extract units from the METADATA HDU header
+                    for colname in metadata_hdu.columns.names:
+                        unit_key = f'TUNIT{metadata_hdu.columns.names.index(colname) + 1}'
+                        if unit_key in metadata_hdu.header:
+                            units_dict[colname] = metadata_hdu.header[unit_key]
                     print(f"Added data from 'METADATA' HDU of {filename}")
 
     # Concatenate data for each HDU
@@ -288,11 +298,21 @@ def combine_fits_files(directory, output_filename='combined.fits'):
     combined_absorber_hdu = fits.BinTableHDU(data=combined_absorber_data, header=absorber_headers[0], name='ABSORBER')
     combined_metadata_hdu = fits.BinTableHDU(data=combined_metadata_data, header=metadata_headers[0], name='METADATA')
 
+    # Add the units back to the headers
+    for colname, unit in units_dict.items():
+        unit_key = f'TUNIT{combined_absorber_hdu.columns.names.index(colname) + 1}' if colname in combined_absorber_hdu.columns.names else None
+        if unit_key:
+            combined_absorber_hdu.header[unit_key] = unit
+
+        unit_key = f'TUNIT{combined_metadata_hdu.columns.names.index(colname) + 1}' if colname in combined_metadata_hdu.columns.names else None
+        if unit_key:
+            combined_metadata_hdu.header[unit_key] = unit
+
     # Create HDU list for the combined file
     combined_hdul = fits.HDUList([primary_hdu, combined_absorber_hdu, combined_metadata_hdu])
 
     # Define the full output file path
-    output_file_path= output_filename
+    output_file_path = output_filename
     if not os.path.isabs(output_file_path):
         output_file_path = os.path.join(directory, output_filename)
 
