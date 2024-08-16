@@ -280,7 +280,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                 else:
                     match_abs1 = -1*np.ones(len(pure_z_abs))
                 match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, absorber, logwave)
-                ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all)
+                ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all, absorber)
                 sel_indices = (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)  # pure final absorber candidates
 
                 # Select final quantities based on sel_indices
