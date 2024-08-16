@@ -262,7 +262,7 @@ def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, resi
 
     return z_ind
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix=0.6, gamma=4, use_kernel='MgII'):
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, gamma=4):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
@@ -273,15 +273,15 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
         d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
+        use_kernel (str, optional): Kernel type (MgII).
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
-        use_kernel (str, optional): Kernel type (MgII). Default is 'MgII'.
 
     Returns:
         list: List after grouping contiguous pixels for each spectrum.
     """
 
     if use_kernel=='MgII':thresh=lines['MgII_2796']
-    if use_kernel=='CIV':thresh=['CIV_1548']
+    if use_kernel=='CIV':thresh=lines['CIV_1548']
 
     z_ind = []  # Final list of median redshifts for each spectrum
 
@@ -380,7 +380,7 @@ def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, re
     return match_abs
 
 #@jit(nopython=False)
-def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix=0.6, use_kernel='MgII', logwave=None):
+def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix, use_kernel, logwave):
     """
     Remove any absorber that arises due to the MgII2803 or CIV1550 line but has already
     been detected for the MgII2796 or CIV1548 line, exploiting the doublet property of MgII/CIV to
@@ -391,8 +391,8 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
         lam_obs (numpy.ndarray): Observed wavelengths.
         residual (numpy.ndarray): Residual values.
         error (numpy.ndarray): Error values corresponding to the residuals.
-        d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
-        use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
+        d_pix (float): Pixel distance for line separation during Gaussian fitting.
+        use_kernel (str, optional): Kernel type (MgII, CIV).
         logwave (bool): if wavelength bins are on log scale
 
     Returns:
@@ -433,7 +433,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
     return match_abs
 
 #@jit(nopython=False)
-def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
+def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel):
     """
     Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR)
     for absorbers.
@@ -442,7 +442,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel='MgII'):
         abs_z (list or numpy.ndarray): List of absorber redshifts.
         sn1_all (list or numpy.ndarray): List of SNR values for the first line.
         sn2_all (list or numpy.ndarray): List of SNR values for the second line.
-        use_kernel (str, optional): Kernel type (MgII, CIV). Default is 'MgII'.
+        use_kernel (str, optional): Kernel type (MgII, CIV).
 
     Returns:
         list: Updated list of absorbers with false positives removed.

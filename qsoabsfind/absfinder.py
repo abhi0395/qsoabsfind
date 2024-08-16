@@ -178,7 +178,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         for sig_ker in width_kernel:
             line_centre = (line1 + line2) / 2
 
-            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, amp_ratio=0.5, log=logwave, wave_res=wave_res, index=spec_index)
+            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
@@ -197,8 +197,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
-        combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual)
-
+        combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber)
         combined_final_our_z = np.array(combined_final_our_z)
         combined_final_our_z = combined_final_our_z[~np.isnan(combined_final_our_z)]
         combined_final_our_z = combined_final_our_z.tolist()

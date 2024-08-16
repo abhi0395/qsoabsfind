@@ -96,7 +96,7 @@ def gauss_two_lines_kernel(x, a):
 
     return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5
 
-def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log=True, wave_res=0.0001, index=None):
+def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, index, amp_ratio=0.5):
     """
     Convolves the spectrum with a Gaussian kernel.
 
@@ -104,10 +104,10 @@ def convolution_fun(absorber, residual_arr_after_mask, width, amp_ratio=0.5, log
         absorber (str): Type of absorber (e.g., 'MgII', 'CIV').
         residual_arr_after_mask (numpy.ndarray): Final residual array after masking.
         width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).
-        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
-        log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)
+        log (bool): if log bins should be used for wavelength
         wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)
         index (int): QSO index
+        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
 
     Returns:
         numpy.ndarray: The convolved residual array.
@@ -240,22 +240,22 @@ def modify_units(col_name, col):
 def combine_fits_files(directory, output_file):
     """
     Combines data from several FITS files in a directory into a single FITS file.
-    
+
     Note:
         This function assumes that all FITS files have the same HDU structure and that all HDUs are Tables. Any column with 'EW' in its name will have its unit set to Angstrom. The `INDEX_SPEC` column is not concatenated. The primary HDU from the first FITS file is copied to the final combined file. So make sure that directory contains only qsoabsfind output files.
 
     Args:
         directory (str): Path to the directory containing the FITS files.
         output_file (str): Path to the output FITS file.
-    
+
     Returns:
         None: The combined FITS file is saved to the specified output path.
     """
-    from astropy.table import vstack 
+    from astropy.table import vstack
     # Initialize a dictionary to store tables for each HDU
     combined_tables = {}
     primary_hdu = None
-    formats = {} 
+    formats = {}
     # Loop through each file in the directory
     for i, file_name in enumerate(os.listdir(directory)):
         if file_name.endswith('.fits'):
@@ -275,7 +275,7 @@ def combine_fits_files(directory, output_file):
                     if isinstance(hdu, fits.BinTableHDU):
                         hdu_name = hdu.name
                         table = Table(hdu.data)
-                        
+
                         # Remove the INDEX_SPEC column if it exists
                         if 'INDEX_SPEC' in table.colnames:
                             table.remove_column('INDEX_SPEC')
@@ -287,26 +287,26 @@ def combine_fits_files(directory, output_file):
                         else:
                             combined_tables[hdu_name] = table
                             print(f"Initialized HDU '{hdu_name}' with data from file {i + 1}.")
-    
+
     # Create the HDUs to write to the output file
     hdul_out = fits.HDUList([primary_hdu])
-    
+
     for hdu_name, table in combined_tables.items():
         # Explicitly handle units by creating columns with modified unit information
         columns = []
         for col_name in table.colnames:
             col = table[col_name]
-            
+
             # Modify the unit based on the column name
             unit = modify_units(col_name, col)
-            
+
             # Create the FITS column, let the format be inferred
             fits_format = formats[hdu_name][col_name]
             columns.append(fits.Column(name=col_name, array=col.data, format=fits_format, unit=unit))
         hdu_out = fits.BinTableHDU.from_columns(columns, name=hdu_name)
         hdul_out.append(hdu_out)
-        print(f"Added HDU '{hdu_name}' to the output file.") 
-    
+        print(f"Added HDU '{hdu_name}' to the output file.")
+
     # Write the combined data to the output FITS file
     hdul_out.writeto(output_file, overwrite=True)
     print(f"Combined FITS file saved to {output_file}")
@@ -396,6 +396,8 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
 
     num_absorbers = len(redshifts)
 
+    sep = 25  # Set separation for zoomed plot ranges
+
     # Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots
     fig = plt.figure(figsize=(13.5, 8))
     fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
@@ -408,7 +410,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
     ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual')
     if show_error:
         ax_main.plot(lam, error, ls='-', lw=1.5, label='error')
-    ax_main.set_xlim(3800, 9200)
+    ymask = ~np.isnan(residual)
+    xmin, xmax = lam[ymask].min(), lam[ymask].max()
+    ax_main.set_xlim(xmin, xmax)
     ax_main.legend()
 
     # Determine the absorber line labels
@@ -431,7 +435,6 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
     ax_main.set_ylim(-1, 2)
 
     # Add subplots for zoomed-in regions in the second row
-    sep = 25  # Set separation for zoomed plot ranges
 
     for idx, z in enumerate(redshifts):
         shift_z = 1 + z
@@ -447,7 +450,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
         ax_zoom.set_xlim([x1 - sep, x2 + sep])
 
         # Determine appropriate y-limits for the subplot based on data
-        y_min, y_max = residual[mask].min(), residual[mask].max()
+        y_min, y_max = max(0,np.nanmin(residual[mask])), np.nanmax(residual[mask])
         y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
         ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
 
