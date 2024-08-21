@@ -160,7 +160,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
         del_sigma = line1 * resolution / speed_of_light  # in Ang
 
-        bd_ct, x_sep = 2.5, 10 # multiple for bound definition (for line centres and widths of line)
+        bd_ct, x_sep = 2.0, 10 # multiple for bound definition (for line centres and widths of line)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
@@ -232,8 +232,9 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         lam_rest = lam_obs / (1 + z_abs[m])
                         c0 = gaussian_parameters[1]
                         c1 = gaussian_parameters[4]
+                        sig1, sig2  = gaussian_parameters[2], gaussian_parameters[5]
                         #S/N estimation
-                        sn1, sn2 = estimate_snr_for_lines(c0, c1, lam_rest, residual, error, logwave)
+                        sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
                         # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
                         # calculate best -fit doublet ratio and errors and check if they are within the range.

@@ -113,13 +113,15 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
     return doublet_ratio, doublet_ratio_error
 
 @jit(nopython=True)
-def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
+def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     """
     Estimate S/N of the doublet lines.
 
     Args:
         l1 (float): First wavelength to check around.
         l2 (float): Second wavelength to check around.
+        sig1 (float): fitted width of the first line
+        sig2 (float): fitted width of second line
         lam_rest (numpy.ndarray): Rest-frame wavelengths.
         residual (numpy.ndarray): Residual flux values.
         error (numpy.ndarray): Error values corresponding to the residuals.
@@ -129,18 +131,13 @@ def estimate_snr_for_lines(l1, l2, lam_rest, residual, error, log):
         tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.
                Returns (mean_sn1, mean_sn2).
     """
-    dpix = 5
-
-    if log:
-        delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
-        delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
-    else:
-        delta1= lam_rest[1]-lam_rest[0]
-        delta2 = delta1
-
+    nsig = 4 # for gaussian more than 99.7 percentile data is within 4sigma
+    
+    delta1, delta2 = nsig * sig2, nsig * sig2
+    
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
     ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
-
+    
     resi1 = residual[ind1]
     resi2 = residual[ind2]
 
