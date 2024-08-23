@@ -8,7 +8,6 @@ from operator import add
 from .utils import convolution_fun, vel_dispersion, elapsed
 from .absorberutils import (
     estimate_local_sigma_conv_array,
-    group_and_weighted_mean_selection_function,
     median_selection_after_combining,
     remove_Mg_falsely_come_from_Fe_absorber,
     z_abs_from_same_metal_absorber,
@@ -16,7 +15,8 @@ from .absorberutils import (
     estimate_snr_for_lines,
     absorber_search_window,
     find_valid_indices,
-    calculate_doublet_ratio
+    calculate_doublet_ratio,
+    group_and_select_weighted_redshift
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
@@ -199,13 +199,12 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             residual_our_z = unmsk_residual[our_z_ind]
 
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
-
-            final_our_z =  group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr), delta_z=del_z)
+            final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
             combined_final_our_z.append(final_our_z)
 
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
-        combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber)
+        combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber, delta_z=del_z)
         combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
 
         if len(combined_final_our_z)>0:

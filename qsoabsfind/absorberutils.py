@@ -142,10 +142,10 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     else:
         nsig = 4 # for gaussian more than 99.7 percentile data is within 4sigma
         delta1, delta2 = nsig * sig2, nsig * sig2
-    
+
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
     ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
-    
+
     resi1 = residual[ind1]
     resi2 = residual[ind2]
 
@@ -218,56 +218,58 @@ def group_contiguous_pixel(data, resi, avg):
     else:
         return groups
 
-@jit(nopython=True)
-def weighted_mean(z_values, residuals, gamma):
+def group_and_select_weighted_redshift(redshifts, fluxes, delta_z_threshold=0.001):
     """
-    Calculate the weighted mean of z_values using residuals raised to the
-    power of gamma.
+    Group contiguous redshifts and select the highest weighted redshift from each group.
 
     Args:
-        z_values (numpy.ndarray): Array of z values.
-        residuals (numpy.ndarray): Array of residual values.
-        gamma (int): Exponent for weighting.
+        redshifts: list or np.array, list of redshifts.
+        fluxes: list or np.array, corresponding fluxes near each redshift.
+        delta_z_threshold: float, the maximum difference between redshifts to consider them contiguous (default is 0.001).
 
     Returns:
-        float: Weighted mean of z values.
+        best_redshifts: list of best redshifts from each group.
+        best_indices: list of indices corresponding to the best redshifts.
     """
-    weights = 1 / residuals**gamma
-    weighted_z = (z_values / residuals**gamma)
-    return np.nansum(weighted_z) / np.nansum(weights)
 
-def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, delta_z, gamma=1):
-    """
-    Perform grouping, splitting, and median selection from the list of all
-    potentially identified absorbers.
+    # Ensure inputs are numpy arrays for easy manipulation
+    redshifts = np.array(redshifts)
+    fluxes = np.array(fluxes)
 
-    Args:
-        master_list_of_pot_absorber (list): List of potential absorbers identified for each spectrum.
-        residual (numpy.ndarray): Residual values corresponding to the absorbers.
-        gamma (int, optional): Exponent for weighting. Default is 1 (so weight would be 1/residual).
+    # Check if redshifts array is empty
+    if len(redshifts) == 0:
+        return []
 
-    Returns:
-        list: List of unique absorbers for each spectrum.
-    """
-    if len(master_list_of_pot_absorber) <= 1:
-        return master_list_of_pot_absorber
+    # Initialize lists to store results
+    best_redshifts = []
 
-    z_ind = []  # Final list of median redshifts for each spectrum
-    z_check = np.array(master_list_of_pot_absorber)
-    #z_check = np.log10(1 + abs_list)
-    
-    # Grouping contiguous pixels separated by ~0.0006 on redshift scale
-    z_temp, res_temp = group_contiguous_pixel(z_check, residual, avg=delta_z)
-    for group_z, group_res in zip(z_temp, res_temp):
-        if isinstance(group_res, list):
-            group_res, group_z = np.array(group_res), np.array(group_z)
-        if group_res.size > 0 and np.all(group_res != 0):
-            abs_z = weighted_mean(group_z, group_res, gamma)
-            z_ind.append(abs_z)
+    # Sort redshifts and corresponding data
+    sorted_indices = np.argsort(redshifts)
+    redshifts = redshifts[sorted_indices]
+    fluxes = fluxes[sorted_indices]
 
-    return z_ind
+    # Initialize the first group
+    current_group = [sorted_indices[0]]
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, gamma=4):
+    # Group contiguous redshifts
+    for i in range(1, len(redshifts)):
+        if redshifts[i] - redshifts[i - 1] <= delta_z_threshold:
+            current_group.append(sorted_indices[i])
+        else:
+            # Select the redshift with the highest weight (flux) in the current group
+            best_index = max(current_group, key=lambda idx: fluxes[idx])
+            best_redshifts.append(redshifts[best_index])
+            # Start a new group
+            current_group = [sorted_indices[i]]
+
+    # Select the best redshift in the last group
+    if current_group:
+        best_index = max(current_group, key=lambda idx: fluxes[idx])
+        best_redshifts.append(redshifts[best_index])
+
+    return best_redshifts
+
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, gamma=4):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
@@ -278,7 +280,8 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
         d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
-        use_kernel (str, optional): Kernel type (MgII).
+        use_kernel (str, optional): Kernel type.
+        delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
 
     Returns:
@@ -289,19 +292,19 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     if use_kernel=='CIV':thresh=lines['CIV_1548']
 
     z_ind = []  # Final list of median redshifts for each spectrum
-
+    ct = 2
     if len(combined_final_our_z) > 1:
         abs_list = np.array(combined_final_our_z)
 
-        # Grouping contiguous pixels separated by ~0.001 on redshift scale
-        z_temp = group_contiguous_pixel(abs_list, resi=None, avg=0.001)
+        # Grouping contiguous pixels separated by delta_z on redshift scale
+        z_temp = group_contiguous_pixel(abs_list, resi=None, avg=delta_z)
 
         for group in z_temp:
             temp_z = []
             res_z = []
             for zabs in group:
                 lam_abs = lam_search / (1 + zabs)
-                ind_z = np.where((lam_abs >= thresh-d_pix) & (lam_abs <= thresh+d_pix))[0]
+                ind_z = np.where((lam_abs >= thresh - ct * d_pix) & (lam_abs <= thresh + ct * d_pix))[0]
 
                 if not np.all(np.isnan(residual[ind_z])):
                     res_ind_z = np.nanmin(residual[ind_z])
@@ -317,7 +320,6 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     else:
         return combined_final_our_z
 
-#@jit(nopython=False)
 def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix, logwave):
     """
     Remove any MgII absorber that arises falsley due to Fe 2586, 2600 doublet,
@@ -384,7 +386,6 @@ def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, re
 
     return match_abs
 
-#@jit(nopython=False)
 def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix, use_kernel, logwave):
     """
     Remove any absorber that arises due to the MgII2803 or CIV1550 line but has already
@@ -437,7 +438,6 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
     return match_abs
 
-#@jit(nopython=False)
 def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params):
     """
     Remove contiguous or duplicate absorbers by evaluating the signal-to-noise ratio (SNR)
@@ -460,8 +460,8 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         c0, c1 = lines["CIV_1548"], lines["CIV_1550"]
     else:
         raise ValueError("Unknown kernel type")
-    
-    thresh = (c1 - c0) / c0 
+
+    thresh = (c1 - c0) / c0
 
     abs_z = np.array(abs_z)
     sn1_all = np.array(sn1_all)
@@ -473,16 +473,16 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         for k in range(nabs):
             if ind_true[k] == -1:  # Skip if already marked as good
                 continue
-            
+
             # Calculate differences between current absorber and others
             diff = np.abs(abs_z[k] - abs_z)
             ix = np.where((diff > 0) & (diff <= thresh))[0]
-            
+
             if ix.size > 0:
                 # Consider the current absorber and its closely spaced ones
                 candidates = np.append(k, ix)
                 best_idx = candidates[0]  # Default to the current one
-                
+
                 # Compare SNR and line positions to decide the best absorber
                 for j in candidates:
                     line_diff = abs(fitted_params[j][1] - c0)
