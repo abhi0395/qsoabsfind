@@ -7,11 +7,16 @@ from functools import reduce
 from operator import add
 from .utils import convolution_fun, vel_dispersion, elapsed
 from .absorberutils import (
-    estimate_local_sigma_conv_array, 
+    estimate_local_sigma_conv_array,
+    group_and_weighted_mean_selection_function,
     median_selection_after_combining,
-    remove_Mg_falsely_come_from_Fe_absorber, z_abs_from_same_metal_absorber,
-    contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window,
-    find_valid_indices, calculate_doublet_ratio, group_and_weighted_mean_selection_function
+    remove_Mg_falsely_come_from_Fe_absorber,
+    z_abs_from_same_metal_absorber,
+    contiguous_pixel_remover,
+    estimate_snr_for_lines,
+    absorber_search_window,
+    find_valid_indices,
+    calculate_doublet_ratio
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
@@ -84,7 +89,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
     # Print progress for every spectrum processed
-    elapsed(start_time, f"\nTime taken to finish absorber detection for index = {spec_index} is: ")
+    elapsed(start_time, f"\nTime taken to finish {absorber} detection for index = {spec_index} is: ")
 
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all)
 
@@ -137,7 +142,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     # return if there are no wavelength pixels available to search for
     if lam_search.size==0 or lam_obs.size==0:
-        print(f'INFO: zero wavelength pixels available in search region, spec index = {spec_index}')
+        print(f'INFO: No wavelength pixels available in search region, spec index = {spec_index}')
         return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])
 
     else:
@@ -169,7 +174,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         edge = 0.05
         bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma - edge, 2e-2, line2 - bd_ct * d_pix, del_sigma - edge])),
                  (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])))
-        
+
         # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
         lower_del_lam = line_sep - d_pix
         upper_del_lam = line_sep + d_pix
@@ -194,16 +199,15 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             residual_our_z = unmsk_residual[our_z_ind]
 
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
-    
-            #final_our_z = group_and_select_weighted_redshift(new_our_z, new_res_arr, delta_z_threshold=del_z)
+
             final_our_z =  group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr), delta_z=del_z)
             combined_final_our_z.append(final_our_z)
-    
+
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber)
         combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
-        
+
         if len(combined_final_our_z)>0:
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
@@ -239,7 +243,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
-                        
+
                         # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV)
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
@@ -248,7 +252,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-                                          
+
                         if (gaussian_parameters > bound[0]).all() and (gaussian_parameters < bound[1]).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1 and c0 > bound[0][1] + 0.01 and c0 < bound[1][1] - 0.01:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
@@ -276,7 +280,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             redshift_err = redshift_err[valid_indices]
             sn1_all = sn1_all[valid_indices]
             sn2_all = sn2_all[valid_indices]
-            
+
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
                     match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, d_pix, logwave)

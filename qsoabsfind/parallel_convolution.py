@@ -43,8 +43,6 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
         dict: A dictionary containing combined results from all parallel runs.
     """
 
-    #kwargs = {'ker_width_pixels': ker_width_pixels, 'coeff_sigma': coeff_sigma, 'mult_resi': mult_resi, 'd_pix': d_pix, 'pm_pixel': pm_pixel, 'sn_line1': sn_line1, 'sn_line2': sn_line2, 'use_covariance': use_covariance, 'logwave': logwave, 'verbose': verbose}
-
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
     # Run the jobs in parallel
@@ -124,14 +122,14 @@ def main():
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
         'KERWIDTH': {"value": str(constants.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
-        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'Coefficient for sigma threshold (coeff_sigma)'},
+        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'sigma threshold (coeff_sigma)'},
         'MULTRE': {"value": constants.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
         'D_PIX': {"value": constants.search_parameters[args.absorber]["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
-        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'Pixel parameter for local noise estimation (pm_pixel)'},
+        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'N_Pixel for noise estimation (pm_pixel)'},
         'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
         'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
-        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error calculation (use_covariance)'},
-        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'wavelength edges to avoid noisy regions (edges+/-lam_edge_sep)'}
+        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error (use_covariance)'},
+        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'wavelength edges to avoid noisy regions'}
     })
 
     package_versions = get_package_versions()
