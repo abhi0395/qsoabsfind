@@ -63,7 +63,8 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
     EW_first = np.nan
     EW_second = np.nan
     EW_total = np.nan
-
+    if bounds is None:
+        bounds = (-np.inf, np.inf)
     try:
         popt, pcov = curve_fit(
             fun_to_run, lam_fit_range, nmf_resi_fit,
@@ -219,24 +220,24 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             EW_first_line_error, EW_second_line_error, EW_total_error
         )
 
-    np.random.seed(1234) # for reproducibility of initital condition
+    #np.random.seed(1234) # for reproducibility of initital condition
     for k in range(size_array):
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
-        nmf_resi = flux[lam_ind]
+        nmf_resi = flux[lam_ind] 
         error_flux = error[lam_ind]
-
+        uniform = np.random.uniform
         if nmf_resi.size > 0 and not np.all(np.isnan(nmf_resi)):
             #random initial condition
-            amp_first_nmf = np.nanmin(nmf_resi) + np.random.normal(0, d_pix/10)
-            line_first = line_centre1 + np.random.normal(0, d_pix)
-            sigma1 = 1.5 + np.random.normal(0, d_pix/2)
-            sigma2 = 1.5 + np.random.normal(0, d_pix/2)
-            line_second = line_first + (line_centre2 - line_centre1) +  np.random.normal(0, d_pix)
+            amp_first_nmf = 1 - np.nanmin(nmf_resi)
+            line_first = line_centre1
+            sigma1 = uniform(bound[0][2], bound[1][2])
+            sigma2 = uniform(bound[0][5], bound[1][5])
+            line_second = line_centre2
             init_cond = [amp_first_nmf, line_first, sigma1, 0.54 * amp_first_nmf, line_second, sigma2]
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
+                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=2000)
 
             fitted_l1 = fitting_param_for_spectrum[k][1]*(1+absorber_redshift[k]) # in observed frame
             fitted_l2 = fitting_param_for_spectrum[k][4]*(1+absorber_redshift[k])

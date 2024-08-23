@@ -131,9 +131,17 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
         tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.
                Returns (mean_sn1, mean_sn2).
     """
-    nsig = 4 # for gaussian more than 99.7 percentile data is within 4sigma
-    
-    delta1, delta2 = nsig * sig2, nsig * sig2
+    if sig1 is None or sig2 is None:
+        dpix = 5
+        if log:
+            delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
+            delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
+        else:
+            delta1 = dpix * (lam_rest[1]-lam_rest[0])
+            delta2 = delta1
+    else:
+        nsig = 4 # for gaussian more than 99.7 percentile data is within 4sigma
+        delta1, delta2 = nsig * sig2, nsig * sig2
     
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
     ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
@@ -228,7 +236,7 @@ def weighted_mean(z_values, residuals, gamma):
     weighted_z = (z_values / residuals**gamma)
     return np.nansum(weighted_z) / np.nansum(weights)
 
-def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, gamma=1):
+def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, residual, delta_z, gamma=1):
     """
     Perform grouping, splitting, and median selection from the list of all
     potentially identified absorbers.
@@ -245,16 +253,16 @@ def group_and_weighted_mean_selection_function(master_list_of_pot_absorber, resi
         return master_list_of_pot_absorber
 
     z_ind = []  # Final list of median redshifts for each spectrum
-    abs_list = np.array(master_list_of_pot_absorber)
-    z_check = np.log10(1 + abs_list)
-
+    z_check = np.array(master_list_of_pot_absorber)
+    #z_check = np.log10(1 + abs_list)
+    
     # Grouping contiguous pixels separated by ~0.0006 on redshift scale
-    z_temp, res_temp = group_contiguous_pixel(z_check, residual, avg=0.0006)
+    z_temp, res_temp = group_contiguous_pixel(z_check, residual, avg=delta_z)
     for group_z, group_res in zip(z_temp, res_temp):
         if isinstance(group_res, list):
             group_res, group_z = np.array(group_res), np.array(group_z)
         if group_res.size > 0 and np.all(group_res != 0):
-            abs_z = weighted_mean(10**group_z - 1, group_res, gamma)
+            abs_z = weighted_mean(group_z, group_res, gamma)
             z_ind.append(abs_z)
 
     return z_ind
@@ -359,10 +367,10 @@ def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, re
 
                 if n_new > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_fe1, sn_fe2 = estimate_snr_for_lines(fe1, fe2, lam_rest, residual, error, logwave)
+                    sn_fe1, sn_fe2 = estimate_snr_for_lines(fe1, fe2, None, None, lam_rest, residual, error, logwave)
                     for k in range(n_new):
                         lam_rest = lam_obs / (1 + z[ind_fin[k]])
-                        sn_mg1, sn_mg2 = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error, logwave)
+                        sn_mg1, sn_mg2 = estimate_snr_for_lines(mg1, mg2, None, None, lam_rest, residual, error, logwave)
                         if (sn_fe1 > sn_mg1) or (sn_fe1 > sn_mg2) or (sn_fe2 > sn_mg1) or (sn_fe2 > sn_mg2):
                             match_abs[ind_fin[k]] = 1  # False positive MgII absorber due to FeII lines
                         else:
@@ -416,11 +424,11 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
 
                 if ind_del.size > 0:
                     lam_rest = lam_obs / (1 + z[p])
-                    sn_mg0, _ = estimate_snr_for_lines(mg1, mg2, lam_rest, residual, error, logwave)
+                    sn_mg0, _ = estimate_snr_for_lines(mg1, mg2, None, None, lam_rest, residual, error, logwave)
 
                     for k in ind_del:
                         lam_rest1 = lam_obs / (1 + z[k])
-                        sn_mg1, _ = estimate_snr_for_lines(mg1, mg2, lam_rest1, residual, error, logwave)
+                        sn_mg1, _ = estimate_snr_for_lines(mg1, mg2, None, None, lam_rest1, residual, error, logwave)
 
                         if sn_mg0 > sn_mg1:
                             match_abs[k] = 1  # Matched within limits, not true absorbers
@@ -430,43 +438,65 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
     return match_abs
 
 #@jit(nopython=False)
-def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel):
+def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params):
     """
-    Remove contiguous pixels by evaluating the signal-to-noise ratio (SNR)
-    for absorbers.
+    Remove contiguous or duplicate absorbers by evaluating the signal-to-noise ratio (SNR)
+    and comparing their line centers.
 
     Args:
         abs_z (list or numpy.ndarray): List of absorber redshifts.
         sn1_all (list or numpy.ndarray): List of SNR values for the first line.
         sn2_all (list or numpy.ndarray): List of SNR values for the second line.
         use_kernel (str, optional): Kernel type (MgII, CIV).
+        fitted_params (list of arrays): corresponding gaussian fitting parameters for those redshifts
 
     Returns:
-        list: Updated list of absorbers with false positives removed.
+        list: Updated list of indices indicating bad (1) or good (-1) absorbers.
     """
-    if use_kernel=='MgII':
-        thresh = (lines['MgII_2803']-lines['MgII_2796'])/lines['MgII_2796']
-    if use_kernel=='CIV':
-        thresh = (lines['CIV_1550']-lines['CIV_1548'])/lines['CIV_1548']
+    # Define constants based on the kernel type
+    if use_kernel == 'MgII':
+        c0, c1 = lines['MgII_2796'], lines["MgII_2803"]
+    elif use_kernel == 'CIV':
+        c0, c1 = lines["CIV_1548"], lines["CIV_1550"]
+    else:
+        raise ValueError("Unknown kernel type")
+    
+    thresh = (c1 - c0) / c0 
+
     abs_z = np.array(abs_z)
     sn1_all = np.array(sn1_all)
     sn2_all = np.array(sn2_all)
     nabs = abs_z.size
-    ind_true = -1 * np.ones(nabs, dtype='int32')
+    ind_true = np.ones(nabs, dtype='int32')  # Initialize all as bad (1)
 
     if nabs > 1:
         for k in range(nabs):
+            if ind_true[k] == -1:  # Skip if already marked as good
+                continue
+            
+            # Calculate differences between current absorber and others
             diff = np.abs(abs_z[k] - abs_z)
             ix = np.where((diff > 0) & (diff <= thresh))[0]
+            
             if ix.size > 0:
-                sn1_temp = sn1_all[ix]
+                # Consider the current absorber and its closely spaced ones
+                candidates = np.append(k, ix)
+                best_idx = candidates[0]  # Default to the current one
+                
+                # Compare SNR and line positions to decide the best absorber
+                for j in candidates:
+                    line_diff = abs(fitted_params[j][1] - c0)
+                    if line_diff < abs(fitted_params[best_idx][1] - c0):
+                        best_idx = j
+                    elif line_diff == abs(fitted_params[best_idx][1] - c0):
+                        if sn1_all[j] > sn1_all[best_idx]:
+                            best_idx = j
 
-                for j in range(ix.size):
-                    if sn1_all[k] > sn1_temp[j]:
-                        ind_true[k] = -1
-                    else:
-                        ind_true[k] = 1
+                # Mark the best one as good (-1) and others as bad (1)
+                ind_true[best_idx] = -1
+                ind_true[candidates[candidates != best_idx]] = 1
             else:
+                # No closely spaced absorbers, mark the current one as good (-1)
                 ind_true[k] = -1
     else:
         ind_true[0] = -1

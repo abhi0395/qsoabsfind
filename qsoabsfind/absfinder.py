@@ -7,11 +7,11 @@ from functools import reduce
 from operator import add
 from .utils import convolution_fun, vel_dispersion, elapsed
 from .absorberutils import (
-    estimate_local_sigma_conv_array, group_and_weighted_mean_selection_function,
+    estimate_local_sigma_conv_array, 
     median_selection_after_combining,
     remove_Mg_falsely_come_from_Fe_absorber, z_abs_from_same_metal_absorber,
     contiguous_pixel_remover, estimate_snr_for_lines, absorber_search_window,
-    find_valid_indices, calculate_doublet_ratio
+    find_valid_indices, calculate_doublet_ratio, group_and_weighted_mean_selection_function
 )
 from .ew import measure_absorber_properties_double_gaussian
 from .config import load_constants
@@ -152,26 +152,30 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
 
         line_sep = line2 - line1
+        del_z = line_sep / (0.5 * (line1+line2))
 
         if not logwave:
             # average resolution in case wavelength is on linear scale
             wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
-            resolution  = np.nanmean(wave_pixel/lam_search) * speed_of_light
+            del_sigma = wave_pixel / 2.355
+            resolution  = np.nanmean(wave_pixel/lam_obs) * speed_of_light
+        else:
+            del_sigma = line1 * resolution / speed_of_light  # in Ang
+            del_sigma = del_sigma / 2.355 ## FWHM sqrt(8ln2)
 
-        del_sigma = line1 * resolution / speed_of_light  # in Ang
-
-        bd_ct, x_sep = 2.0, 10 # multiple for bound definition (for line centres and widths of line)
+        bd_ct, x_sep = 1.0, 10 # multiple for bound definition (for line centres and widths of line)
 
         # bounds for gaussian fitting, to avoid very bad candidates
-        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma-0.1, 2e-2, line2 - bd_ct * d_pix, del_sigma-0.1])),
-                 (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma+0.1, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma+0.1])))
-
+        edge = 0.05
+        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma - edge, 2e-2, line2 - bd_ct * d_pix, del_sigma - edge])),
+                 (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])))
+        
         # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
         lower_del_lam = line_sep - d_pix
         upper_del_lam = line_sep + d_pix
 
         # Kernel width computation
-        width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.35) for ker in ker_width_pixels])
+        width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
 
         combined_final_our_z = []
 
@@ -190,20 +194,17 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             residual_our_z = unmsk_residual[our_z_ind]
 
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
-
-            final_our_z = group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr))
-
+    
+            #final_our_z = group_and_select_weighted_redshift(new_our_z, new_res_arr, delta_z_threshold=del_z)
+            final_our_z =  group_and_weighted_mean_selection_function(new_our_z, np.array(new_res_arr), delta_z=del_z)
             combined_final_our_z.append(final_our_z)
-
+    
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber)
-        combined_final_our_z = np.array(combined_final_our_z)
-        combined_final_our_z = combined_final_our_z[~np.isnan(combined_final_our_z)]
-        combined_final_our_z = combined_final_our_z.tolist()
-
+        combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
+        
         if len(combined_final_our_z)>0:
-
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
 
@@ -220,8 +221,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             sn1_all = np.zeros(len(z_abs))
             sn2_all = np.zeros(len(z_abs))
 
-
-            for m in range(len(z_abs)):
+            z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
+            for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
                     z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
@@ -238,6 +239,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
+                        
                         # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV)
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
@@ -246,8 +248,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-
-                        if (gaussian_parameters > bound[0] + 0.01).all() and (gaussian_parameters < bound[1] - 0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
+                                          
+                        if (gaussian_parameters > bound[0]).all() and (gaussian_parameters < bound[1]).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1 and c0 > bound[0][1] + 0.01 and c0 < bound[1][1] - 0.01:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
@@ -262,7 +264,6 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                             sn2_all[m] = sn2
 
             valid_indices = pure_z_abs != 0
-
             pure_z_abs = pure_z_abs[valid_indices]
             pure_gauss_fit = pure_gauss_fit[valid_indices]
             pure_gauss_fit_std = pure_gauss_fit_std[valid_indices]
@@ -275,13 +276,14 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             redshift_err = redshift_err[valid_indices]
             sn1_all = sn1_all[valid_indices]
             sn2_all = sn2_all[valid_indices]
+            
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
                     match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, d_pix, logwave)
                 else:
                     match_abs1 = -1*np.ones(len(pure_z_abs))
                 match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, absorber, logwave)
-                ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all, absorber)
+                ind_z = contiguous_pixel_remover(pure_z_abs, sn1_all, sn2_all, absorber, pure_gauss_fit)
                 sel_indices = (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)  # pure final absorber candidates
 
                 # Select final quantities based on sel_indices

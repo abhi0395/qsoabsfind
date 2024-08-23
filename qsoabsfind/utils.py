@@ -94,7 +94,7 @@ def gauss_two_lines_kernel(x, a):
 
     norm_constant = -1#/((a1+a2)*(2*np.pi*a[1]**2)**0.5)
 
-    return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5
+    return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5 + 1
 
 def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, index, amp_ratio=0.5):
     """
@@ -132,7 +132,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
         lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), wave_res) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
     else:
-        lam_ker = np.arange(lam_ker_start, lam_ker_end, wave_res) # DESI-like wavelength resolution
+        lam_ker = np.arange(lam_ker_start, lam_ker_end, 0.8) # DESI-like wavelength resolution
 
     if len(lam_ker)>len(residual_arr_after_mask):
         lam_ker = lam_ker[0: len(residual_arr_after_mask)]
@@ -140,7 +140,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     gauss_kernel = gauss_two_lines_kernel(lam_ker, a=ker_parm)
 
     result = np.convolve(gauss_kernel, residual_arr_after_mask, mode='same')
-
+    
     #check if input and output array size are same
     bad_conv = validate_sizes(result, residual_arr_after_mask, index)
     if bad_conv == 1:
@@ -351,6 +351,9 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     v1_sig = sigma1 / c1 * speed_of_light
     v2_sig = sigma2 / c2 * speed_of_light
+    
+    # FWHM of instrument
+    resolution = resolution/2.355
 
     del_v1_sq = v1_sig**2 - resolution**2
     del_v2_sq = v2_sig**2 - resolution**2
