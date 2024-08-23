@@ -218,18 +218,18 @@ def group_contiguous_pixel(data, resi, avg):
     else:
         return groups
 
-def group_and_select_weighted_redshift(redshifts, fluxes, delta_z_threshold=0.001):
+def group_and_select_weighted_redshift(redshifts, fluxes, delta_z):
     """
-    Group contiguous redshifts and select the highest weighted redshift from each group.
+    Group contiguous redshifts and select the highest weighted
+    (corresponding to minimum flux) redshift from each group.
 
     Args:
-        redshifts: list or np.array, list of redshifts.
-        fluxes: list or np.array, corresponding fluxes near each redshift.
-        delta_z_threshold: float, the maximum difference between redshifts to consider them contiguous (default is 0.001).
+        redshifts (list or np.array): list of redshifts.
+        fluxes (list or np.array): corresponding fluxes near each redshift.
+        delta_z (float): the maximum difference between redshifts to consider them contiguous.
 
     Returns:
         best_redshifts: list of best redshifts from each group.
-        best_indices: list of indices corresponding to the best redshifts.
     """
 
     # Ensure inputs are numpy arrays for easy manipulation
@@ -253,18 +253,18 @@ def group_and_select_weighted_redshift(redshifts, fluxes, delta_z_threshold=0.00
 
     # Group contiguous redshifts
     for i in range(1, len(redshifts)):
-        if redshifts[i] - redshifts[i - 1] <= delta_z_threshold:
+        if redshifts[i] - redshifts[i - 1] <= delta_z:
             current_group.append(sorted_indices[i])
         else:
-            # Select the redshift with the highest weight (flux) in the current group
-            best_index = max(current_group, key=lambda idx: fluxes[idx])
+            # Select the redshift with the highest weight (i.e. minimum flux) in the current group
+            best_index = min(current_group, key=lambda idx: fluxes[idx])
             best_redshifts.append(redshifts[best_index])
             # Start a new group
             current_group = [sorted_indices[i]]
 
     # Select the best redshift in the last group
     if current_group:
-        best_index = max(current_group, key=lambda idx: fluxes[idx])
+        best_index = min(current_group, key=lambda idx: fluxes[idx])
         best_redshifts.append(redshifts[best_index])
 
     return best_redshifts
