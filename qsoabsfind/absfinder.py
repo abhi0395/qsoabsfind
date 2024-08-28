@@ -170,10 +170,10 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             del_sigma = line1 * resolution / speed_of_light  # in Ang
             del_sigma = del_sigma / 2.355 ## FWHM sqrt(8ln2)
 
-        bd_ct, x_sep = 1.0, 10 # multiple for bound definition (for line centres and widths of line)
+        bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
-        edge = 0.05
+        edge = 0.1
         bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma - edge, 2e-2, line2 - bd_ct * d_pix, del_sigma - edge])),
                  (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])))
 
@@ -212,7 +212,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         if len(combined_final_our_z)>0:
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
-
+            
             pure_z_abs = np.zeros(len(z_abs))
             pure_gauss_fit = np.zeros((len(z_abs), 6))
             pure_gauss_fit_std = np.zeros((len(z_abs), 6))
@@ -227,6 +227,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             sn2_all = np.zeros(len(z_abs))
            
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
+            
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
@@ -253,8 +254,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-                         
-                        if (gaussian_parameters > bound[0]+0.01).all() and (gaussian_parameters < bound[1]-0.01).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1 and c0 > bound[0][1] + 0.01 and c0 < bound[1][1] - 0.01:
+                            
+                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
