@@ -140,7 +140,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     gauss_kernel = gauss_two_lines_kernel(lam_ker, a=ker_parm)
 
     result = np.convolve(gauss_kernel, residual_arr_after_mask, mode='same')
-    
+
     #check if input and output array size are same
     bad_conv = validate_sizes(result, residual_arr_after_mask, index)
     if bad_conv == 1:
@@ -234,6 +234,8 @@ def modify_units(col_name, col):
     """
     if 'EW' in col_name.upper():
         return 'Angstrom'
+    elif 'VDISP' in col_name.upper():
+        return 'km/s'
     else:
         return str(col.unit) if col.unit is not None else None
 
@@ -351,7 +353,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     v1_sig = sigma1 / c1 * speed_of_light
     v2_sig = sigma2 / c2 * speed_of_light
-    
+
     # FWHM of instrument
     resolution = resolution/2.355
 

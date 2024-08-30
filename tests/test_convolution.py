@@ -25,7 +25,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
         # Validate the output
         self.assertIsInstance(result, tuple)
-        self.assertEqual(len(result), 13)  # Ensure the correct number of return values
+        self.assertEqual(len(result), 15)  # Ensure the correct number of return values
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function

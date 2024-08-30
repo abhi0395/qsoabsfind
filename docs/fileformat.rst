@@ -25,7 +25,6 @@ Then run `qsoabsfind` with the required FITS file. If using a custom constant fi
 ::
 
     qsoabsfind --input-fits-file data/qso_test.fits \
-               --n-qso 500 \
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
@@ -47,8 +46,9 @@ The **output** `fits file` will have two HDUs `ABSORBER` and `METADATA`:
 - **Z_ABS_ERR**: Measured error in the redshift of the absorber.
 - **GAUSS_FIT**: Rest-frame fitting parameters of double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
 - **GAUSS_FIT_STD**: Uncertainties in rest-frame fitting parameters of double Gaussian to the absorber doublet.
-- **SN_${METAL}_${LINE}**: Signal-to-noise ratio of the lines.
+- **SN_${METAL}_${LINE}**: Signal-to-noise ratio (SNR) of the lines, estimated from uncertainties on residual.
 - **${METAL}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
+- **{METAL}_${LINE}_VDISP**: Rest-frame intrinsic velocity dispersion (corrected for instrumental resolution) in km/s.
 
 **METADATA** HDU will contain every metadata (corresponding to each absorber) that is available in input spectra file.

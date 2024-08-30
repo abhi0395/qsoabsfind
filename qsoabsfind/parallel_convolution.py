@@ -64,11 +64,13 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
         'z_abs_err': [],
         'sn_1': [],
         'sn_2': [],
+        'vel_disp1': [],
+        'vel_disp2': [],
     }
 
     for result in results:
         (index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean, ew_total_mean,
-         ew_1_error, ew_2_error, ew_total_error, z_abs_err, sn_1, sn_2) = result
+         ew_1_error, ew_2_error, ew_total_error, z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2) = result
 
         valid_indices = np.array(z_abs) > 0
 
@@ -85,6 +87,8 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
         combined_results['z_abs_err'].extend(np.array(z_abs_err)[valid_indices])
         combined_results['sn_1'].extend(np.array(sn_1)[valid_indices])
         combined_results['sn_2'].extend(np.array(sn_2)[valid_indices])
+        combined_results['vel_disp1'].extend(np.array(vel_disp1)[valid_indices])
+        combined_results['vel_disp2'].extend(np.array(vel_disp2)[valid_indices])
 
     return combined_results
 
@@ -129,7 +133,7 @@ def main():
         'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
         'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
         'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error (use_covariance)'},
-        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'wavelength edges to avoid noisy regions'}
+        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'}
     })
 
     package_versions = get_package_versions()

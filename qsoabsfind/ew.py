@@ -6,7 +6,6 @@ import numpy as np
 from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
-import copy
 from .config import load_constants
 
 constants = load_constants()
@@ -111,8 +110,9 @@ def calculate_ew_errors(popt, perr):
     EW1 = amp1 * np.sqrt(np.pi * 2 * sigma1 ** 2)
     EW2 = amp2 * np.sqrt(np.pi * 2 * sigma2 ** 2)
 
-    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (2 * sigma1_err / sigma1) ** 2)
-    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (2 * sigma2_err / sigma2) ** 2)
+    # using correlation between parameters
+    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (sigma1_err / sigma1) ** 2) - 2 * amp1_err * sigma1_err / (amp1 * sigma1)
+    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (sigma2_err / sigma2) ** 2) - 2 * amp2_err * sigma2_err / (amp2 * sigma2)
 
     EW_total_error = np.sqrt(EW1_error ** 2 + EW2_error ** 2)
 
@@ -158,7 +158,7 @@ def full_covariance_ew_errors(popt, pcov):
     # Total EW error, including cross-terms
     cross_term = 2 * np.dot(jacobian_EW1, np.dot(pcov, jacobian_EW2.T))
     EW_total_error = np.sqrt(EW1_var + EW2_var + cross_term)
-    
+
     return EW1_error, EW2_error, EW_total_error
 
 def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, use_covariance=False):
@@ -175,7 +175,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         absorber_redshift (list): List of potential absorbers identified previously.
         bound (tuple): Bounds for the fitting parameters.
         use_kernel (str, optional): Kernel type ('MgII, FeII, CIV).
-        d_pix (float, optional): wavelength pixel for tolerance 
+        d_pix (float, optional): wavelength pixel for tolerance
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
 
     Returns:
@@ -226,7 +226,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
-        nmf_resi = flux[lam_ind] 
+        nmf_resi = flux[lam_ind]
         error_flux = error[lam_ind]
         uniform = np.random.uniform
         if nmf_resi.size > 0 and not np.all(np.isnan(nmf_resi)):
@@ -256,24 +256,24 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
-            
+
             fitted_l1 = fitting_param_for_spectrum[k][1]*(1+z_abs_array[k]) # in observed frame
             fitted_l2 = fitting_param_for_spectrum[k][4]*(1+z_abs_array[k])
             std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+z_abs_array[k])
             std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+z_abs_array[k])
 
             z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
-            
+
             #best-fit corresponding to this best redshift
             absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
             lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
             lam_fit = absorber_rest_lam[lam_ind]
             nmf_resi = flux[lam_ind]
             error_flux = error[lam_ind]
-            
+
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
-            
+
             ## errors on EW
             if not use_covariance:
                 EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = calculate_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])

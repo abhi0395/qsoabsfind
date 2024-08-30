@@ -56,11 +56,15 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         sn_2 = 'SN_MGII_2803'
         EW_1 = 'MGII_2796_EW'
         EW_2 = 'MGII_2803_EW'
+        VDISP1 = 'MGII_2796_VDISP'
+        VDISP2 = 'MGII_2803_VDISP'
     elif absorber == 'CIV':
         sn_1 = 'SN_CIV_1548'
         sn_2 = 'SN_CIV_1550'
         EW_1 = 'CIV_1548_EW'
         EW_2 = 'CIV_1550_EW'
+        VDISP1 = 'CIV_1548_VDISP'
+        VDISP2 = 'CIV_1550_VDISP'
     else:
         raise ValueError(f"Unsupported absorber: {absorber}")
 
@@ -77,7 +81,9 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_total_error'])),
         fits.Column(name='Z_ABS_ERR', format='D', array=np.array(results['z_abs_err'])),
         fits.Column(name=sn_1, format='D', array=np.array(results['sn_1'])),
-        fits.Column(name=sn_2, format='D', array=np.array(results['sn_2']))
+        fits.Column(name=sn_2, format='D', array=np.array(results['sn_2'])),
+        fits.Column(name=VDISP1, format='D', unit='km/s', array=np.array(results['vel_disp1'])),
+        fits.Column(name=VDISP2, format='D', unit='km/s', array=np.array(results['vel_disp2']))
     ], name='ABSORBER')
 
     hdr = fits.Header()

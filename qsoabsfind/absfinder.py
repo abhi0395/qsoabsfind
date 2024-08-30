@@ -18,7 +18,7 @@ from .absorberutils import (
     calculate_doublet_ratio,
     group_and_select_weighted_redshift
 )
-from .ew import ( 
+from .ew import (
     measure_absorber_properties_double_gaussian
 )
 from .config import load_constants
@@ -88,12 +88,12 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
 
-    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
     # Print progress for every spectrum processed
     elapsed(start_time, f"\nTime taken to finish {absorber} detection for index = {spec_index} is: ")
 
-    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all)
+    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 
 
 def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
@@ -140,12 +140,17 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             - errors EW1 (list): errors on Equivalent width of line 1 for each absorber
             - errors EW2 (list): errors on Equivalent width of line 2 for each absorber
             - errors EW total (list): errors on Total Equivalent width of line 1 and line 2 for each absorber
+            - zabs_err (list): errors on redshifts of absorbers detected
+            - sn1 (list): SNR of line 1 for each absorber
+            - sn2 (list): SNR of of line 2 for each absorber
+            - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
+            - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
     """
 
     # return if there are no wavelength pixels available to search for
     if lam_search.size==0 or lam_obs.size==0:
         print(f'INFO: No wavelength pixels available in search region, spec index = {spec_index}')
-        return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+        return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
 
     else:
         # Constants
@@ -212,7 +217,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         if len(combined_final_our_z)>0:
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
-            
+
             pure_z_abs = np.zeros(len(z_abs))
             pure_gauss_fit = np.zeros((len(z_abs), 6))
             pure_gauss_fit_std = np.zeros((len(z_abs), 6))
@@ -225,15 +230,17 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             redshift_err = np.zeros(len(z_abs))
             sn1_all = np.zeros(len(z_abs))
             sn2_all = np.zeros(len(z_abs))
-           
+            vel_disp1 = np.zeros(len(z_abs))
+            vel_disp2 = np.zeros(len(z_abs))
+
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
-            
+
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
                     z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
                         index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix)
-                    
+
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                         gaussian_parameters = np.array(fit_param_temp[0])
                         lam_rest = lam_obs / (1 + z_abs[m])
@@ -254,7 +261,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-                            
+
                         if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 > sn_line1 and sn2 > sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
@@ -268,6 +275,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                             redshift_err[m] = z_new_error
                             sn1_all[m] = sn1
                             sn2_all[m] = sn2
+                            vel_disp1[m] = vel1
+                            vel_disp2[m] = vel2
 
             valid_indices = pure_z_abs != 0
             pure_z_abs = pure_z_abs[valid_indices]
@@ -282,6 +291,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             redshift_err = redshift_err[valid_indices]
             sn1_all = sn1_all[valid_indices]
             sn2_all = sn2_all[valid_indices]
+            vel_disp1 = vel_disp1[valid_indices]
+            vel_disp2 = vel_disp2[valid_indices]
 
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
@@ -305,6 +316,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                 redshift_err = redshift_err[sel_indices]
                 sn1_all = sn1_all[sel_indices]
                 sn2_all = sn2_all[sel_indices]
+                vel_disp1 = vel_disp1[sel_indices]
+                vel_disp2 = vel_disp2[sel_indices]
             else:
                 redshift_err = np.array([0])
                 pure_z_abs = np.array([0])
@@ -312,10 +325,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                 pure_ew_first_line_mean = pure_ew_second_line_mean = pure_ew_total_mean = np.array([0])
                 pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
                 sn1_all = sn2_all = np.array([0])
+                vel_disp1 = vel_disp2= np.array([0])
 
             not_found = max(1, len(pure_z_abs))
             index_spec = [spec_index for _ in range(not_found)]
             return (index_spec, pure_z_abs.tolist(), pure_gauss_fit.tolist(), pure_gauss_fit_std.tolist(), pure_ew_first_line_mean.tolist(), pure_ew_second_line_mean.tolist(), pure_ew_total_mean.tolist(),
-                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist())
+                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist(), vel_disp1.tolist(), vel_disp2.tolist())
         else:
-            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
