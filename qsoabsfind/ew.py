@@ -111,8 +111,8 @@ def calculate_ew_errors(popt, perr):
     EW2 = amp2 * np.sqrt(np.pi * 2 * sigma2 ** 2)
 
     # using correlation between parameters
-    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (sigma1_err / sigma1) ** 2) - 2 * amp1_err * sigma1_err / (amp1 * sigma1)
-    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (sigma2_err / sigma2) ** 2) - 2 * amp2_err * sigma2_err / (amp2 * sigma2)
+    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (sigma1_err / sigma1) ** 2 - 2 * amp1_err * sigma1_err / (amp1 * sigma1))
+    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (sigma2_err / sigma2) ** 2 - 2 * amp2_err * sigma2_err / (amp2 * sigma2))
 
     EW_total_error = np.sqrt(EW1_error ** 2 + EW2_error ** 2)
 
