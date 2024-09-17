@@ -370,7 +370,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
 
     return corr_del_v1_sq, corr_del_v2_sq
 
-def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (ang)', ylabel='residual', title='QSO', plot_filename=None):
+def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):
     """
     Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along
     with its Gaussian fit in the current working directory or in the user-defined
@@ -381,11 +381,25 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
         absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
         zabs (list, array, or Table): Absorber redshifts, or a Table with 'Z_ABS' and 'GAUSS_FIT' columns.
         show_error (bool): if error bars should be shown (default False)
-        xlabel (str): The label for the x-axis. Default is 'obs wave (ang)'.
-        ylabel (str): The label for the y-axis. Default is 'residual'.
-        title (str): The super title of the plot. Default is 'QSO'.
         plot_filename (str): If provided, will save the plot to the given filename.
+        **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
+                  xlabel (str): The label for the x-axis.
+                  ylabel (str): The label for the y-axis.
+                  title (str): The super title of the plot.
+                  fontsize (int): Font size for the title and labels.
+                  major_tick_params (dict): Parameters for major ticks.
+                  minor_tick_params (dict): Parameters for minor ticks.
     """
+
+    # Extract common plot parameters from kwargs or set to default values
+    xlabel = kwargs.pop('xlabel', 'obs wave (ang)')
+    ylabel = kwargs.pop('ylabel', 'residual')
+    title = kwargs.pop('title', 'QSO')
+    fontsize = kwargs.pop('fontsize', 16)
+
+    # Extract tick parameters for major and minor ticks
+    major_tick_params = kwargs.pop('major_tick_params', {'length': 6, 'width': 1})
+    minor_tick_params = kwargs.pop('minor_tick_params', {'length': 3, 'width': 0.5})
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
@@ -408,13 +422,13 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
     fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
 
     # Super title for the entire figure
-    fig.suptitle(title, fontsize=16)
+    fig.suptitle(title, fontsize=fontsize)
 
     # Create the main plot in the first row
     ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
-    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual')
+    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
     if show_error:
-        ax_main.plot(lam, error, ls='-', lw=1.5, label='error')
+        ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
     ax_main.set_xlim(xmin, xmax)
@@ -434,45 +448,51 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
         ax_main.axvline(x=x1, color='r', ls='--')
         ax_main.axvline(x=x2, color='r', ls='--')
 
-    ax_main.set_xlabel(xlabel)
-    ax_main.set_ylabel(ylabel)
+    ax_main.set_xlabel(xlabel, fontsize=fontsize)
+    ax_main.set_ylabel(ylabel, fontsize=fontsize)
     ax_main.grid(True)
+    ax_main.minorticks_on()
     ax_main.set_ylim(-1, 2)
+    ax_main.tick_params(axis='both', which='major', labelsize=13)
+    ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
     # Add subplots for zoomed-in regions in the second row
-
     for idx, z in enumerate(redshifts):
         shift_z = 1 + z
         ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
         mask = (lam > x1 - sep) & (lam < x2 + sep)  # Define zoom range around the lines
         if not show_error:
-            ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data')
+            ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data', **kwargs)
         else:
-            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data')
+            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data', **kwargs)
         ax_zoom.axvline(x=x1, color='r', ls='--')
         ax_zoom.axvline(x=x2, color='r', ls='--')
         ax_zoom.set_xlim([x1 - sep, x2 + sep])
 
         # Determine appropriate y-limits for the subplot based on data
-        y_min, y_max = max(0,np.nanmin(residual[mask])), np.nanmax(residual[mask])
+        y_min, y_max = max(0, np.nanmin(residual[mask])), np.nanmax(residual[mask])
         y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
         ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
 
-        ax_zoom.set_title(f'{absorber} at z={z:.3f}')
+        ax_zoom.set_title(f'{absorber} at z={z:.3f}', fontsize=fontsize)
+        ax_zoom.minorticks_on()
         ax_zoom.grid(True)
-        ax_zoom.set_xlabel(xlabel)
-        ax_zoom.set_ylabel(ylabel)
-
+        ax_zoom.set_xlabel(xlabel, fontsize=fontsize)
+        ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
+        ax_zoom.tick_params(axis='both', which='major', labelsize=13)
+        ax_zoom.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
         # Add Gaussian fit
         if fit_params is not None:
             params = fit_params[idx]
             # Adjust fit parameters for the redshift
             # Plot the Gaussian fit
             lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
-            fit_curve = double_gaussian(lam_fit, params[0], shift_z * params[1], shift_z * params[2],
-            params[3], shift_z * params[4], shift_z * params[5])
-            ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit')
+            fit_curve = double_gaussian(
+                lam_fit, params[0], shift_z * params[1], shift_z * params[2],
+                params[3], shift_z * params[4], shift_z * params[5]
+            )
+            ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
         ax_zoom.legend()
 
     # Use tight_layout to ensure there are no overlaps
@@ -495,7 +515,6 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, xlabel='obs wave (a
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
-
 
 def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """
