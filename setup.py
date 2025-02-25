@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
+import setuptools_scm
 
 setup(
     name='qsoabsfind',
-    version='0.1.0',
+    use_scm_version=True, # Automatically detects version from Git tag
+    setup_requires=["setuptools_scm"]
     description='A module to search for MgII/CIV absorption features in QSO spectra using convolution based adaptive S/N approach',
     packages=find_packages(),
     install_requires=[
@@ -21,7 +23,7 @@ setup(
         'qsoabsfind': ['*.py'],
     },
     author='Abhijeet Anand',
-    author_email='AbhijeetAnand@lbl.gov',
+    author_email='abhijeetanand2011@gmail.com',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/abhi0395/qsoabsfind',
