@@ -4,7 +4,7 @@ import setuptools_scm
 setup(
     name='qsoabsfind',
     use_scm_version=True, # Automatically detects version from Git tag
-    setup_requires=["setuptools_scm"]
+    setup_requires=["setuptools_scm"],
     description='A module to search for MgII/CIV absorption features in QSO spectra using convolution based adaptive S/N approach',
     packages=find_packages(),
     install_requires=[
