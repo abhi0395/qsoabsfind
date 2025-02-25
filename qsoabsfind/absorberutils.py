@@ -547,7 +547,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         absorber (str): Options 'CIV', 'MgII'.
         min_wave (float): minimum wavelength edge (in Ang)
         max_wave (float): maximum wavelength edge (in Ang)
-        lam_edge_sep (float): separation from minimum wavelength, i.e. lam_min + lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
+        lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
         verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
@@ -559,12 +559,12 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         lam_CIV = lines['CIV_1549'] * (1 + zqso + lines['dz_start']) #redshifted from CIV emission lines
         lam_MgII = lines['MgI_2799'] * (1 + zqso - lines['dz_end']) #blueshifted MgII emission lines
         lam_start = max(min_wave, lam_CIV) + lam_edge_sep
-        lam_end = min(max_wave, lam_MgII)
+        lam_end = min(max_wave, lam_MgII) - lam_edge_sep
     elif absorber == 'CIV':
         dz = (lines['dv'] / speed_of_light) * (1 + zqso)
         lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
         lam_start = max(min_wave, 1310 * (1 + zqso)) + lam_edge_sep  # This is from Cooksey et al 2013
-        lam_end = min(lam_CIV, max_wave)
+        lam_end = min(lam_CIV, max_wave) - lam_edge_sep
     else:
         raise ValueError("Absorber must be 'CIV' or 'MgII'")
 
