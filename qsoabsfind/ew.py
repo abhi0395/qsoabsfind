@@ -221,8 +221,8 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             EW_first_line_error, EW_second_line_error, EW_total_error
         )
 
-    #np.random.seed(1234) # for reproducibility of initital condition
     for k in range(size_array):
+        np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32) # for reproducibility
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
