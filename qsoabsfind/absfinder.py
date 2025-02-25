@@ -69,8 +69,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     lam_obs = spectra.wavelength
 
     # Define the wavelength range for searching the absorber
-    min_wave, max_wave = lam_obs.min() + kwargs["lam_edge_sep"], lam_obs.max() - kwargs["lam_edge_sep"]  # avoiding edges
-
+    min_wave, max_wave = lam_obs.min(), lam_obs.max()
+    
     # Retrieve flux and error data, ensuring consistent dtype for Numba compatibility
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
@@ -81,7 +81,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     # Identify the wavelength region for searching the specified absorber
     lam_search, unmsk_residual, unmsk_error = absorber_search_window(
-        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, verbose=kwargs['verbose'])
+        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, lam_edge_sep= kwargs["lam_edge_sep"], verbose=kwargs['verbose'])
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
