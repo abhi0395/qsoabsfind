@@ -1,6 +1,10 @@
 name: Python application
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 1,15 * *"  # 1st and 15th of every month at 00:00 UTC
 
 jobs:
   build:
