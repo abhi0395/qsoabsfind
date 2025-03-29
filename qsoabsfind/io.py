@@ -4,6 +4,7 @@ This script contains a functions to read and write files.
 
 import astropy.io.fits as fits
 import numpy as np
+from astropy.table import Table
 
 def read_fits_file(fits_file, index=None):
     """
@@ -17,24 +18,25 @@ def read_fits_file(fits_file, index=None):
     Returns:
         tuple: A tuple containing the flux, error, wavelength, and metadata data.
     """
+    ## Read the metadata Table first:
+    metadata = Table.read(fits_file, hdu="METADATA") ## this preserves the units
     with fits.open(fits_file, memmap=True) as hdul:
         if index is None:
             flux = hdul['FLUX'].data
             error = hdul['ERROR'].data
             wavelength = hdul['WAVELENGTH'].data
-            metadata = hdul['METADATA'].data
+             
         else:
+            metadata = metadata[index] ## get metadata only for the input index (or indices)
             if isinstance(index, int):
                 flux = hdul['FLUX'].data[index].flatten()
                 error = hdul['ERROR'].data[index].flatten()
-                metadata = {name: hdul['METADATA'].data[index][name] for name in hdul['METADATA'].data.names}
             else:
                 flux = hdul['FLUX'].data[index]
                 error = hdul['ERROR'].data[index]
-                metadata = hdul['METADATA'].data[index]
             wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
     return flux, error, wavelength, metadata
-
+    
 def save_results_to_fits(results, input_file, output_file, headers, absorber):
     """
     Save the absorber results to a FITS file along with the metadata of QSOs.
@@ -48,7 +50,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
 
     Returns:
         A fits file containing detected absorber properties in 'ABSORBER' HDU and
-        corresponfing QSO metadata in 'METADATA' HDU.
+        corresponding QSO metadata in 'METADATA' HDU.
     """
     EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
     if absorber == 'MgII':
