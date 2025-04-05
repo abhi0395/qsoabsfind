@@ -107,12 +107,19 @@ def main():
 
     # Set the environment variable for the constants file
     if args.constant_file:
-        print(f"INFO: Using user-provided constants from: {os.path.abspath(args.constant_file)}")
-        print("INFO: Overwriting QSO_CONSTANTS_FILE variable with this path")
-        os.environ['QSO_CONSTANTS_FILE'] = os.path.abspath(args.constant_file)
+        const_path = os.path.abspath(args.constant_file)
+        if not os.path.exists(const_path):
+            raise FileNotFoundError(f"ERROR: Provided constants file does not exist: {const_path}")
+        print(f"INFO: Using user-provided constants from: {const_path}")
+        print("INFO: Overwriting QSO_CONSTANTS_FILE environment variable with this path")
+        os.environ['QSO_CONSTANTS_FILE'] = const_path
+    else:
+        if 'QSO_CONSTANTS_FILE' in os.environ:
+            print(f"INFO: Using QSO_CONSTANTS_FILE from environment: {os.environ['QSO_CONSTANTS_FILE']}")
+        else:
+            print("INFO: No constant file provided; using default constants in the codebase.")
 
-    print(f"INFO: QSO_CONSTANTS_FILE: {os.environ['QSO_CONSTANTS_FILE']}")
-    # set the new constants
+    # Load constants
     from .config import load_constants
     constants = load_constants()
 
