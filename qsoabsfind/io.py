@@ -21,6 +21,7 @@ def read_fits_file(fits_file, index=None):
     ## Read the metadata Table first:
     metadata = Table.read(fits_file, hdu="METADATA") ## this preserves the units
     with fits.open(fits_file, memmap=True) as hdul:
+        wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
         if index is None:
             flux = hdul['FLUX'].data
             error = hdul['ERROR'].data
@@ -34,7 +35,7 @@ def read_fits_file(fits_file, index=None):
             else:
                 flux = hdul['FLUX'].data[index]
                 error = hdul['ERROR'].data[index]
-            wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
+            
     return flux, error, wavelength, metadata
     
 def save_results_to_fits(results, input_file, output_file, headers, absorber):
