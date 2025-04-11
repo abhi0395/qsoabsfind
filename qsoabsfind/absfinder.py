@@ -64,7 +64,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     """
     start_time = time.time()
     # Read the specified QSO spectrum from the FITS file
-    spectra = QSOSpecRead(fits_file, spec_index)
+    spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=True) # verbose=True, shows time
+    spectra.read_fits() # load data explicitly for this quasar
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
 
@@ -91,7 +92,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
     # Print progress for every spectrum processed
-    elapsed(start_time, f"\nTime taken to finish {absorber} detection for index = {spec_index} is: ")
+    elapsed(start_time, f"\nINFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is: ")
 
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 
