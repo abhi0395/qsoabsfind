@@ -57,5 +57,5 @@ class QSOSpecRead:
             details_dict = {key: self.metadata[key] for key in self.metadata.dtype.names}
             return details_dict
         else:
-            return return self.metadata
+            return self.metadata
             
