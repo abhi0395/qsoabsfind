@@ -375,7 +375,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     res2_rest = res2 / (1 + z)
 
     del_v1_sq = v1_sig**2 - res1_rest**2
-    del_v2_sq = v2_sig**2 - res1_rest**2
+    del_v2_sq = v2_sig**2 - res2_rest**2
 
     # Correct for instrumental resolution
     if del_v1_sq > 0 and del_v2_sq > 0:
