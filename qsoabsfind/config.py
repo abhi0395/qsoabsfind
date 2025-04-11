@@ -18,12 +18,17 @@ import qsoabsfind.constants as default_constants
 
 def load_constants():
     """
-    Load constants from the user-provided file if specified, otherwise use the default constants (qsoabsfind.constants).
-    If user provides a constant file, this function will read QSO_CONSTANTS_FILE environment
-    variable, initially set when user provides a constant file.
+    Load constants used by qsoabsfind.
 
-    Returns:
-        module: The module containing the constants.
+    This function checks the QSO_CONSTANTS_FILE environment variable.
+    If it points to a valid Python file, that file is dynamically loaded and used
+    as the constants module. If the variable is unset or invalid, it falls back
+    to the built-in constants in `qsoabsfind.constants`.
+
+    Returns
+    -------
+    module
+        The module (either user-defined or default) containing the constants.
     """
     constants_file = os.environ.get('QSO_CONSTANTS_FILE')
 
