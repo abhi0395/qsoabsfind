@@ -169,9 +169,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         if not logwave:
             # average resolution in case wavelength is on linear scale
             wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
-            del_sigma = wave_pixel / 2.355
-            resolution  = np.nanmean(wave_pixel/lam_obs) * speed_of_light
+            del_sigma = wave_pixel / 2.355 # this is just to define the boundary for gaussian fits
+            resolution  = wave_pixel/lam_obs * speed_of_light # an array
         else:
+            if resolution is None:
+                raise ValueError(f"ERROR: must provide instrumental resolution of the spectrum in km/s")
             del_sigma = line1 * resolution / speed_of_light  # in Ang
             del_sigma = del_sigma / 2.355 ## FWHM sqrt(8ln2)
 
@@ -249,11 +251,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         sig1, sig2  = gaussian_parameters[2], gaussian_parameters[5]
                         #S/N estimation
                         sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
-                        # resolution corrected velocity dispersion (should be greater than 0)
-                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution)
+                        # resolution corrected velocity dispersion (should be greater than 0) 
+                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_abs[m], lam_obs)
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
+                        # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
 
-                        # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV)
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
                             min_dr, max_dr = 1 -  dr_error, f1/f2 +  dr_error
