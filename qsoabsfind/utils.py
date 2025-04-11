@@ -11,7 +11,7 @@ import os
 from astropy.io import fits
 from astropy.table import Table
 import re
-import pkg_resources
+from importlib.metadata import version, PackageNotFoundError
 
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,6 +22,7 @@ import pkg_resources
 constants = load_constants()
 lines, amplitude_dict, speed_of_light = constants.lines, constants.amplitude_dict, constants.speed_of_light
 
+
 def get_package_versions():
     """
     Get the versions of qsoabsfind and other relevant packages.
@@ -30,8 +31,14 @@ def get_package_versions():
         dict: A dictionary containing the versions of the packages.
     """
     packages = ['qsoabsfind', 'numpy', 'astropy', 'scipy', 'numba', 'matplotlib']
-    versions = {pkg: pkg_resources.get_distribution(pkg).version for pkg in packages}
+    versions = {}
+    for pkg in packages:
+        try:
+            versions[pkg] = version(pkg)
+        except PackageNotFoundError:
+            versions[pkg] = 'not installed'
     return versions
+
 
 def parse_qso_sequence(qso_sequence):
     """
@@ -336,36 +343,46 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
         # raise
     return bad_conv
 
-def vel_dispersion(c1, c2, sigma1, sigma2, resolution):
+def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     """
-    Calculates velocity dispersion using Gaussian quadrature.
+    Calculates and corrects velocity dispersion using Gaussian quadrature.
 
     Args:
-        c1 (float): fitted line center 1 (in Ang).
-        c2 (float): fitted line center 2 (in Ang).
-        sigma1 (float): fitted width 1 (in Ang).
-        sigma2 (float): fitted width 2 (in Ang).
-        resoultion (float): instrumental resolution (in km/s).
+        c1 (float): rest-frame fitted line center 1 (in Ang).
+        c2 (float): rest-frame fitted line center 2 (in Ang).
+        sigma1 (float): rest-frame fitted width 1 (in Ang).
+        sigma2 (float): rest-frame fitted width 2 (in Ang).
+        resolution (float or np.array): instrumental resolution (in km/s).
+        z (float): redshift of absorber
+        obs_wave (np.array): observed wavelength in Angstroms
 
     Returns:
-        resolution corrected velocity dispersion
+        instrumental resolution corrected velocity dispersion in km/s
     """
 
     v1_sig = sigma1 / c1 * speed_of_light
     v2_sig = sigma2 / c2 * speed_of_light
 
-    # FWHM of instrument
-    resolution = resolution/2.355
+    lam_obs1 = (1 + z) * c1
+    lam_obs2 = (1 + z) * c2
 
-    del_v1_sq = v1_sig**2 - resolution**2
-    del_v2_sq = v2_sig**2 - resolution**2
+    # Get per-line resolution (scalar or from array)
+    res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
+    res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
+
+    # Convert to rest-frame
+    res1_rest = res1 / (1 + z)
+    res2_rest = res2 / (1 + z)
+
+    del_v1_sq = v1_sig**2 - res1_rest**2
+    del_v2_sq = v2_sig**2 - res1_rest**2
 
     # Correct for instrumental resolution
     if del_v1_sq > 0 and del_v2_sq > 0:
         corr_del_v1_sq = np.sqrt(del_v1_sq)
         corr_del_v2_sq = np.sqrt(del_v2_sq)
     else:
-        corr_del_v1_sq  = 0.0  # Set to 0 if the observed width is less than instrumental width
+        corr_del_v1_sq  = 0.0  # Set to 0 if the fitted width is less than rest-frame instrumental width for any one line
         corr_del_v2_sq  = 0.0
 
     return corr_del_v1_sq, corr_del_v2_sq
