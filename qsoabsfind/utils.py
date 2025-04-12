@@ -352,12 +352,15 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
         c2 (float): rest-frame fitted line center 2 (in Ang).
         sigma1 (float): rest-frame fitted width 1 (in Ang).
         sigma2 (float): rest-frame fitted width 2 (in Ang).
-        resolution (float or np.array): instrumental resolution (in km/s).
+        resolution (float or np.array): instrumental true resolution (in km/s), see note.
         z (float): redshift of absorber
         obs_wave (np.array): observed wavelength in Angstroms
 
     Returns:
         instrumental resolution corrected velocity dispersion in km/s
+
+    Note:
+        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important
     """
 
     v1_sig = sigma1 / c1 * speed_of_light
@@ -373,17 +376,16 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     # Convert to rest-frame
     res1_rest = res1 / (1 + z)
     res2_rest = res2 / (1 + z)
-
+    
+    #Gaussian quadrature correction
     del_v1_sq = v1_sig**2 - res1_rest**2
     del_v2_sq = v2_sig**2 - res2_rest**2
 
     # Correct for instrumental resolution
-    if del_v1_sq > 0 and del_v2_sq > 0:
-        corr_del_v1_sq = np.sqrt(del_v1_sq)
-        corr_del_v2_sq = np.sqrt(del_v2_sq)
-    else:
-        corr_del_v1_sq  = 0.0  # Set to 0 if the fitted width is less than rest-frame instrumental width for any one line
-        corr_del_v2_sq  = 0.0
+    # Set to 0 if the fitted  width is less than rest-frame instrumental width
+    # One line may resolved and one may be not, so this condition is a little relaxed
+    corr_del_v1_sq = np.sqrt(del_v1_sq) if del_v1_sq > 0 else 0.0
+    corr_del_v2_sq = np.sqrt(del_v2_sq) if del_v2_sq > 0 else 0.0
 
     return corr_del_v1_sq, corr_del_v2_sq
 
