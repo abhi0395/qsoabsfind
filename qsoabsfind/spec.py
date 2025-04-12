@@ -39,7 +39,7 @@ class QSOSpecRead:
         start_time = time.time()
         self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
         if self.verbose:
-            elapsed(start_time, "\nINFO: Time taken to read {self.fits_file}")
+            elapsed(start_time, f"\nINFO: Time taken to read {self.fits_file}")
 
     def get_metadata(self, asdict=False):
         """
