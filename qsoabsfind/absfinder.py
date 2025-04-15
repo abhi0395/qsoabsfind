@@ -168,10 +168,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         del_z = line_sep / (0.5 * (line1+line2))
 
         if not logwave:
-            # average resolution in case wavelength is on linear scale
+            print(f'INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
+            # per pixel resolution in case wavelength is on linear scale
             wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
             del_sigma = wave_pixel / 2.355 # this is just to define the boundary for gaussian fits
-            resolution  = wave_pixel/lam_obs * speed_of_light # an array
+            resolution  = wave_pixel/lam_obs * speed_of_light # an array, it is assumed that it's true one not FWHM
         else:
             if resolution is None:
                 raise ValueError(f"ERROR: must provide instrumental resolution of the spectrum in km/s")
