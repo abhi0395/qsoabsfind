@@ -16,7 +16,7 @@ import os
 import importlib.util
 import qsoabsfind.constants as default_constants
 
-def load_constants():
+def load_constants(verbose=False):
     """
     Load constants used by qsoabsfind.
 
@@ -43,5 +43,6 @@ def load_constants():
             print(f"Error loading user constants: {e}. Falling back to default constants.")
             return default_constants
     else:
-        print("Using default constants.")
+        if verbose:
+            print("Using default constants.")
         return default_constants
