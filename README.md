@@ -68,7 +68,6 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-           --n-tasks 16 \
            --ncpus 4 \
            --constant-file data/sdss/sdss_constants.py
 ```
@@ -81,7 +80,6 @@ qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=DESI AUTHOR=YOUR_NAME \
-           --n-tasks 16 \
            --ncpus 4 \
            --constant-file data/desi/desi_constants.py
 ```
