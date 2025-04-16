@@ -82,7 +82,7 @@ def elapsed(start, msg):
     """
     end = time.time()
     if start is not None:
-        print(f"{msg} {end - start:.2f} seconds")
+        print(f"{msg} {end - start:.2f} seconds\n")
     return end
 
 def gauss_two_lines_kernel(x, a):
@@ -136,10 +136,10 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     else:
         raise ValueError(f"Unsupported absorber type for specific Args: {absorber}")
     if log:
-        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), wave_res) #SDSS-like wavelength resolution
+        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end)+wave_res, wave_res) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
     else:
-        lam_ker = np.arange(lam_ker_start, lam_ker_end, 0.8) # DESI-like wavelength resolution
+        lam_ker = np.arange(lam_ker_start, lam_ker_end+wave_res, wave_res) # DESI-like wavelength resolution
 
     if len(lam_ker)>len(residual_arr_after_mask):
         lam_ker = lam_ker[0: len(residual_arr_after_mask)]

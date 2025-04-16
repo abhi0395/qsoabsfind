@@ -65,6 +65,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     """
     start_time = time.time()
     # Read the specified QSO spectrum from the FITS file
+    print(f'INFO: Starting search for QSO INDEX = {spec_index}')
     spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=kwargs["verbose"]) # verbose=True, shows time
     spectra.read_fits() # load data explicitly for this quasar
     spectra.metadata = Table(spectra.metadata) # in case spectra.metadata is a Row
@@ -73,7 +74,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
-
+    
     # Define the wavelength range for searching the absorber
     min_wave, max_wave = lam_obs.min(), lam_obs.max()
 
@@ -93,11 +94,14 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
     kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
+    if kwargs["verbose"]:
+        print(f'INFO: search absorber = {absorber}')
+        print(f'INFO: Z_qso = {z_qso[0]}')
 
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
     # Print progress for every spectrum processed
-    elapsed(start_time, f"\nINFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is: ")
+    elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is: \n")
 
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 
@@ -151,8 +155,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
     """
 
-    # return if there are no wavelength pixels available to search for
-    if lam_search.size==0 or lam_obs.size==0:
+    # return if there are less than 10 wavelength pixels available to search for
+    if lam_search.size<=10 or lam_obs.size<=10:
         print(f'INFO: No wavelength pixels available in search region, spec index = {spec_index}')
         return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
 
@@ -189,7 +193,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             mean_resolution = resolution
 
         print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
-
+        
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates

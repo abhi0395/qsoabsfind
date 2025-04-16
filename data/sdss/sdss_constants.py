@@ -43,7 +43,7 @@ lines = {
 ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels)
 pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
 mult_resi = 1                         # Multiplication factor for residual spectrum
-lam_sep = 300                         # Wavelength cut from spectrum edges (Å)
+lam_sep = 25                         # Wavelength cut from spectrum edges (Å)
 
 # ==============================
 # Search Parameter Dictionary
