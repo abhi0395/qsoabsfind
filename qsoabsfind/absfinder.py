@@ -65,9 +65,9 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     """
     start_time = time.time()
     # Read the specified QSO spectrum from the FITS file
-    spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=True) # verbose=True, shows time
+    spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=kwargs["verbose"]) # verbose=True, shows time
     spectra.read_fits() # load data explicitly for this quasar
-    spectra.metadata = Table(spectra.metadata) # in case spectra.metadata is a Row 
+    spectra.metadata = Table(spectra.metadata) # in case spectra.metadata is a Row
     if 'Z' in spectra.metadata.colnames:
         spectra.metadata.rename_column('Z', 'Z_QSO')
 
@@ -76,7 +76,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     # Define the wavelength range for searching the absorber
     min_wave, max_wave = lam_obs.min(), lam_obs.max()
-    
+
     # Retrieve flux and error data, ensuring consistent dtype for Numba compatibility
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
@@ -104,7 +104,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
 def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
 lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
-mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, resolution=69, logwave=True, wave_res=0.0001, verbose=False):
+mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -129,9 +129,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         sn_line1 (float): Signal-to-noise ratio for thresholding for line1 (default 3).
         sn_line2 (float): Signal-to-noise ratio for thresholding for line2 (default 3).
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
-        resolution (float): wavelength resolution of spectrum (in km/s), e.g. SDSS: ~69, DESI: ~70 (also defined in constants)
         logwave (bool): if wavelength on log scale (default True for SDSS)
-        wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
 
     Returns:
@@ -172,20 +170,25 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         line_sep = line2 - line1
         del_z = line_sep / (0.5 * (line1+line2))
 
-        if not logwave:
+        if verbose:
             print(f'INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
+
+        if not logwave:
             # per pixel resolution in case wavelength is on linear scale
-            wave_pixel = np.nanmedian(np.diff(lam_search)) # robust to outliers
-            resolution  = wave_pixel/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
+            wave_res = np.nanmedian(np.diff(lam_search)) # robust to outliers
+
+            resolution  = wave_res/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
             del_sigma = np.nanmedian(resolution) * line1 / speed_of_light #this is just to define the lower boundary for gaussian sigma
             mean_resolution = np.nanmean(resolution)
-            
+
         else:
-            if resolution is None:
-                raise ValueError(f"ERROR: must provide instrumental resolution of the spectrum in km/s")
+            log_obs_wave = np.log10(lam_search)
+            wave_res = np.nanmedian(np.diff(log_obs_wave))
+            resolution = (10**wave_res - 1) * speed_of_light
             del_sigma = line1 * resolution / speed_of_light  # in Ang
-            del_sigma /=2.355 ## FWHM sqrt(8ln2)
+            del_sigma /=2.355 ## FWHM sqrt(8ln2) #this is just to define the lower boundary for gaussian sigma
             mean_resolution = resolution
+
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
@@ -199,7 +202,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
         # Kernel width computation
         width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
-        
+
         combined_final_our_z = []
 
         for sig_ker in width_kernel:
@@ -260,8 +263,10 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         sig1, sig2  = gaussian_parameters[2], gaussian_parameters[5]
                         #S/N estimation
                         sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
-                        # resolution corrected velocity dispersion (should be greater than 0) 
+
+                        # resolution corrected velocity dispersion (should be greater than 0)
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_abs[m], lam_obs)
+
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
                         # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
 
