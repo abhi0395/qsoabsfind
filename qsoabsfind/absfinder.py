@@ -176,7 +176,6 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         if not logwave:
             # per pixel resolution in case wavelength is on linear scale
             wave_res = np.nanmedian(np.diff(lam_search)) # robust to outliers
-
             resolution  = wave_res/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
             del_sigma = np.nanmedian(resolution) * line1 / speed_of_light #this is just to define the lower boundary for gaussian sigma
             mean_resolution = np.nanmean(resolution)
@@ -188,6 +187,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             del_sigma = line1 * resolution / speed_of_light  # in Ang
             del_sigma /=2.355 ## FWHM sqrt(8ln2) #this is just to define the lower boundary for gaussian sigma
             mean_resolution = resolution
+
+        print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
 
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
