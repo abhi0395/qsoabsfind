@@ -32,16 +32,50 @@ Before using your own constant file, please set an environment variable `QSO_CON
 
 The user-defined **constant-file** must follow the same structure as the `qsoabsfind.constants` file, otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
 
-Running the Tool
+Example Usage
 ----------------
 
 Run `qsoabsfind` with the required FITS file. If using a custom constant file, include it in the command:
 
-::
 
-    qsoabsfind --input <path_to_input_fits_file> [--constant-file <path_to_constant_file>] --output <path_to_output_fits_file>
+    qsoabsfind \
+        --input input_fits_file \
+        --constant-file constant_file \
+        --output output_fits_file \
+        --absorber $absorber
 
-Replace `<path_to_input_fits_file>` with the path to your input FITS file, `<path_to_constant_file>` with the path to your constant file (if using), and `<path_to_output_fits_file>` with the desired path for your output FITS file. For a quick example run you can run the module on `data/qso_test.fits`.
+To run the absorber search module, replace the placeholder paths as follows:
+
+- ``input_fits_file``: Input QSO spectra FITS file
+- ``constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
+- ``output_fits_file``: Output filename resulting absorber catalog FITS file
+- `absorber`: absorber (MgII or CIV)
+
+Quick Example Runs
+------------------
+
+**For SDSS spectra** (e.g., MgII or CIV search):
+
+    qsoabsfind \
+        --input data/sdss/qso_test_spectra.fits \
+        --constants data/sdss/sdss_constants.py \
+        --absorber MgII \
+        --output output_fits_file
+
+**For DESI spectra** (e.g., MgII or CIV search):
+
+    qsoabsfind \
+        --input data/desi/qso_test_spectra.fits \
+        --constants data/desi/desi_constants.py \
+        --absorber MgII \
+        --output output_fits_file
+
+**Note**
+---------
+
+   Output catalogs for MgII and CIV absorber searches in both SDSS and DESI test spectra
+   are already saved in the ``data/sdss/`` and ``data/desi/`` directories, respectively.
+
 
 Output FITS File Structure
 --------------------------
@@ -60,6 +94,7 @@ The **output** `fits file` will have two HDUs `ABSORBER` and `METADATA`:
 - **SN_${METAL}_${LINE}**: Signal-to-noise ratio of the lines.
 - **${METAL}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
+- **${METAL}_${LINE}_VDISP**: Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
 
 **METADATA** HDU will contain every metadata (corresponding to each absorber) that is available in input spectra file.
 

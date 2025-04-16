@@ -55,19 +55,35 @@ python -m unittest discover -s tests
 Instructions
 -------------
 
-Before running the program, please read the `data/datamodel.rst` file. The instructions for the input and output files are provided there. I have also provided an example QSO spectra FITS file, `data/qso_test.fits`, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+Before running the program, please read the `data/datamodel.rst` file. The instructions for the input and output files are provided there. I have also provided an example QSO spectra FITS file, `data/sdss/qso_test_spectra.fits` and `data/desi/qso_test_spectra.fits` which contain 500 continuum-normalized SDSS and DESI QSO spectra, respectively. You can use this file to test an example run as described below.
 
 Running example:
 ----------------
 
+**SDSS**
+
 ```sh
-qsoabsfind --input-fits-file data/qso_test.fits \
+qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --n-qso 500 \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
            --n-tasks 16 \
-           --ncpus 4
+           --ncpus 4 \
+           --constant-file data/sdss/sdss_constants.py
+```
+
+**DESI**
+
+```sh
+qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
+           --n-qso 500 \
+           --absorber MgII \
+           --output test_MgII.fits \
+           --headers SURVEY=DESI AUTHOR=YOUR_NAME \
+           --n-tasks 16 \
+           --ncpus 4 \
+           --constant-file data/desi/desi_constants.py
 ```
 
 Useful notes:
@@ -86,7 +102,7 @@ In order to decide the right size of the FITS file, consider the total available
 Example run
 -----------
 
-An [example jupyter notebook](https://github.com/abhi0395/qsoabsfind/blob/main/nb/example.ipynb) is also available.
+SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
 Contribution
 ------------
@@ -102,11 +118,11 @@ Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) i
 License
 -------
 
-Copyright (c) 2021-2025 Abhijeet Anand.  
+Copyright (c) 2021-2025 Abhijeet Anand.
 
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
 
-Thanks,  
-Abhijeet Anand  
-Lawrence Berkeley National Lab  
+Thanks,
+Abhijeet Anand
+Lawrence Berkeley National Lab

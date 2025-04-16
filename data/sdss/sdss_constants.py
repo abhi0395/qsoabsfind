@@ -1,8 +1,13 @@
 """
-constants.py
+sdss_constants.py
 
 This module defines constants, line wavelengths, search parameters, and oscillator strengths
-used in QSO absorption line analysis.
+used in QSO absorption line analysis. It includes general and survey-specific configurations
+for SDSS quasar spectra.
+
+Used in:
+- data/sdss/qso_test_spectra.py
+- To generate: data/sdss/MgII_cat.fits and data/sdss/CIV_cat.fits
 
 Usage:
     from constants import speed_of_light, lines, search_parameters, ...
@@ -45,7 +50,6 @@ lam_sep = 300                         # Wavelength cut from spectrum edges (Å)
 # ==============================
 
 search_parameters = {
-    # Used in SDSS-like spectra (e.g., data/sdss/qso_test_spectra.py) for unittest
     'MgII': {
         'ker_width_pixels': ker_width_pixels,
         'pm_pixel': pm_pixel,
@@ -59,7 +63,6 @@ search_parameters = {
         'lam_edge_sep': lam_sep,
         'verbose': True,
     },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest
     'CIV': {
         'ker_width_pixels': ker_width_pixels,
         'pm_pixel': pm_pixel,
@@ -69,7 +72,7 @@ search_parameters = {
         'sn_line1': 3,
         'sn_line2': 2,
         'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
+        'logwave': True,  # SDSS-like linear wavelength
         'lam_edge_sep': lam_sep,
         'verbose': True,
     }
@@ -102,7 +105,6 @@ oscillator_parameters = {
 
 """
 - SDSS spectra: `logwave=True` (log-uniform wavelength); resolution estimated automatically.
-- DESI spectra: `logwave=False` (linear wavelength grid); per-pixel resolution is computed.
-- MgII default parameters are optimized for SDSS spectra; CIV for DESI.
+- MgII/CIV default parameters are optimized for SDSS spectra
   Adjust as needed based on spectrum type.
 """
