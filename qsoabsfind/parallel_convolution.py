@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import time
 import os
+import multiprocessing
 from multiprocessing import Pool
 from .absfinder import read_single_spectrum_and_find_absorber
 from .io import save_results_to_fits
@@ -100,8 +101,7 @@ def main():
     parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as qsoabsfind.constants, i.e the default parameter that the code uses')
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
-    parser.add_argument('--n-tasks', type=int, required=True, help='Number of tasks.')
-    parser.add_argument('--ncpus', type=int, required=True, help='Number of CPUs per task.')
+    parser.add_argument('--ncpus', type=int, required=False, default=4, help='Number of CPUs for parallel processing.')
 
     args = parser.parse_args()
 
@@ -159,10 +159,13 @@ def main():
     # Parse the QSO sequence
     spec_indices = parse_qso_sequence(args.n_qso)
 
+    # define number of CPUs cores
+    n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 2)) ## getting some CPUs for safe I/O processing
+    
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        n_jobs=args.n_tasks * args.ncpus, **constants.search_parameters[args.absorber]
+        n_jobs=n_jobs, **constants.search_parameters[args.absorber]
     )
 
     # only save absorber file if there at least one absorber is detected
