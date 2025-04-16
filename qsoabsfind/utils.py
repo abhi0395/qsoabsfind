@@ -9,7 +9,7 @@ from .config import load_constants
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, Row
 import re
 from importlib.metadata import version, PackageNotFoundError
 
@@ -389,6 +389,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
 
     return corr_del_v1_sq, corr_del_v2_sq
 
+
 def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):
     """
     Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along
@@ -422,7 +423,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
-    if isinstance(zabs, (Table, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
+    if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
         redshifts = zabs['Z_ABS']
         fit_params = zabs['GAUSS_FIT']
     else:
@@ -451,7 +452,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
     ax_main.set_xlim(xmin, xmax)
-    ax_main.legend()
+    ax_main.legend(prop={'size':11})
 
     # Determine the absorber line labels
     if absorber == 'MgII':
@@ -512,7 +513,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
                 params[3], shift_z * params[4], shift_z * params[5]
             )
             ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
-        ax_zoom.legend()
+        ax_zoom.legend(prop={'size':11})
 
     # Use tight_layout to ensure there are no overlaps
     plt.tight_layout(rect=[0, 0, 1, 0.96])  # Reserve space for suptitle
