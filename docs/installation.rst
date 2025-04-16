@@ -36,7 +36,6 @@ Before running, please read :doc:`File formats <fileformat>`. I have provided an
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --n-tasks 16 \
                --ncpus 4
 
 Useful notes:
