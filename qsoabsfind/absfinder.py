@@ -170,15 +170,16 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         if not logwave:
             print(f'INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
             # per pixel resolution in case wavelength is on linear scale
-            wave_pixel = np.nanmean(lam_search[1:] - lam_search[:-1])
+            wave_pixel = np.nanmedian(np.diff(lam_search)) # robust to outliers
             del_sigma = wave_pixel / 2.355 # this is just to define the boundary for gaussian fits
             resolution  = wave_pixel/lam_obs * speed_of_light # an array, it is assumed that it's true one not FWHM
+            mean_resolution = np.nanmean(resolution)
         else:
             if resolution is None:
                 raise ValueError(f"ERROR: must provide instrumental resolution of the spectrum in km/s")
             del_sigma = line1 * resolution / speed_of_light  # in Ang
             del_sigma = del_sigma / 2.355 ## FWHM sqrt(8ln2)
-
+            mean_resolution = resolution
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
@@ -191,8 +192,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         upper_del_lam = line_sep + d_pix
 
         # Kernel width computation
-        width_kernel = np.array([ker * resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
-
+        width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
+        
         combined_final_our_z = []
 
         for sig_ker in width_kernel:
