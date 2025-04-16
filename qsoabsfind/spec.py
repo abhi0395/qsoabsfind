@@ -22,6 +22,7 @@ class QSOSpecRead:
             verbose (bool): if want to print time info
         """
         self.fits_file = fits_file
+        self.header = None
         self.flux = None
         self.error = None
         self.wavelength = None
@@ -37,7 +38,7 @@ class QSOSpecRead:
         Reads the FITS file and measures the time taken for the operation.
         """
         start_time = time.time()
-        self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
+        self.header, self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
         if self.verbose:
             elapsed(start_time, f"\nINFO: Time taken to read {self.fits_file}")
 

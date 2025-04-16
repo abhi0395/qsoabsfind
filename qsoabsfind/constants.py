@@ -28,7 +28,8 @@ lam_sep = 300 # wavelength shift from edges (in Ang), i.e., lam_min + lam_sep, l
 
 # Some NOTES:
 # SDSS spectra: use resolution 69 (km/s), wave_res = 0.0001, logwave=True
-# DESI spectra: use resolution None, wave_res = 0.8, logwave=False, average resolution will be calculated by code
+# DESI spectra: use resolution None, wave_res = 0.8, logwave=False, per pixel resolution will be calculated by code
+# In the dictionary, MgII parameters are for SDSS like spectra, while CIV are for DESI-like spectra. This will be used for Unit test runs. User can always define these parameters accordingly
 
 search_parameters = {
     'MgII': {
@@ -51,13 +52,13 @@ search_parameters = {
         'pm_pixel': pm_pixel,
         'coeff_sigma': 2,
         'mult_resi': mult_resi,
-        'd_pix': 0.7,
+        'd_pix': 0.6,
         'sn_line1':3,
         'sn_line2':2,
         'use_covariance':False,
-        'resolution':69,
-        'logwave':True,
-        'wave_res':0.0001,
+        'resolution':None,
+        'logwave':False,
+        'wave_res':0.8,
         'lam_edge_sep':lam_sep,
         'verbose':False,
     }

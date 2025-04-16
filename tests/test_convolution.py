@@ -10,40 +10,66 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def setUp(self):
         # Set the file path to the data file
-        self.fits_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'qso_test.fits')
+        #SDSS
+        self.sdss_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/sdss', 'qso_test_spectra.fits')
         # Ensure the file exists
-        self.assertTrue(os.path.exists(self.fits_file), f"File {self.fits_file} does not exist")
+        self.assertTrue(os.path.exists(self.sdss_fits_file), f"File {self.sdss_fits_file} does not exist")
+        #DESI
+        self.desi_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/desi',            'qso_test_spectra.fits')
+        # Ensure the file exists
+        self.assertTrue(os.path.exists(self.desi_fits_file), f"File {self.desi_fits_file} does not  exist")
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_index = np.random.randint(100)
-        absorber = 'MgII'
-
+        spec_index = np.random.randint(500)
+        absorber="MgII"
         # Call the function
-        result = read_single_spectrum_and_find_absorber(
-            self.fits_file, spec_index, absorber, **constants.search_parameters[absorber])
+        sdss_result = read_single_spectrum_and_find_absorber(
+            self.sdss_fits_file, spec_index, absorber, **constants.search_parameters[absorber])
 
+        desi_absorber="CIV"
+        desi_result = read_single_spectrum_and_find_absorber(
+            self.desi_fits_file, spec_index, desi_absorber, **constants.search_parameters[desi_absorber])
+        
         # Validate the output
-        self.assertIsInstance(result, tuple)
-        self.assertEqual(len(result), 15)  # Ensure the correct number of return values
+        self.assertIsInstance(sdss_result, tuple)
+        self.assertEqual(len(sdss_result), 15)  # Ensure the correct number of return values
+
+        self.assertIsInstance(desi_result, tuple)
+        self.assertEqual(len(desi_result), 15)  # Ensure the correct number of return values
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_indices = np.random.randint(0, 100, size=3)
+        spec_indices = np.random.randint(0, 500, size=3)
         absorber = 'MgII'
         n_jobs = 4
         # Call the function
-        results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            self.fits_file, spec_indices, absorber, n_jobs, **constants.search_parameters[absorber])
+        sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+            self.sdss_fits_file, spec_indices, absorber, n_jobs, **constants.search_parameters[absorber])
+        
+        desi_absorber='CIV'
+        desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+            self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **constants.search_parameters[desi_absorber])
 
         # Validate the output
-        self.assertIsInstance(results, dict)
-        self.assertIn('index_spec', results)
-        self.assertIn('z_abs', results)
-        try:
-            self.assertGreater(len(results['index_spec']), 0)
-        except AssertionError:
-            print('INFO:: Test failed possibly because no absorber could be detected')
+        self.assertIsInstance(sdss_results, dict)
+        self.assertIn('index_spec', sdss_results)
+        self.assertIn('z_abs', sdss_results)
+
+        self.assertIsInstance(desi_results, dict)
+        self.assertIn('index_spec', desi_results)
+        self.assertIn('z_abs', desi_results)
+
+        if len(sdss_results['index_spec']) == 0:
+            self.skipTest("Skipping test: no SDSS absorbers detected")
+
+        if len(desi_results['index_spec']) == 0:
+            self.skipTest("Skipping test: no DESI absorbers detected")
+
+        # Continue with assertions only if absorbers exist
+        self.assertGreater(len(sdss_results['index_spec']), 0)
+        self.assertGreater(len(desi_results['index_spec']), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
