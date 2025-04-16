@@ -9,7 +9,7 @@ from .config import load_constants
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, Row
 import re
 from importlib.metadata import version, PackageNotFoundError
 
@@ -82,7 +82,7 @@ def elapsed(start, msg):
     """
     end = time.time()
     if start is not None:
-        print(f"{msg} {end - start:.2f} seconds")
+        print(f"{msg} {end - start:.2f} seconds\n")
     return end
 
 def gauss_two_lines_kernel(x, a):
@@ -136,10 +136,10 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     else:
         raise ValueError(f"Unsupported absorber type for specific Args: {absorber}")
     if log:
-        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end), wave_res) #SDSS-like wavelength resolution
+        lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end)+wave_res, wave_res) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
     else:
-        lam_ker = np.arange(lam_ker_start, lam_ker_end, 0.8) # DESI-like wavelength resolution
+        lam_ker = np.arange(lam_ker_start, lam_ker_end+wave_res, wave_res) # DESI-like wavelength resolution
 
     if len(lam_ker)>len(residual_arr_after_mask):
         lam_ker = lam_ker[0: len(residual_arr_after_mask)]
@@ -352,12 +352,15 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
         c2 (float): rest-frame fitted line center 2 (in Ang).
         sigma1 (float): rest-frame fitted width 1 (in Ang).
         sigma2 (float): rest-frame fitted width 2 (in Ang).
-        resolution (float or np.array): instrumental resolution (in km/s).
+        resolution (float or np.array): instrumental true resolution (in km/s), see note.
         z (float): redshift of absorber
         obs_wave (np.array): observed wavelength in Angstroms
 
     Returns:
         instrumental resolution corrected velocity dispersion in km/s
+
+    Note:
+        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.
     """
 
     v1_sig = sigma1 / c1 * speed_of_light
@@ -370,22 +373,18 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
     res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
 
-    # Convert to rest-frame
-    res1_rest = res1 / (1 + z)
-    res2_rest = res2 / (1 + z)
-
-    del_v1_sq = v1_sig**2 - res1_rest**2
-    del_v2_sq = v2_sig**2 - res2_rest**2
+    #Gaussian quadrature correction
+    del_v1_sq = v1_sig**2 - res1**2
+    del_v2_sq = v2_sig**2 - res2**2
 
     # Correct for instrumental resolution
-    if del_v1_sq > 0 and del_v2_sq > 0:
-        corr_del_v1_sq = np.sqrt(del_v1_sq)
-        corr_del_v2_sq = np.sqrt(del_v2_sq)
-    else:
-        corr_del_v1_sq  = 0.0  # Set to 0 if the fitted width is less than rest-frame instrumental width for any one line
-        corr_del_v2_sq  = 0.0
+    # Set to 0 if the fitted  width is less than rest-frame instrumental width
+    # One line may resolved and one may be not, so this condition is a little relaxed
+    corr_del_v1_sq = np.sqrt(del_v1_sq) if del_v1_sq > 0 else 0.0
+    corr_del_v2_sq = np.sqrt(del_v2_sq) if del_v2_sq > 0 else 0.0
 
     return corr_del_v1_sq, corr_del_v2_sq
+
 
 def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):
     """
@@ -396,7 +395,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
         absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
-        zabs (list, array, or Table): Absorber redshifts, or a Table with 'Z_ABS' and 'GAUSS_FIT' columns.
+        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and 'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.
         **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
@@ -420,15 +419,17 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
-    if isinstance(zabs, (Table, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
+    if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
         redshifts = zabs['Z_ABS']
         fit_params = zabs['GAUSS_FIT']
     else:
         redshifts = zabs
         fit_params = None
-
+    
     if isinstance(redshifts, float):
         redshifts = [redshifts]
+        if fit_params is not None:
+            fit_params = [fit_params]
 
     num_absorbers = len(redshifts)
 
@@ -449,7 +450,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
     ax_main.set_xlim(xmin, xmax)
-    ax_main.legend()
+    ax_main.legend(prop={'size':11})
 
     # Determine the absorber line labels
     if absorber == 'MgII':
@@ -510,7 +511,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
                 params[3], shift_z * params[4], shift_z * params[5]
             )
             ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
-        ax_zoom.legend()
+        ax_zoom.legend(prop={'size':11})
 
     # Use tight_layout to ensure there are no overlaps
     plt.tight_layout(rect=[0, 0, 1, 0.96])  # Reserve space for suptitle

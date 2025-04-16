@@ -21,6 +21,7 @@ def read_fits_file(fits_file, index=None):
     ## Read the metadata Table first:
     metadata = Table.read(fits_file, hdu="METADATA") ## this preserves the units
     with fits.open(fits_file, memmap=True) as hdul:
+        header = hdul[0].header
         wavelength = hdul['WAVELENGTH'].data  # Assuming wavelength is common for all spectra
         if index is None:
             flux = hdul['FLUX'].data
@@ -34,7 +35,7 @@ def read_fits_file(fits_file, index=None):
                 flux = hdul['FLUX'].data[index]
                 error = hdul['ERROR'].data[index]
             
-    return flux, error, wavelength, metadata
+    return header, flux, error, wavelength, metadata
     
 def save_results_to_fits(results, input_file, output_file, headers, absorber):
     """
@@ -92,7 +93,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         hdr[key] = (header["value"], header["comment"])
 
     # load the QSO METADATA
-    _, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
+    _,_, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
     hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
 

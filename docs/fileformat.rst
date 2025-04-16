@@ -11,7 +11,7 @@ The input `fits file` must have the following HDU extensions:
 - **ERROR**: Error on residuals.
 - **METADATA**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
-I have also provided an example QSO spectra FITS file, `data/qso_test.fits`, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+I have also provided two example QSO spectra FITS files. 1) `data/sdss/qso_test_spectra.fits`, which contains 500 continuum-normalized SDSS QSO spectra. 2) `data/desi/qso_test_spectra.fits`, which contains 500 continuum-normalized DESI DR1 QSO spectra. You can use these files to test an example run as described below.
 
 Constant File (Optional)
 ------------------------
@@ -24,31 +24,29 @@ Then run `qsoabsfind` with the required FITS file. If using a custom constant fi
 
 ::
 
-    qsoabsfind --input-fits-file data/qso_test.fits \
+    qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --n-tasks 16 \
-               --ncpus 4
                --constant-file path_to_your_file
 
 Output FITS File Structure
 --------------------------
 
-The **output** `fits file` will have two HDUs `ABSORBER` and `METADATA`:
+The **output** `fits file` will have two HDUs **ABSORBER** and **METADATA**:
 
-**ABSORBER** HDU will contain following structured data:
+**ABSORBER** HDU will contain the following structured data:
 
 - **INDEX_SPEC**: Index of quasar (can be used to read the RA, DEC, and Z of QSOs).
 - **Z_ABS**: Redshift of absorber.
 - **${METAL}_${LINE}_EW**: Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.
 - **${METAL}_${LINE}_EW_ERROR**: Uncertainties in rest-frame EWs of absorber lines in Angstroms.
 - **Z_ABS_ERR**: Measured error in the redshift of the absorber.
-- **GAUSS_FIT**: Rest-frame fitting parameters of double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
-- **GAUSS_FIT_STD**: Uncertainties in rest-frame fitting parameters of double Gaussian to the absorber doublet.
-- **SN_${METAL}_${LINE}**: Signal-to-noise ratio (SNR) of the lines, estimated from uncertainties on residual.
+- **GAUSS_FIT**: Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
+- **GAUSS_FIT_STD**: Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.
+- **SN_${METAL}_${LINE}**: Signal-to-noise ratio of the lines.
 - **${METAL}_EW_TOTAL**: Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: Uncertainties in total EW of the lines in Angstroms.
-- **{METAL}_${LINE}_VDISP**: Rest-frame intrinsic velocity dispersion (corrected for instrumental resolution) in km/s.
+- **${METAL}_${LINE}_VDISP**: Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
 
-**METADATA** HDU will contain every metadata (corresponding to each absorber) that is available in input spectra file.
+**METADATA** HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.
