@@ -72,7 +72,7 @@ search_parameters = {
         'sn_line1': 3,
         'sn_line2': 2,
         'use_covariance': False,
-        'logwave': True,  # SDSS-like linear wavelength
+        'logwave': True,  # SDSS-like log-scaled wavelength
         'lam_edge_sep': lam_sep,
         'verbose': True,
     }
