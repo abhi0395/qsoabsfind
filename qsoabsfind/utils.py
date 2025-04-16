@@ -360,7 +360,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
         instrumental resolution corrected velocity dispersion in km/s
 
     Note:
-        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important
+        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.
     """
 
     v1_sig = sigma1 / c1 * speed_of_light
