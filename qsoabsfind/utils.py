@@ -373,13 +373,9 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
     res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
 
-    # Convert to rest-frame
-    res1_rest = res1 / (1 + z)
-    res2_rest = res2 / (1 + z)
-    
     #Gaussian quadrature correction
-    del_v1_sq = v1_sig**2 - res1_rest**2
-    del_v2_sq = v2_sig**2 - res2_rest**2
+    del_v1_sq = v1_sig**2 - res1**2
+    del_v2_sq = v2_sig**2 - res2**2
 
     # Correct for instrumental resolution
     # Set to 0 if the fitted  width is less than rest-frame instrumental width
@@ -399,7 +395,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
         absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
-        zabs (list, array, or Table): Absorber redshifts, or a Table with 'Z_ABS' and 'GAUSS_FIT' columns.
+        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and 'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.
         **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
@@ -423,15 +419,17 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
-    if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.colnames or 'Z_ABS' in zabs.dtype.names):
+    if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
         redshifts = zabs['Z_ABS']
         fit_params = zabs['GAUSS_FIT']
     else:
         redshifts = zabs
         fit_params = None
-
+    
     if isinstance(redshifts, float):
         redshifts = [redshifts]
+        if fit_params is not None:
+            fit_params = [fit_params]
 
     num_absorbers = len(redshifts)
 
