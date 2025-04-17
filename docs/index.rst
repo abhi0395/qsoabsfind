@@ -10,9 +10,11 @@ Currently, the package only works for **MgII 2796,2803** and **CIV 1548,1550** d
 Features
 --------
 
-- Convolution-based adaptive S/N approach for detecting absorbers in QSO spectra.
-- Gaussian fitting for accurate measurement of absorber properties (such as EW, line widths, and centers).
-- Parallel processing using multiprocessing for efficient computation on a large number of spectra.
+- Convolution-based adaptive S/N approach for detecting doublet absorbers in low-resolution QSO spectra.
+- A rigorous selection criterion to select the best absorber candidates.
+- Gaussian fitting for accurately measuring absorber properties (such as EW, line widths, and centers).
+- Instrumental-resolution correction to the width of detected absorbers.
+- Parallel processing using `multiprocessing` for efficient computation on a large number of spectra.
 
 .. toctree::
    :maxdepth: 1
