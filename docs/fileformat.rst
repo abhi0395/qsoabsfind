@@ -24,11 +24,11 @@ Then run `qsoabsfind` with the required FITS file. If using a custom constant fi
 
 ::
 
-    qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
+    qsoabsfind --input data/sdss/qso_test_spectra.fits \
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --constant-file path_to_your_file
+               --constant-file data/sdss_constants.py
 
 Output FITS File Structure
 --------------------------
