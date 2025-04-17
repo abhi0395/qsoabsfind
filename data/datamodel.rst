@@ -28,14 +28,14 @@ The input `fits file` must have the following HDU extensions:
 Constant File (Optional)
 ------------------------
 
-Before using your own constant file, please set an environment variable `QSO_CONSTANTS_FILE` in your `bashrc` or `zshrc` file and point it to the `qsoabsfind.constants` file. As the code loads the constants from new file dynamically, it is important to define this environment variable.
+Before using your custom constant file, please set an environment variable ``QSO_CONSTANTS_FILE`` in your ``bashrc`` or ``zshrc`` file and point it to the `qsoabsfind.constants` file. As the code loads the constants from a new file dynamically, it is crucial to define this environment variable.
 
-The user-defined **constant-file** must follow the same structure as the `qsoabsfind.constants` file, otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
+The user-defined **constant-file** must follow the same structure as the ``qsoabsfind.constants`` file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
 
 Example Usage
 ----------------
 
-Run `qsoabsfind` with the required FITS file. If using a custom constant file, include it in the command:
+Run `qsoabsfind` using the required FITS file. If using a custom constant file, include it in the command:
 ::
     qsoabsfind \
         --input input_fits_file \
@@ -45,29 +45,32 @@ Run `qsoabsfind` with the required FITS file. If using a custom constant file, i
 
 To run the absorber search module, replace the placeholder paths as follows:
 
-- ``input_fits_file``: Input QSO spectra FITS file
+- ``input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
 - ``constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
-- ``output_fits_file``: Output filename resulting absorber catalog FITS file
+- ``output_fits_file``: Output filename to save absorber catalog
 - `absorber`: MgII or CIV
 
 Quick Example Runs
 ------------------
 
-**For SDSS spectra** (e.g., MgII or CIV search):
+**For SDSS spectra** (MgII or CIV search):
 ::
     qsoabsfind \
         --input data/sdss/qso_test_spectra.fits \
-        --constants data/sdss/sdss_constants.py \
+        --constant-file data/sdss/sdss_constants.py \
         --absorber MgII \
-        --output output_fits_file
+        --output output_fits_file \
+        --ncpus 4
+        
 
-**For DESI spectra** (e.g., MgII or CIV search):
+**For DESI spectra** (MgII or CIV search):
 ::
     qsoabsfind \
         --input data/desi/qso_test_spectra.fits \
-        --constants data/desi/desi_constants.py \
+        --constant-file data/desi/desi_constants.py \
         --absorber MgII \
-        --output output_fits_file
+        --output output_fits_file \
+        --ncpus 4
 
 **Note**
 ---------
