@@ -27,15 +27,34 @@ First, clone the repository to your local machine:
 Running example:
 ----------------
 
-Before running, please read :doc:`File formats <fileformat>`. I have provided an example QSO spectra FITS file, `data/qso_test.fits`, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+Before running, please read :doc:`File formats <fileformat>`. 
+
+**1. SDSS spectra** (MgII or CIV search):
+-----------------------------------------------
+
+I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 .. code-block:: bash
 
-    qsoabsfind --input-fits-file data/qso_test.fits \
-               --n-qso 500 \
+    qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
+               --constant-file data/sdss/sdss_constants.py \
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
+               --ncpus 4
+
+**2. DESI DR1 spectra** (MgII or CIV search):
+-----------------------------------------------
+
+Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 500 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
+
+.. code-block:: bash
+
+    qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
+               --constant-file data/desi/desi_constants.py \
+               --absorber MgII \
+               --output test_MgII.fits \
+               --headers SURVEY=DESI AUTHOR=YOUR_NAME \
                --ncpus 4
 
 Useful notes:
