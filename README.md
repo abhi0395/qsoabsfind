@@ -16,9 +16,11 @@ Currently, the package only works for **MgII 2796,2803** and **CIV 1548,1550** d
 Features
 --------
 
-- Convolution-based adaptive S/N approach for detecting absorbers in QSO spectra.
-- Gaussian fitting for accurate measurement of absorber properties (such as EW, line widths, and centers).
-- Parallel processing using multiprocessing for efficient computation on a large number of spectra.
+- Convolution-based adaptive S/N approach for detecting doublet absorbers in low-resolution QSO spectra.
+- A rigorous selection criterion to select the best absorber candidates.
+- Gaussian fitting for accurately measuring absorber properties (such as EW, line widths, and centers).
+- Instrumental-resolution correction to the width of detected absorbers.
+- Parallel processing using `multiprocessing` for efficient computation on a large number of spectra.
 
 Documentation
 -------------
@@ -55,12 +57,17 @@ python -m unittest discover -s tests
 Instructions
 -------------
 
-Before running the program, please read the `data/datamodel.rst` file. The instructions for the input and output files are provided there. I have also provided an example QSO spectra FITS file, `data/sdss/qso_test_spectra.fits` and `data/desi/qso_test_spectra.fits` which contain 500 continuum-normalized SDSS and DESI QSO spectra, respectively. You can use this file to test an example run as described below.
+- Before running the module, please read the [datamodel](https://github.com/abhi0395/qsoabsfind/blob/main/data/datamodel.rst). The instructions for the input and output files are provided there. 
+- I have also provided two example QSO spectra files:
+  -  `data/sdss/qso_test_spectra.fits` : 500 continuum-normalized spectra from [SDSS DR16](https://www.sdss4.org/dr17/algorithms/qso_catalog/) 
+  -  `data/desi/qso_test_spectra.fits` : 500 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
+- You can use this file to test an example run as described below.
 
-Running example:
+Running as script:
 ----------------
 
-**SDSS**
+**SDSS DR16 Spectra**
+---------------------
 
 ```sh
 qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
@@ -72,7 +79,8 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --constant-file data/sdss/sdss_constants.py
 ```
 
-**DESI**
+**DESI DR1 Spectra**
+---------------------
 
 ```sh
 qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
@@ -93,12 +101,12 @@ Parallel mode can be memory-intensive if the input FITS file is large in size. A
 
 - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
 
-- **Merge results at the end:** After processing, you can merge your results.
+- **Merge results at the end:** After processing, you can merge your results using `qsoabsfind.utils.combine_fits_files`.
 
 In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
 
-Example run
------------
+Example catalog runs
+--------------------
 
 SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
