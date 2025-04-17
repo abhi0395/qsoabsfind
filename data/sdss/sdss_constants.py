@@ -20,30 +20,30 @@ Usage:
 speed_of_light = 3e5  # Speed of light in km/s
 
 # ==============================
-# Absorption Line Wavelengths (in Ångströms)
+# Absorption Line Wavelengths (in Ang)
 # ==============================
 
 lines = {
     'Lya': 1215.16,
     'MgII_2796': 2796.35,
     'MgII_2803': 2803.52,
-    'MgI_2799': 2799.117,
+    'MgI_2799': 2799.117, # average of the MgII doublet
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
-    'CIV_1549': 1549.48,  # average of the doublet (optional)
-    'dz_start': 0.018,  # starting redshift window for stacking or searching
-    'dz_end': 0.003,    # ending redshift window
-    'dv': -5000         # velocity offset for absorber matching in km/s
+    'CIV_1549': 1549.48,  # # average of the CIV doublet
+    'dz_start': 0.018,  # starting redshift offset for defining absorber window
+    'dz_end': 0.003,    # ending redshift offset for defining absorber window
+    'dv': -5000         # velocity offset from quasars redshift in km/s
 }
 
 # ==============================
 # Default Signal Parameters
 # ==============================
 
-ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels)
+ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels) for convolution
 pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
 mult_resi = 1                         # Multiplication factor for residual spectrum
-lam_sep = 25                         # Wavelength cut from spectrum edges (Å)
+lam_sep = 25                         # Wavelength cut from spectrum edges (in Ang)
 
 # ==============================
 # Search Parameter Dictionary
@@ -79,7 +79,7 @@ search_parameters = {
 }
 
 # ==============================
-# Default Amplitudes for Injection Simulations
+# Default Amplitudes for Gaussian doublet kernel
 # ==============================
 
 amplitude_dict = {
