@@ -118,8 +118,7 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 Citation
 --------
 
-Please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) if you find this code useful in your research. The BibTeX entry for the paper can be found [here](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation).
-
+If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
 
 License
 -------
