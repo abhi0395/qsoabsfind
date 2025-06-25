@@ -3,18 +3,18 @@
 qsoabsfind's documentation
 ===========================
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar spectra. This tool identifies potential absorbers using a convolution-based adaptive S/N approach, applies Gaussian fitting and extensive checks to reject false positives, and computes equivalent widths (EWs) of the lines using a simple double Gaussian.
+``qsoabsfind`` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model.
 
-Currently, the package only works for **MgII 2796,2803** and **CIV 1548,1550** doublets.
+Currently, the package supports only **Mg II (2796, 2803 Å)** and **C IV (1548, 1550 Å)** doublets.
 
 Features
 --------
 
-- Convolution-based adaptive S/N approach for detecting doublet absorbers in low-resolution QSO spectra.
-- A rigorous selection criterion to select the best absorber candidates.
-- Gaussian fitting for accurately measuring absorber properties (such as EW, line widths, and centers).
-- Instrumental-resolution correction to the width of detected absorbers.
-- Parallel processing using `multiprocessing` for efficient computation on a large number of spectra.
+- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
+- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
+- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
+- **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
 
 .. toctree::
    :maxdepth: 1
@@ -36,14 +36,17 @@ Citation
 
 If you use this code in your analysis, please cite `Anand, Nelson & Kauffmann 2021 <https://arxiv.org/abs/2103.15842>`_ and `Anand et al. 2025 <https://arxiv.org/abs/2504.20299>`_. The BibTeX entries for these papers can be found `here (2021 paper) <https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation>`_ and `here (2025 paper) <https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation>`_.
 
+If you use this **codebase**, please also cite the associated `Zenodo record <https://zenodo.org/records/15685771>`_. Additionally, consider starring the repository if you find it useful or use it in your work.
+
 
 Contact
 -------
 
 | Abhijeet Anand
 | Lawrence Berkeley National Lab
+|
 
-If you have any questions/suggestions, please feel free to write to abhijeetanand2011 [at] gmail.com or, preferably, open a GitHub issue.
+For questions or feedback, please contact: `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
 
 
 Indices and tables
