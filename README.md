@@ -11,18 +11,20 @@ qsoabsfind
 [![Documentation Status](https://readthedocs.org/projects/qsoabsfind/badge/?version=latest)](https://qsoabsfind.readthedocs.io/en/latest/?badge=latest)
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar spectra. This tool identifies potential absorbers using a convolution-based adaptive S/N approach, applies Gaussian fitting and extensive checks to reject false positives, and computes equivalent widths (EWs) of the lines using a simple double Gaussian.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model.
 
-Currently, the package only works for **MgII 2796,2803** and **CIV 1548,1550** doublets.
+> ⚠️ Currently, the package supports only **Mg II (2796, 2803 Å)** and **C IV (1548, 1550 Å)** doublets.
 
-Features
+
+Key Features
 --------
 
-- Convolution-based adaptive S/N approach for detecting doublet absorbers in low-resolution QSO spectra.
-- A rigorous selection criterion to select the best absorber candidates.
-- Gaussian fitting for accurately measuring absorber properties (such as EW, line widths, and centers).
-- Instrumental-resolution correction to the width of detected absorbers.
-- Parallel processing using `multiprocessing` for efficient computation on a large number of spectra.
+- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
+- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
+- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
+- **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Parallel processing**: Supports efficient computation across large datasets using Python's `multiprocessing` module.
+
 
 Documentation
 -------------
@@ -121,6 +123,9 @@ Citation
 --------
 
 If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
+
+If you use this **codebase**, please also cite the associated [Zenodo record](https://zenodo.org/records/15685771). Additionally, consider starring the repository if you find it useful or use it in your work.
+
 
 License
 -------
