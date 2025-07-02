@@ -19,17 +19,51 @@ speed_of_light = 3e5  # Speed of light in km/s
 # ==============================
 
 lines = {
-    'Lya': 1215.16,
-    'MgII_2796': 2796.35,
-    'MgII_2803': 2803.52,
-    'MgI_2799': 2799.117, # average of the MgII doublet
+    # Lyman series
+    'Lya': 1215.67,
+    'Lyb_1026': 1025.72,
+
+    # CIV doublet
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
     'CIV_1549': 1549.48,  # average of the CIV doublet
-    'dz_start': 0.018,  # starting redshift offset for defining absorber window
-    'dz_end': 0.003,    # ending redshift offset for defining absorber window
-    'dv': -5000         # velocity offset from quasars redshift in km/s
+
+    # MgII doublet
+    'MgII_2796': 2796.35,
+    'MgII_2803': 2803.52,
+    'MgI_2799': 2799.117,  # average of the MgII doublet
+
+    # OVI doublet
+    'OVI_1032': 1031.926,
+    'OVI_1038': 1037.617,
+    'OVI_1035': 1034.77,  # average
+
+    # NV doublet
+    'NV_1238': 1238.821,
+    'NV_1242': 1242.804,
+    'NV_1240': 1240.81,  # average
+
+    # SiIV doublet
+    'SiIV_1394': 1393.755,
+    'SiIV_1403': 1402.770,
+    'SiIV_1399': 1398.26,  # average
+
+    # AlIII doublet
+    'AlIII_1855': 1854.716,
+    'AlIII_1863': 1862.790,
+    'AlIII_1857': 1858.753,  # average
+
+    # FeII lines (two strongest)
+    'FeII_2586': 2586.650,
+    'FeII_2600': 2600.173,
+    'FeII_2593': 2593.4115,  # average of above
+
+    # Window offsets
+    'dz_start': 0.018,  # optional if using dv logic instead, starting redshift offset for defining absorber window
+    'dz_end': 0.003, # ending redshift offset for defining absorber window
+    'dv': 5000  # velocity offset quasars redshift in km/s
 }
+
 
 # ==============================
 # Default Signal Parameters
@@ -72,6 +106,76 @@ search_parameters = {
         'logwave': False,  # DESI-like linear wavelength
         'lam_edge_sep': lam_sep,
         'verbose': True,
+    },
+    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
+    'FeII': {
+        'ker_width_pixels': ker_width_pixels,
+        'pm_pixel': pm_pixel,
+        'coeff_sigma': 2,
+        'mult_resi': mult_resi,
+        'd_pix': 0.6,
+        'sn_line1': 3,
+        'sn_line2': 2,
+        'use_covariance': False,
+        'logwave': False,  # DESI-like linear wavelength
+        'lam_edge_sep': lam_sep,
+        'verbose': True,
+    },
+    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
+    'OVI': {
+        'ker_width_pixels': ker_width_pixels,
+        'pm_pixel': pm_pixel,
+        'coeff_sigma': 2,
+        'mult_resi': mult_resi,
+        'd_pix': 0.6,
+        'sn_line1': 3,
+        'sn_line2': 2,
+        'use_covariance': False,
+        'logwave': False,  # DESI-like linear wavelength
+        'lam_edge_sep': lam_sep,
+        'verbose': True,
+    },
+    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
+    'NV': {
+        'ker_width_pixels': ker_width_pixels,
+        'pm_pixel': pm_pixel,
+        'coeff_sigma': 2,
+        'mult_resi': mult_resi,
+        'd_pix': 0.6,
+        'sn_line1': 3,
+        'sn_line2': 2,
+        'use_covariance': False,
+        'logwave': False,  # DESI-like linear wavelength
+        'lam_edge_sep': lam_sep,
+        'verbose': True,
+    },
+    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
+    'SiIV': {
+        'ker_width_pixels': ker_width_pixels,
+        'pm_pixel': pm_pixel,
+        'coeff_sigma': 2,
+        'mult_resi': mult_resi,
+        'd_pix': 0.6,
+        'sn_line1': 3,
+        'sn_line2': 2,
+        'use_covariance': False,
+        'logwave': False,  # DESI-like linear wavelength
+        'lam_edge_sep': lam_sep,
+        'verbose': True,
+    },
+    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
+    'AlIII': {
+        'ker_width_pixels': ker_width_pixels,
+        'pm_pixel': pm_pixel,
+        'coeff_sigma': 2,
+        'mult_resi': mult_resi,
+        'd_pix': 0.6,
+        'sn_line1': 3,
+        'sn_line2': 2,
+        'use_covariance': False,
+        'logwave': False,  # DESI-like linear wavelength
+        'lam_edge_sep': lam_sep,
+        'verbose': True,
     }
 }
 
@@ -82,7 +186,12 @@ search_parameters = {
 amplitude_dict = {
     'MgII': 0.94,
     'CIV': 0.75,
-    'FeII': 0.75
+    'FeII': 0.75,
+    'AlIII': 0.75,
+    'SiIV': 0.75,
+    'OVI': 0.75,
+    'NV': 0.75,
+
 }
 
 # ==============================
@@ -90,11 +199,35 @@ amplitude_dict = {
 # ==============================
 
 oscillator_parameters = {
-    'MgII_f1': 0.6123,  # MgII 2796
-    'MgII_f2': 0.3954,  # MgII 2803
-    'CIV_f1': 0.19,     # CIV 1548
-    'CIV_f2': 0.0962    # CIV 1550
+    # MgII doublet
+    'MgII_f1': 0.6123,   # 2796.35
+    'MgII_f2': 0.3054,   # 2803.52
+
+    # CIV doublet
+    'CIV_f1': 0.1908,    # 1548.20
+    'CIV_f2': 0.09522,   # 1550.77
+
+    # OVI doublet
+    'OVI_f1': 0.1329,    # 1031.926
+    'OVI_f2': 0.0661,    # 1037.617
+
+    # NV doublet
+    'NV_f1': 0.157,      # 1238.821
+    'NV_f2': 0.07821,    # 1242.804
+
+    # SiIV doublet
+    'SiIV_f1': 0.514,    # 1393.755
+    'SiIV_f2': 0.2553,   # 1402.770
+
+    # AlIII doublet
+    'AlIII_f1': 0.559,   # 1854.716
+    'AlIII_f2': 0.278,   # 1862.790
+
+    # FeII lines
+    'FeII_f1': 0.0691,   # 2586.650
+    'FeII_f2': 0.239.    # 2600.173
 }
+
 
 # ==============================
 # Notes:

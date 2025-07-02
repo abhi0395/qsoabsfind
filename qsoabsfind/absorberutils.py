@@ -533,6 +533,71 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
 
     return z_corr, z_err
 
+def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0):
+    """
+    Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
+
+    Args:
+        absorber (str): Absorber name (e.g., 'CIV', 'MgII', 'OVI', etc.)
+        zqso (float): Quasar emission redshift
+        min_wave, max_wave (float): Observed wavelength coverage
+        lines (dict): Dictionary of rest wavelengths and dv offset
+        lam_edge_sep (float): Padding in angstroms to avoid edge artifacts
+        speed_of_light (float): Speed of light in km/s
+
+    Returns:
+        lam_start, lam_end (float): Observed-frame wavelength limits
+    """
+
+    # Convert velocity offset to redshift offset
+    dz = (abs(lines['dv']) / speed_of_light) * (1 + zqso)
+
+    if absorber == 'MgII':
+        lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
+        lam_MgII = lines['MgI_2799'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_CIV) + lam_edge_sep
+        lam_end = min(max_wave, lam_MgII) - lam_edge_sep
+
+    elif absorber == 'CIV':
+        lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
+        lam_start = max(min_wave, 1310.0 * (1 + zqso)) + lam_edge_sep  # Cooksey+2013
+        lam_end = min(max_wave, lam_CIV) - lam_edge_sep
+
+    elif absorber == 'OVI':
+        lam_OVI = lines['OVI_1032'] * (1 + zqso + dz)
+        lam_Lya = lines['Lya'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_OVI) + lam_edge_sep
+        lam_end = min(max_wave, lam_Lya) - lam_edge_sep
+
+    elif absorber == 'NV':
+        lam_Lyb = lines['Lyb_1026'] * (1 + zqso + dz)
+        lam_NV = lines['NV_1240'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_Lyb) + lam_edge_sep
+        lam_end = min(max_wave, lam_NV) - lam_edge_sep
+
+    elif absorber == 'SiIV':
+        lam_Lya = lines['Lya'] * (1 + zqso + dz)
+        lam_CIV = lines['CIV_1549'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_Lya) + lam_edge_sep
+        lam_end = min(max_wave, lam_CIV) - lam_edge_sep
+
+    elif absorber == 'AlIII':
+        lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
+        lam_AlIII = lines['AlIII_1857'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_CIV) + lam_edge_sep
+        lam_end = min(max_wave, lam_AlIII) - lam_edge_sep
+
+    elif absorber == 'FeII':
+        lam_AlIII = lines['AlIII_1857'] * (1 + zqso + dz)
+        lam_MgII = lines['MgI_2799'] * (1 + zqso - dz)
+        lam_start = max(min_wave, lam_AlIII) + lam_edge_sep
+        lam_end = min(max_wave, lam_MgII) - lam_edge_sep
+
+    else:
+        raise ValueError(f"Unsupported absorber: {absorber}")
+
+    return lam_start, lam_end
+
 
 def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, lam_edge_sep=0, verbose=False):
     """
@@ -555,18 +620,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     """
     start = elapsed(None, "")
 
-    if absorber == 'MgII':
-        lam_CIV = lines['CIV_1549'] * (1 + zqso + lines['dz_start']) #redshifted from CIV emission lines
-        lam_MgII = lines['MgI_2799'] * (1 + zqso - lines['dz_end']) #blueshifted MgII emission lines
-        lam_start = max(min_wave, lam_CIV) + lam_edge_sep
-        lam_end = min(max_wave, lam_MgII) - lam_edge_sep
-    elif absorber == 'CIV':
-        dz = (lines['dv'] / speed_of_light) * (1 + zqso)
-        lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
-        lam_start = max(min_wave, 1310 * (1 + zqso)) + lam_edge_sep  # This is from Cooksey et al 2013
-        lam_end = min(lam_CIV, max_wave) - lam_edge_sep
-    else:
-        raise ValueError("Absorber must be 'CIV' or 'MgII'")
+    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=lam_edge_sep)
 
     imp_ind = np.where((wavelength >= lam_start) & (wavelength <= lam_end))[0]
     lam_search = wavelength[imp_ind]
