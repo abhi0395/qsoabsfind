@@ -87,6 +87,7 @@ class TestQSOAbsFind(unittest.TestCase):
             abs_cat["MGII_2803_EW"] = sdss_results["ew_2_mean"]
             abs_cat["MGII_2796_EW_ERROR"] = sdss_results["ew_1_error"]
             abs_cat["MGII_2803_EW_ERROR"] = sdss_results["ew_2_error"]
+            abs_cat["Z_ABS"] = sdss_results["z_abs"]
             f1, f2 = 0.6123, 0.3054
             lambda1, lambda2 = (f1, 2796.35), (f2, 2803.52)
             Ncol = total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
