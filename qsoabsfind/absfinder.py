@@ -66,7 +66,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     """
     start_time = time.time()
     # Read the specified QSO spectrum from the FITS file
-    print(f'INFO: Starting search for QSO INDEX = {spec_index}')
+    print(f'\nINFO: Starting search for QSO INDEX = {spec_index}')
     spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=kwargs["verbose"]) # verbose=True, shows time
     spectra.read_fits() # load data explicitly for this quasar
     spectra.metadata = Table(spectra.metadata) # in case spectra.metadata is a Row
@@ -97,7 +97,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
     if kwargs["verbose"]:
         print(f'INFO: search absorber = {absorber}')
-        print(f'INFO: Z_qso = {z_qso[0]}')
+        print(f'INFO: Z_QSO = {z_qso[0]}')
 
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
@@ -282,7 +282,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
 
-                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 >= 0 and vel2 >= 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
+                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 > 0 and vel2 > 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]

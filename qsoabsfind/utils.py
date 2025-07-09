@@ -83,7 +83,7 @@ def elapsed(start, msg):
     """
     end = time.time()
     if start is not None:
-        print(f"{msg} {end - start:.2f} seconds\n")
+        print(f"{msg} {end - start:.2f} seconds")
     return end
 
 def gauss_two_lines_kernel(x, a):
