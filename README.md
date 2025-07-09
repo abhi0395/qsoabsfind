@@ -8,7 +8,7 @@ qsoabsfind
 [![arXiv-2103.15842](http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat)](https://arxiv.org/abs/2103.15842)
 [![arXiv-2504.20299](http://img.shields.io/badge/arXiv-2504.20299-orange.svg?style=flat)](https://arxiv.org/abs/2504.20299)
 [![Tests](https://github.com/abhi0395/qsoabsfind/actions/workflows/tests.yml/badge.svg)](https://github.com/abhi0395/qsoabsfind/actions)
-[![coverage](https://codecov.io/gh/abhi0395/qsoabsfind/branch/main/graph/badge.svg)](https://codecov.io/gh/abhi0395/qsoabsfind)
+[![codecov](https://codecov.io/gh/abhi0395/qsoabsfind/branch/ovi_support/graph/badge.svg)](https://codecov.io/gh/abhi0395/qsoabsfind)
 [![Documentation Status](https://readthedocs.org/projects/qsoabsfind/badge/?version=latest)](https://qsoabsfind.readthedocs.io/en/latest/?badge=latest)
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
 
