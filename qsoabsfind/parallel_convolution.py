@@ -102,6 +102,9 @@ def main():
     parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file to save absorber catalog.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--ncpus', type=int, required=False, default=4, help='Number of CPUs for parallel processing.')
+    parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
+    parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
+
 
     args = parser.parse_args()
 
@@ -146,6 +149,19 @@ def main():
         'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'}
     })
 
+    if args.coldens:
+        print(f'INFO: Will also calculate column densities using apparent optical depth method (AODM)')
+        headers.update({
+                'N_METHOD': {
+                    'value': 'AODM',
+                    'comment': 'Column Density Method: apparent optical depth'
+                },
+                'DELTA_V': {
+                    'value': args.dv,
+                    'comment': '+/- velocity (km/s) to calculate optical depth'
+                }
+            })
+
     package_versions = get_package_versions()
     for pkg, ver in package_versions.items():
         headers[pkg.upper()] = {"value": ver, "comment": f'{pkg} version'}
@@ -178,6 +194,12 @@ def main():
         save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
     else:
         print(f'INFO: No {args.absorber} absorbers found, no file saved..')
+
+    if args.coldens:
+        from .columndensity import return_total_column_density_table
+        from .io import append_table_to_fits
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, args.dv, n_jobs)
+        append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing
     end_time = time.time()

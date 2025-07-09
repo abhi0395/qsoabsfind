@@ -38,9 +38,9 @@ Example Usage
 Run `qsoabsfind` using the required FITS file. If using a custom constant file, include it in the command:
 ::
     qsoabsfind \
-        --input input_fits_file \
-        --constant-file constant_file \
-        --output output_fits_file \
+        --input $input_fits_file \
+        --constant-file $constant_file \
+        --output $output_fits_file \
         --absorber $absorber
 
 To run the absorber search module, replace the placeholder paths as follows:
@@ -48,28 +48,28 @@ To run the absorber search module, replace the placeholder paths as follows:
 - ``input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
 - ``constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
 - ``output_fits_file``: Output filename to save absorber catalog
-- `absorber`: MgII or CIV
+- `absorber`: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
 
 Quick Example Runs
 ------------------
 
-**For SDSS spectra** (MgII or CIV search):
+**For SDSS spectra** (MgII search):
 ::
     qsoabsfind \
         --input data/sdss/qso_test_spectra.fits \
         --constant-file data/sdss/sdss_constants.py \
         --absorber MgII \
-        --output output_fits_file \
+        --output $output.fits \
         --ncpus 4
-        
 
-**For DESI spectra** (MgII or CIV search):
+
+**For DESI spectra** (MgII search):
 ::
     qsoabsfind \
         --input data/desi/qso_test_spectra.fits \
         --constant-file data/desi/desi_constants.py \
         --absorber MgII \
-        --output output_fits_file \
+        --output $output.fits \
         --ncpus 4
 
 **Note**

@@ -1,7 +1,7 @@
 """
-This script contains a functions to read and write files.
+This script contains functions to read and write files.
 """
-
+import os
 import astropy.io.fits as fits
 import numpy as np
 from astropy.table import Table
@@ -94,3 +94,28 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
 
     hdul.writeto(output_file, overwrite=True)
     print(f'INFO: ouptut file {output_file} written.')
+
+def append_table_to_fits(filename, table, hdu_name):
+    """
+    Append an Astropy Table as a new BinTableHDU to a FITS file.
+
+    Args:
+        filename (str): Path to the FITS file to write to.
+        table (astropy.table.Table): Table to append.
+        hdu_name (str): Name of the new HDU (used for identification).
+
+    """
+    if not isinstance(table, Table):
+        raise TypeError("Provided 'table' must be an astropy.table.Table object")
+
+    # Create the new HDU
+    new_hdu = fits.BinTableHDU(data=table, name=hdu_name)
+
+    if os.path.exists(filename):
+        # Open existing file and append
+        with fits.open(filename, mode='update') as hdul:
+            hdul.append(new_hdu)
+            hdul.flush()
+    else:
+        raise ValueError(f"ERROR: {filename} does not exist")
+

@@ -19,6 +19,17 @@ Usage:
 
 speed_of_light = 3e5  # Speed of light in km/s
 
+# supported absorbers
+doublet_keys = {
+        'MgII': ('MgII_2796', 'MgII_2803'),
+        'CIV':  ('CIV_1548', 'CIV_1550'),
+        'OVI':  ('OVI_1032', 'OVI_1038'),
+        'NV':   ('NV_1238', 'NV_1242'),
+        'SiIV': ('SiIV_1394', 'SiIV_1403'),
+        'AlIII': ('AlIII_1855', 'AlIII_1863'),
+        'FeII': ('FeII_2586', 'FeII_2600')
+    }
+
 # ==============================
 # Absorption Line Wavelengths (in Ang)
 # ==============================
@@ -31,9 +42,7 @@ lines = {
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
     'CIV_1549': 1549.48,  # # average of the CIV doublet
-    'dz_start': 0.018,  # starting redshift offset for defining absorber window
-    'dz_end': 0.003,    # ending redshift offset for defining absorber window
-    'dv': -5000         # velocity offset from quasars redshift in km/s
+    'dv': 5000         # velocity offset from quasars redshift in km/s
 }
 
 # ==============================

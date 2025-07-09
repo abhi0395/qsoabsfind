@@ -3,15 +3,14 @@ This script contains some utility functions.
 """
 
 import time
-#import logging
 import numpy as np
-from .config import load_constants
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
 from astropy.table import Table, Row
 import re
 from importlib.metadata import version, PackageNotFoundError
+from .config import load_constants
 
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
