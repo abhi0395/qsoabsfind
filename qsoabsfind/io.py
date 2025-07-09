@@ -5,6 +5,10 @@ This script contains a functions to read and write files.
 import astropy.io.fits as fits
 import numpy as np
 from astropy.table import Table
+from .config import load_constants
+
+constants = load_constants()
+doublet_keys = constants.doublet_keys
 
 def read_fits_file(fits_file, index=None):
     """
@@ -34,9 +38,9 @@ def read_fits_file(fits_file, index=None):
             else:
                 flux = hdul['FLUX'].data[index]
                 error = hdul['ERROR'].data[index]
-            
+
     return header, flux, error, wavelength, metadata
-    
+
 def save_results_to_fits(results, input_file, output_file, headers, absorber):
     """
     Save the absorber results to a FITS file along with the metadata of QSOs.
@@ -52,23 +56,14 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         A fits file containing detected absorber properties in 'ABSORBER' HDU and
         corresponding QSO metadata in 'METADATA' HDU.
     """
-    EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
-    if absorber == 'MgII':
-        sn_1 = 'SN_MGII_2796'
-        sn_2 = 'SN_MGII_2803'
-        EW_1 = 'MGII_2796_EW'
-        EW_2 = 'MGII_2803_EW'
-        VDISP1 = 'MGII_2796_VDISP'
-        VDISP2 = 'MGII_2803_VDISP'
-    elif absorber == 'CIV':
-        sn_1 = 'SN_CIV_1548'
-        sn_2 = 'SN_CIV_1550'
-        EW_1 = 'CIV_1548_EW'
-        EW_2 = 'CIV_1550_EW'
-        VDISP1 = 'CIV_1548_VDISP'
-        VDISP2 = 'CIV_1550_VDISP'
+    if absorber not in doublet_keys:
+        raise ValueError(f"Unsupported absorber, must be in {doublet_keys.keys()}")
     else:
-        raise ValueError(f"Unsupported absorber: {absorber}")
+        EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
+        l1, l2 = doublet_keys[absorber][0].upper(), doublet_keys[absorber][1].upper()
+        sn_1, sn_2 = f'SN_{l1}', f'SN_{l2}'
+        EW_1, EW_2 = f'{l1}_EW', f'{l2}_EW'
+        VDISP1, VDISP2 = f'{l1}_VDISP', f'{l2}_VDISP'
 
     hdu = fits.BinTableHDU.from_columns([
         fits.Column(name='INDEX_SPEC', format='K', array=np.array(results['index_spec'])),

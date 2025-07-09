@@ -19,7 +19,7 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_indices (list or numpy.array): Indices of quasars in the data matrix.
-        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, SiIV, AlIII, FeII). Default is 'MgII'.
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
@@ -36,7 +36,7 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_indices (list or numpy.array): Indices of quasars in the data matrix.
-        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, SiIV, AlIII, FeII). Default is 'MgII'.
         n_jobs (int): Number of parallel jobs to run.
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
@@ -161,7 +161,7 @@ def main():
 
     # define number of CPUs cores
     n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 2)) ## getting some CPUs for safe I/O processing
-    
+
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,

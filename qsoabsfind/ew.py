@@ -10,6 +10,7 @@ from .config import load_constants
 
 constants = load_constants()
 lines = constants.lines
+doublet_keys = constants.doublet_keys
 
 def return_line_centers(use_kernel):
     """
@@ -21,16 +22,10 @@ def return_line_centers(use_kernel):
     Returns:
         line centers (floats)
     """
-
-    if use_kernel == 'MgII':
-        line_centre1 = lines['MgII_2796']
-        line_centre2 = lines['MgII_2803']
-    elif use_kernel == 'CIV':
-        line_centre1 = lines['CIV_1548']
-        line_centre2 = lines['CIV_1550']
+    if use_kernel not in doublet_keys:
+        raise ValueError(f"Unsupported kernel type. Use {doublet_keys.keys()}")
     else:
-        raise ValueError("Unsupported kernel type. Use 'MgII', or 'CIV'.")
-
+        line_centre1, line_centre2  = lines[doublet_keys[use_kernel][0]], lines[doublet_keys[use_kernel][1]]
     return line_centre1, line_centre2
 
 # Example usage within double_curve_fit

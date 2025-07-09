@@ -14,6 +14,18 @@ Usage:
 
 speed_of_light = 3e5  # Speed of light in km/s
 
+# supported absorbers
+
+doublet_keys = {
+        'MgII': ('MgII_2796', 'MgII_2803'),
+        'CIV':  ('CIV_1548', 'CIV_1550'),
+        'OVI':  ('OVI_1032', 'OVI_1038'),
+        'NV':   ('NV_1238', 'NV_1242'),
+        'SiIV': ('SiIV_1394', 'SiIV_1403'),
+        'AlIII': ('AlIII_1855', 'AlIII_1863'),
+        'FeII': ('FeII_2586', 'FeII_2600')
+    }
+
 # ==============================
 # Absorption Line Wavelengths (in Ang)
 # ==============================
@@ -58,9 +70,6 @@ lines = {
     'FeII_2600': 2600.173,
     'FeII_2593': 2593.4115,  # average of above
 
-    # Window offsets
-    'dz_start': 0.018,  # optional if using dv logic instead, starting redshift offset for defining absorber window
-    'dz_end': 0.003, # ending redshift offset for defining absorber window
     'dv': 5000  # velocity offset quasars redshift in km/s
 }
 
@@ -72,111 +81,32 @@ lines = {
 ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels) for convolution
 pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
 mult_resi = 1                         # Multiplication factor for residual spectrum
-lam_sep = 300                         # Wavelength cut from spectrum edges (in Ang)
+lam_sep = 50                         # Wavelength cut from spectrum edges (in Ang)
 
 # ==============================
 # Search Parameter Dictionary
 # ==============================
 
+# Define default parameters
+# Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest
+default_search_params = {
+    'ker_width_pixels': ker_width_pixels,
+    'pm_pixel': pm_pixel,
+    'coeff_sigma': 2.5,
+    'mult_resi': mult_resi,
+    'd_pix': 0.6,
+    'sn_line1': 3,
+    'sn_line2': 2,
+    'use_covariance': False,
+    'logwave': True,  # Assume SDSS-style linear by default
+    'lam_edge_sep': lam_sep,
+    'verbose': True,
+}
+
+# Create the final dictionary
 search_parameters = {
-    # Used in SDSS-like spectra (e.g., data/sdss/qso_test_spectra.py) for unittest
-    'MgII': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2.5,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': True,  # SDSS-like log-scaled wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest
-    'CIV': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
-    'FeII': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
-    'OVI': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
-    'NV': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
-    'SiIV': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    },
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py)
-    'AlIII': {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # DESI-like linear wavelength
-        'lam_edge_sep': lam_sep,
-        'verbose': True,
-    }
+    absorber: default_search_params.copy()
+    for absorber in doublet_keys.keys()
 }
 
 # ==============================
@@ -225,7 +155,7 @@ oscillator_parameters = {
 
     # FeII lines
     'FeII_f1': 0.0691,   # 2586.650
-    'FeII_f2': 0.239.    # 2600.173
+    'FeII_f2': 0.239    # 2600.173
 }
 
 

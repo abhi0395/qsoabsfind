@@ -28,6 +28,7 @@ import time
 
 constants = load_constants()
 lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light
+doublet_keys  = constants.doublet_keys
 
 def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
     """
@@ -74,7 +75,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
-    
+
     # Define the wavelength range for searching the absorber
     min_wave, max_wave = lam_obs.min(), lam_obs.max()
 
@@ -118,7 +119,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     Args:
         spec_index (int): Index of quasar in the spectra 2D array.
-        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, FeII, SiIV, AlIII). Default is 'MgII'.
         lam_obs (numpy.array): observed wavelength array.
         residual (numpy.array): residual (i.e. flux/continuum) array
         error (numpy.array): error on residuals
@@ -162,20 +163,18 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     else:
         # Constants
-        if absorber == 'MgII':
-            line1, line2 = lines['MgII_2796'], lines['MgII_2803']
-            f1, f2 = oscillator_parameters['MgII_f1'], oscillator_parameters['MgII_f2']
-        elif absorber == 'CIV':
-            line1, line2 = lines['CIV_1548'], lines['CIV_1550']
-            f1, f2 = oscillator_parameters['CIV_f1'], oscillator_parameters['CIV_f2']
+        if absorber not in doublet_keys:
+            raise ValueError(f"No support for {absorber}, only supports {doublet_keys.keys()}")
         else:
-            raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
+            line1, line2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
+            f1, f2 = oscillator_parameters[f'{absorber}_f1'], oscillator_parameters[f'{absorber}_f2']
+            line_ratio = max(f1, f2) / min(f1, f2)
 
         line_sep = line2 - line1
         del_z = line_sep / (0.5 * (line1+line2))
 
         if verbose:
-            print(f'INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
+            print('INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
 
         if not logwave:
             # per pixel resolution in case wavelength is on linear scale
@@ -193,7 +192,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             mean_resolution = resolution
 
         print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
-        
+
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
@@ -213,7 +212,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         for sig_ker in width_kernel:
             line_centre = (line1 + line2) / 2
 
-            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index)
+            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, amp_ratio=line_ratio)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
@@ -224,7 +223,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
 
-            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
+            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
             final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
             combined_final_our_z.append(final_our_z)
 
@@ -273,11 +272,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_abs[m], lam_obs)
 
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
-                        # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
+                        # usually 1 < DR < line_ratio (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
 
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
-                            min_dr, max_dr = 1 -  dr_error, f1/f2 +  dr_error
+                            min_dr, max_dr = 1 -  dr_error, line_ratio +  dr_error
                             ew1_snr, ew2_snr = EW_first_temp_mean[0] / EW_first_error_temp[0], EW_second_temp_mean[0] / EW_second_error_temp[0]
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case

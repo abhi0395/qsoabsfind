@@ -21,6 +21,7 @@ from importlib.metadata import version, PackageNotFoundError
 
 constants = load_constants()
 lines, amplitude_dict, speed_of_light = constants.lines, constants.amplitude_dict, constants.speed_of_light
+doublet_keys = constants.doublet_keys
 
 
 def get_package_versions():
@@ -125,16 +126,13 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     A_main = amplitude_dict[absorber]
     A_secondary = A_main * amp_ratio
     ct = 10
-    if absorber == 'MgII':
-        ker_parm = np.array([A_main, lines['MgII_2796'], width, A_secondary, lines['MgII_2803'], width])
-        lam_ker_start = lines['MgII_2796']-ct*width # +/- 10sigma , #rest-frame
-        lam_ker_end = lines['MgII_2803']+ct*width
-    elif absorber == 'CIV':
-        ker_parm = np.array([A_main, lines['CIV_1548'], width, A_secondary, lines['CIV_1550'], width])
-        lam_ker_start = lines['CIV_1548']-ct*width # +/- 10sigma , #rest-frame
-        lam_ker_end = lines['CIV_1550']+ct*width #
-    else:
-        raise ValueError(f"Unsupported absorber type for specific Args: {absorber}")
+    # extract lambdas for the doublet
+    lambda1, lambda2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
+
+    ker_parm = np.array([A_main, lambda1, width, A_secondary, lambda2, width])
+    lam_ker_start = lambda1 - ct * width # +/- 10sigma , #rest-frame
+    lam_ker_end = lambda2 + ct * width
+
     if log:
         lam_ker = np.arange(np.log10(lam_ker_start), np.log10(lam_ker_end)+wave_res, wave_res) #SDSS-like wavelength resolution
         lam_ker = 10**lam_ker
@@ -338,9 +336,7 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
         assert conv_arr.size == unmsk_residual.size
     except AssertionError:
         bad_conv=1
-        # logging.error(f"Size mismatch detected in spec_index {spec_index}")
-        # logging.debug(f"conv_arr size: {conv_arr.size}, unmsk_residual size: {unmsk_residual.size}")
-        # raise
+        print(f"ERROR: Size mismatch detected in spec_index {spec_index}")
     return bad_conv
 
 def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
@@ -380,8 +376,8 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     # Correct for instrumental resolution
     # Set to 0 if the fitted  width is less than rest-frame instrumental width
     # One line may resolved and one may be not, so this condition is a little relaxed
-    corr_del_v1_sq = np.sqrt(del_v1_sq) if del_v1_sq > 0 else 0.0
-    corr_del_v2_sq = np.sqrt(del_v2_sq) if del_v2_sq > 0 else 0.0
+    corr_del_v1_sq = np.sqrt(del_v1_sq) if del_v1_sq >= 0 else 0.0
+    corr_del_v2_sq = np.sqrt(del_v2_sq) if del_v2_sq >= 0 else 0.0
 
     return corr_del_v1_sq, corr_del_v2_sq
 
@@ -403,8 +399,6 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
                   ylabel (str): The label for the y-axis.
                   title (str): The super title of the plot.
                   fontsize (int): Font size for the title and labels.
-                  major_tick_params (dict): Parameters for major ticks.
-                  minor_tick_params (dict): Parameters for minor ticks.
     """
 
     # Extract common plot parameters from kwargs or set to default values
@@ -412,10 +406,6 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ylabel = kwargs.pop('ylabel', 'residual')
     title = kwargs.pop('title', 'QSO')
     fontsize = kwargs.pop('fontsize', 16)
-
-    # Extract tick parameters for major and minor ticks
-    major_tick_params = kwargs.pop('major_tick_params', {'length': 6, 'width': 1})
-    minor_tick_params = kwargs.pop('minor_tick_params', {'length': 3, 'width': 0.5})
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     # If zabs is a Table or structured array, extract redshifts and fit parameters
@@ -425,7 +415,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     else:
         redshifts = zabs
         fit_params = None
-    
+
     if isinstance(redshifts, float):
         redshifts = [redshifts]
         if fit_params is not None:
@@ -453,12 +443,11 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ax_main.legend(prop={'size':11})
 
     # Determine the absorber line labels
-    if absorber == 'MgII':
-        l1, l2 = 'MgII_2796', 'MgII_2803'
-    elif absorber == 'CIV':
-        l1, l2 = 'CIV_1548', 'CIV_1550'
-    else:
+
+    if absorber not in doublet_keys:
         raise ValueError(f"Unsupported absorber type: {absorber}")
+    else:
+        l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
 
     # Plot vertical lines for the absorber lines in the main plot
     for z in redshifts:

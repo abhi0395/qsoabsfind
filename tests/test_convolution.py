@@ -28,9 +28,10 @@ class TestQSOAbsFind(unittest.TestCase):
             self.sdss_fits_file, spec_index, absorber, **constants.search_parameters[absorber])
 
         desi_absorber="CIV"
+        constants.search_parameters[desi_absorber]["logwave"]=False
         desi_result = read_single_spectrum_and_find_absorber(
             self.desi_fits_file, spec_index, desi_absorber, **constants.search_parameters[desi_absorber])
-        
+
         # Validate the output
         self.assertIsInstance(sdss_result, tuple)
         self.assertEqual(len(sdss_result), 15)  # Ensure the correct number of return values
@@ -46,8 +47,9 @@ class TestQSOAbsFind(unittest.TestCase):
         # Call the function
         sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
             self.sdss_fits_file, spec_indices, absorber, n_jobs, **constants.search_parameters[absorber])
-        
+
         desi_absorber='CIV'
+        constants.search_parameters[desi_absorber]["logwave"]=False
         desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
             self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **constants.search_parameters[desi_absorber])
 

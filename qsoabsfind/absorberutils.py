@@ -9,9 +9,10 @@ from numba import jit
 
 constants = load_constants()
 lines, speed_of_light = constants.lines, constants.speed_of_light
+doublet_keys = constants.doublet_keys
 
 @jit(nopython=True)
-def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, beta, line1, line2, logwave):
+def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
     """
     Find valid indices based on thresholding in the convolved array.
 
@@ -22,7 +23,6 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
         conv_arr (array): Convolved array.
         sigma_cr (array): Local sigma values.
         coeff_sigma (float): Coefficient for sigma.
-        d_pix (float): Pixel distance for line separation.
         beta (float): Oscillator strength ratio.
         line1 (float): First line wavelength.
         line2 (float): Second line wavelength.
@@ -287,9 +287,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     Returns:
         list: List after grouping contiguous pixels for each spectrum.
     """
-
-    if use_kernel=='MgII':thresh=lines['MgII_2796']
-    if use_kernel=='CIV':thresh=lines['CIV_1548']
+    thresh  = lines[doublet_keys[use_kernel][0]]
 
     z_ind = []  # Final list of median redshifts for each spectrum
     ct = 2
@@ -404,11 +402,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
     Returns:
         numpy.ndarray: Updated list of absorbers with false positives removed.
     """
-    if use_kernel=='MgII':
-        mg1, mg2 = lines['MgII_2796'], lines['MgII_2803']
-
-    if use_kernel=='CIV':
-        mg1, mg2 = lines['CIV_1548'], lines['CIV_1550']
+    mg1, mg2 = lines[doublet_keys[use_kernel][0]], lines[doublet_keys[use_kernel][1]]
 
     z = np.array(first_list_z)
     nabs = z.size
@@ -454,12 +448,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         list: Updated list of indices indicating bad (1) or good (-1) absorbers.
     """
     # Define constants based on the kernel type
-    if use_kernel == 'MgII':
-        c0, c1 = lines['MgII_2796'], lines["MgII_2803"]
-    elif use_kernel == 'CIV':
-        c0, c1 = lines["CIV_1548"], lines["CIV_1550"]
-    else:
-        raise ValueError("Unknown kernel type")
+    c0, c1 = lines[doublet_keys[use_kernel][0]], lines[doublet_keys[use_kernel][1]]
 
     thresh = (c1 - c0) / c0
 
