@@ -83,13 +83,13 @@ class TestQSOAbsFind(unittest.TestCase):
             error = spec.error
             wavelength = spec.wavelength
             abs_cat = Table()
-            abs_cat["MGII_2796_EW"] = sdss_results["ew_1_mean"]
-            abs_cat["MGII_2803_EW"] = sdss_results["ew_2_mean"]
-            abs_cat["MGII_2796_EW_ERROR"] = sdss_results["ew_1_error"]
-            abs_cat["MGII_2803_EW_ERROR"] = sdss_results["ew_2_error"]
-            abs_cat["Z_ABS"] = sdss_results["z_abs"]
+            abs_cat["MGII_2796_EW"] = sdss_results["ew_1_mean"][0]
+            abs_cat["MGII_2803_EW"] = sdss_results["ew_2_mean"][0]
+            abs_cat["MGII_2796_EW_ERROR"] = sdss_results["ew_1_error"][0]
+            abs_cat["MGII_2803_EW_ERROR"] = sdss_results["ew_2_error"][0]
+            abs_cat["Z_ABS"] = sdss_results["z_abs"][0]
             f1, f2 = 0.6123, 0.3054
-            lambda1, lambda2 = (f1, 2796.35), (f2, 2803.52)
+            lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
             Ncol = total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
             self.assertEqual(len(Ncol.keys), 4)
 
