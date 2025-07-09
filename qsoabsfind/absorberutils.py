@@ -318,7 +318,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     else:
         return combined_final_our_z
 
-def remove_Mg_falsely_come_from_Fe_absorber(index, z_after_grouping, lam_obs, residual, error, d_pix, logwave):
+def remove_Mg_falsely_come_from_Fe_absorber(z_after_grouping, lam_obs, residual, error, d_pix, logwave):
     """
     Remove any MgII absorber that arises falsley due to Fe 2586, 2600 doublet,
     i.e., false positive due to Fe lines.
@@ -441,7 +441,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         abs_z (list or numpy.ndarray): List of absorber redshifts.
         sn1_all (list or numpy.ndarray): List of SNR values for the first line.
         sn2_all (list or numpy.ndarray): List of SNR values for the second line.
-        use_kernel (str, optional): Kernel type (MgII, CIV).
+        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
         fitted_params (list of arrays): corresponding gaussian fitting parameters for those redshifts
 
     Returns:
@@ -527,7 +527,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
     Args:
-        absorber (str): Absorber name (e.g., 'CIV', 'MgII', 'OVI', etc.)
+        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
         zqso (float): Quasar emission redshift
         min_wave, max_wave (float): Observed wavelength coverage
         lines (dict): Dictionary of rest wavelengths and dv offset
@@ -583,7 +583,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
         lam_end = min(max_wave, lam_MgII) - lam_edge_sep
 
     else:
-        raise ValueError(f"Unsupported absorber: {absorber}")
+        raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 
     return lam_start, lam_end
 
@@ -598,7 +598,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         residual (numpy.ndarray): The residual array of the QSO spectrum.
         err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
         zqso (float): The redshift of the QSO.
-        absorber (str): Options 'CIV', 'MgII'.
+        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII)
         min_wave (float): minimum wavelength edge (in Ang)
         max_wave (float): maximum wavelength edge (in Ang)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum

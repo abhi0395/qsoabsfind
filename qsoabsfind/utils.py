@@ -109,7 +109,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     Convolves the spectrum with a Gaussian kernel.
 
     Args:
-        absorber (str): Type of absorber (e.g., 'MgII', 'CIV').
+        absorber (str): Type of absorber (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
         residual_arr_after_mask (numpy.ndarray): Final residual array after masking.
         width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).
         log (bool): if log bins should be used for wavelength
@@ -390,7 +390,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
-        absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
+        absorber (str): Type of absorber, e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII
         zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and 'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.

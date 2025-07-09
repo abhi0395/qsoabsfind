@@ -41,7 +41,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          The file must include extensions for FLUX, ERROR, WAVELENGTH
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
-        absorber (str): Name of the absorber to search for (e.g., 'MgII', 'CIV').
+        absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
@@ -119,7 +119,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     Args:
         spec_index (int): Index of quasar in the spectra 2D array.
-        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, FeII, SiIV, AlIII). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
         lam_obs (numpy.array): observed wavelength array.
         residual (numpy.array): residual (i.e. flux/continuum) array
         error (numpy.array): error on residuals
@@ -316,7 +316,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
-                    match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, d_pix, logwave)
+                    match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(pure_z_abs, lam_obs, residual, error, d_pix, logwave)
                 else:
                     match_abs1 = -1*np.ones(len(pure_z_abs))
                 match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, absorber, logwave)

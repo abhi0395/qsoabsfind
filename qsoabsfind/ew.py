@@ -17,7 +17,7 @@ def return_line_centers(use_kernel):
     Return line centers for a given absorber
 
     Args:
-        use_kerne (str): absorber (e.g. MgII, CIV)
+        use_kerne (str): absorber (e.g. MgII, CIV, OVI, NV, AlIII, SiIV, FeII)
 
     Returns:
         line centers (floats)
@@ -169,7 +169,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         error (numpy.ndarray): Error array corresponding to the flux.
         absorber_redshift (list): List of potential absorbers identified previously.
         bound (tuple): Bounds for the fitting parameters.
-        use_kernel (str, optional): Kernel type ('MgII, FeII, CIV).
+        use_kernel (str, optional): Kernel type ('MgII, FeII, CIV, NV, OVI, SiIV, AlIII).
         d_pix (float, optional): wavelength pixel for tolerance
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
 

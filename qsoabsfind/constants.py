@@ -5,7 +5,7 @@ This module defines constants, line wavelengths, search parameters, and oscillat
 used in QSO absorption line analysis.
 
 Usage:
-    from constants import speed_of_light, lines, search_parameters, ...
+    from constants import speed_of_light, lines, search_parameters, doublet_keys ...
 """
 
 # ==============================
@@ -15,7 +15,6 @@ Usage:
 speed_of_light = 3e5  # Speed of light in km/s
 
 # supported absorbers
-
 doublet_keys = {
         'MgII': ('MgII_2796', 'MgII_2803'),
         'CIV':  ('CIV_1548', 'CIV_1550'),
@@ -48,29 +47,29 @@ lines = {
     # OVI doublet
     'OVI_1032': 1031.926,
     'OVI_1038': 1037.617,
-    'OVI_1035': 1034.77,  # average
+    'OVI_1035': 1034.77,  # average of the OVI doublet
 
     # NV doublet
     'NV_1238': 1238.821,
     'NV_1242': 1242.804,
-    'NV_1240': 1240.81,  # average
+    'NV_1240': 1240.81,  # average of the NV doublet
 
     # SiIV doublet
     'SiIV_1394': 1393.755,
     'SiIV_1403': 1402.770,
-    'SiIV_1399': 1398.26,  # average
+    'SiIV_1399': 1398.26,  # average of the SiIV doublet
 
     # AlIII doublet
     'AlIII_1855': 1854.716,
     'AlIII_1863': 1862.790,
-    'AlIII_1857': 1858.753,  # average
+    'AlIII_1857': 1858.753,  # average of the AlIII doublet
 
     # FeII lines (two strongest)
     'FeII_2586': 2586.650,
     'FeII_2600': 2600.173,
-    'FeII_2593': 2593.4115,  # average of above
+    'FeII_2593': 2593.4115,  # average of the FeII doublet
 
-    'dv': 5000  # velocity offset quasars redshift in km/s
+    'dv': 5000  # velocity offset from quasars redshift in km/s
 }
 
 
@@ -117,10 +116,10 @@ amplitude_dict = {
     'MgII': 0.94,
     'CIV': 0.75,
     'FeII': 0.75,
-    'AlIII': 0.75,
-    'SiIV': 0.75,
-    'OVI': 0.75,
-    'NV': 0.75,
+    'AlIII': 0.5,
+    'SiIV': 0.5,
+    'OVI': 0.5,
+    'NV': 0.5,
 
 }
 
@@ -166,6 +165,5 @@ oscillator_parameters = {
 """
 - SDSS spectra: `logwave=True` (log-uniform wavelength); resolution estimated automatically.
 - DESI spectra: `logwave=False` (linear wavelength grid); per-pixel resolution is computed.
-- MgII default parameters are optimized for SDSS spectra; CIV for DESI.
   Adjust as needed based on spectrum type.
 """
