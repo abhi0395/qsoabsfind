@@ -3,11 +3,9 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 import qsoabsfind
 from datetime import datetime
-import subprocess
 
 project = 'qsoabsfind'
 author = 'Abhijeet Anand'
-release = '0.1.0'
 copyright = f'2021-{datetime.now().year}, Abhijeet Anand'
 
 html_context = {

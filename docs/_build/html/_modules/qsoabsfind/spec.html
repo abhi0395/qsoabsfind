@@ -45,6 +45,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Search Windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -74,12 +75,13 @@
              
   <h1>Source code for qsoabsfind.spec</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a classes and functions to read a given spectra fits files.</span>
+<span class="sd">This script contains a class and functions to read a given spectra fits file.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">read_fits_file</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
 
 <div class="viewcode-block" id="QSOSpecRead">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead">[docs]</a>
@@ -89,47 +91,65 @@
 
 <div class="viewcode-block" id="QSOSpecRead.__init__">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the QSOSpecRead class.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            fits_file (str): Path to the FITS file containing QSO spectra.</span>
 <span class="sd">            index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.</span>
+<span class="sd">            autoload (bool): if True, class itself will load the data (default=False),</span>
+<span class="sd">                             in True case, user does not need to use available class functions.</span>
+<span class="sd">            verbose (bool): if want to print time info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span> <span class="o">=</span> <span class="n">fits_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flux</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">read_fits</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span> <span class="o">=</span> <span class="n">autoload</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_fits</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="QSOSpecRead.read_fits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.read_fits">[docs]</a>
     <span class="k">def</span> <span class="nf">read_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Reads the FITS file and measures the time taken for the</span>
-<span class="sd">        operation.</span>
+<span class="sd">        Reads the FITS file and measures the time taken for the operation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span>
         <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-        <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Time taken to read FITS file&quot;</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;INFO: Time taken to read </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="QSOSpecRead.get_metadata">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.get_metadata">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asdict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the METADATA data with keyword handling.</span>
+<span class="sd">        Returns the METADATA data with keyword handling (must be used after read_fits() option).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            asdict (bool): if True, metadata will be returned as a dictionary, otherwise astropy.table</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict: The metadata data with keywords.</span>
+<span class="sd">            dict or Table: The metadata data with keywords (if asdict=True), otherwise a Table</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
-        <span class="k">return</span> <span class="n">details_dict</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: there is no metadata available, use read_fits()&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">asdict</span><span class="p">:</span>
+            <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
+            <span class="k">return</span> <span class="n">details_dict</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span></div>
 </div>
+
 
 </pre></div>
 
@@ -140,8 +160,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2025-07-09.
       </span></p>
   </div>
 

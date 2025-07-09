@@ -33,7 +33,7 @@ def ss1991_correction(delta_logN):
         delta_logN (float): difference between logN of first and second lines
 
     Returns:
-        return correction based on Savage & Sembach 1991 paper
+        correction based on Savage & Sembach 1991 paper (array)
     """
     delta_vals = np.array([
         0.000, 0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090,
@@ -60,7 +60,7 @@ def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac=0.05):
         continuum_error_frac (float): assumed systematics on continuum normalized flux (default 5%)
 
     Returns:
-        tau: apparent optical depth array
+        apparent optical depth array and corresponding error arrays
     """
 
     F_lambda = np.clip(F_lambda, 0.005, 1)  # Avoid log(0) issues
@@ -82,7 +82,7 @@ def velocity_from_wavelength(lambda_array, lambda_0, z):
         z (float): redshift of absorber
 
     Returns:
-        velocities (observed and in rest-frame)
+        velocities (observed and in rest-frame, array)
 
     """
 
@@ -163,6 +163,10 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
         results (dict): dictionary containing apparent column density and error
         and flag showing if its saturated
 
+    Note:
+        for fN flag, description:
+        1: WEIGHTED, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak line is not available) -1: FAIL',
+
     """
 
     z = abs_cat["Z_ABS"]
@@ -224,12 +228,11 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
 
     results = Table({'LOG10N': [log_N], 'SIG_LOG10N': [err_log_N], 'SATURATION': [sflag], 'fN': [val_flag]})
 
-    # for fN flag::
-    #comment='1: WEIGHTED, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak line is not available) -1: FAIL',
-
     return results
 
 def compute_single_column_density(args):
+    """Function to compute column density of one absorbers
+    """
     flux, error, wavelength, tt_row, f1, f2, l1, l2, dv = args
     return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, velocity_range=dv)
 

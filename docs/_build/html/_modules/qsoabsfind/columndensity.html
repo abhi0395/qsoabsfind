@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qsoabsfind.columndensity &mdash; qsoabsfind  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            qsoabsfind
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">qsoabsfind</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">qsoabsfind.columndensity</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for qsoabsfind.columndensity</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains functions to calculate column densities for absorbers</span>
+<span class="sd">using Apparent Optical Depth Method (AODM) of Savage &amp; Sembach 1991</span>
+
+<span class="sd">Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">vstack</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">calculate_doublet_ratio</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
+
+
+<span class="c1"># We adopt the inverse-variance weighted column density for doublets with DR &gt; 2 − DR_error. For systems with DR ≤ 2 − DR_error, we apply the Savage &amp; Sembach (1991) correction to the weaker line when both transitions are measured. Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.</span>
+
+
+<span class="c1"># Constants</span>
+<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
+<span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
+<span class="n">oscillator_strengths</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">oscillator_parameters</span>
+<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
+<span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
+
+
+<div class="viewcode-block" id="ss1991_correction">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.ss1991_correction">[docs]</a>
+<span class="k">def</span> <span class="nf">ss1991_correction</span><span class="p">(</span><span class="n">delta_logN</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Interpolate Savage &amp; Sembach (1991) Table 4 to get Δlog N correction.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        delta_logN (float): difference between logN of first and second lines</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        correction based on Savage &amp; Sembach 1991 paper (array)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">delta_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="mf">0.000</span><span class="p">,</span> <span class="mf">0.010</span><span class="p">,</span> <span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.030</span><span class="p">,</span> <span class="mf">0.040</span><span class="p">,</span> <span class="mf">0.050</span><span class="p">,</span> <span class="mf">0.060</span><span class="p">,</span> <span class="mf">0.070</span><span class="p">,</span> <span class="mf">0.080</span><span class="p">,</span> <span class="mf">0.090</span><span class="p">,</span>
+        <span class="mf">0.100</span><span class="p">,</span> <span class="mf">0.110</span><span class="p">,</span> <span class="mf">0.110</span><span class="p">,</span> <span class="mf">0.120</span><span class="p">,</span> <span class="mf">0.130</span><span class="p">,</span> <span class="mf">0.140</span><span class="p">,</span> <span class="mf">0.150</span><span class="p">,</span> <span class="mf">0.160</span><span class="p">,</span> <span class="mf">0.170</span><span class="p">,</span> <span class="mf">0.180</span><span class="p">,</span>
+        <span class="mf">0.190</span><span class="p">,</span> <span class="mf">0.200</span><span class="p">,</span> <span class="mf">0.210</span><span class="p">,</span> <span class="mf">0.220</span><span class="p">,</span> <span class="mf">0.230</span><span class="p">,</span> <span class="mf">0.240</span>
+    <span class="p">])</span>
+    <span class="n">correction_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="mf">0.000</span><span class="p">,</span> <span class="mf">0.010</span><span class="p">,</span> <span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.030</span><span class="p">,</span> <span class="mf">0.040</span><span class="p">,</span> <span class="mf">0.051</span><span class="p">,</span> <span class="mf">0.061</span><span class="p">,</span> <span class="mf">0.073</span><span class="p">,</span> <span class="mf">0.085</span><span class="p">,</span> <span class="mf">0.097</span><span class="p">,</span>
+        <span class="mf">0.111</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.140</span><span class="p">,</span> <span class="mf">0.157</span><span class="p">,</span> <span class="mf">0.175</span><span class="p">,</span> <span class="mf">0.195</span><span class="p">,</span> <span class="mf">0.217</span><span class="p">,</span> <span class="mf">0.243</span><span class="p">,</span> <span class="mf">0.273</span><span class="p">,</span>
+        <span class="mf">0.307</span><span class="p">,</span> <span class="mf">0.348</span><span class="p">,</span> <span class="mf">0.396</span><span class="p">,</span> <span class="mf">0.453</span><span class="p">,</span> <span class="mf">0.520</span><span class="p">,</span> <span class="mf">0.600</span>
+    <span class="p">])</span>
+    <span class="n">correction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">delta_logN</span><span class="p">,</span> <span class="n">delta_vals</span><span class="p">,</span> <span class="n">correction_vals</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">correction</span></div>
+
+
+
+<div class="viewcode-block" id="optical_depth">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.optical_depth">[docs]</a>
+<span class="k">def</span> <span class="nf">optical_depth</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">sigma_F_lambda</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Function to calculate optical depth (tau) of absorption feature</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        F_lambda (array): continuum normalized flux</span>
+<span class="sd">        sigma_F_lambda (array): errors on continuum normalized flux</span>
+<span class="sd">        continuum_error_frac (float): assumed systematics on continuum normalized flux (default 5%)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        apparent optical depth array and corresponding error arrays</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">F_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Avoid log(0) issues</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">)</span>
+    <span class="n">sigma_tau_cont</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">continuum_error_frac</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span>
+    <span class="n">sigma_F_lambda_inflated</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_F_lambda</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">sigma_tau_cont</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_tau</span> <span class="o">=</span> <span class="n">sigma_F_lambda_inflated</span> <span class="o">/</span> <span class="p">(</span><span class="n">F_lambda</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_tau</span></div>
+
+
+<span class="c1"># Function to convert wavelength to velocity</span>
+
+<div class="viewcode-block" id="velocity_from_wavelength">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.velocity_from_wavelength">[docs]</a>
+<span class="k">def</span> <span class="nf">velocity_from_wavelength</span><span class="p">(</span><span class="n">lambda_array</span><span class="p">,</span> <span class="n">lambda_0</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to convert wavelength into velocity pixels</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lambda_array (array): observed wavelength</span>
+<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber</span>
+<span class="sd">        z (float): redshift of absorber</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        velocities (observed and in rest-frame, array)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">d_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lambda_array</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">lambda_array</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">lambda_obs</span>  <span class="o">=</span> <span class="n">lambda_0</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
+    <span class="n">d_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">lambda_array</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="o">*</span> <span class="n">d_lambda</span>
+    <span class="n">dv</span> <span class="o">=</span> <span class="p">(</span><span class="n">lambda_array</span> <span class="o">-</span> <span class="n">lambda_obs</span><span class="p">)</span> <span class="o">/</span> <span class="n">lambda_obs</span> <span class="o">*</span> <span class="n">speed_of_light</span>
+    <span class="k">return</span> <span class="n">speed_of_light</span> <span class="o">*</span> <span class="n">d_lambda</span> <span class="o">/</span> <span class="p">(</span><span class="n">lambda_obs</span><span class="p">),</span> <span class="n">dv</span> <span class="c1"># Velocity in km/s</span></div>
+
+
+<span class="c1"># Function to calculate total column density integrated over velocity range</span>
+
+<div class="viewcode-block" id="single_column_density">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.single_column_density">[docs]</a>
+<span class="k">def</span> <span class="nf">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">lambda_0</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to calculate apparent column density for one line using Savage &amp; Sembach 1991 method</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        F_lambda (array): continuum normalized flux</span>
+<span class="sd">        error (array): continuum normalized errors</span>
+<span class="sd">        wavelength (array): observed wavelength</span>
+<span class="sd">        z (float): redshift of absorber</span>
+<span class="sd">        f (float): oscillator strength of line transition</span>
+<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber</span>
+<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        results (dict): dictionary containing column density and error</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Step 1: Convert wavelength to velocity</span>
+
+    <span class="n">v_array</span><span class="p">,</span> <span class="n">dv_absorber</span> <span class="o">=</span> <span class="n">velocity_from_wavelength</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">lambda_0</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+    <span class="n">velocity_filter</span> <span class="o">=</span> <span class="p">(</span><span class="n">dv_absorber</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">velocity_range</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">dv_absorber</span> <span class="o">&lt;=</span> <span class="n">velocity_range</span><span class="p">)</span>
+    <span class="n">F_lam</span> <span class="o">=</span> <span class="n">F_lambda</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">]</span>
+    <span class="n">err_F_lam</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">]</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">F_lam</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">F_lam</span> <span class="o">&gt;</span><span class="mf">0.005</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">F_lam</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">err_F_lam</span><span class="p">)</span>
+    <span class="n">F_lam</span> <span class="o">=</span> <span class="n">F_lam</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span>
+    <span class="n">delta_dv_i</span> <span class="o">=</span> <span class="n">v_array</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">][</span><span class="n">sel</span><span class="p">]</span>
+    <span class="n">dv_i</span> <span class="o">=</span> <span class="n">dv_absorber</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">][</span><span class="n">sel</span><span class="p">]</span>
+    <span class="n">err_F_lam</span> <span class="o">=</span> <span class="n">err_F_lam</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span>
+    <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_tau</span> <span class="o">=</span> <span class="n">optical_depth</span><span class="p">(</span><span class="n">F_lam</span><span class="p">,</span> <span class="n">err_F_lam</span><span class="p">)</span>
+
+    <span class="n">k_norm</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mf">14.5762</span> <span class="o">/</span> <span class="p">(</span><span class="n">lambda_0</span> <span class="o">*</span> <span class="n">f</span><span class="p">)</span>
+
+    <span class="n">N_line</span> <span class="o">=</span> <span class="n">k_norm</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tau</span><span class="o">*</span> <span class="n">delta_dv_i</span><span class="p">)</span>
+    <span class="n">sig_N_line</span> <span class="o">=</span> <span class="n">k_norm</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">((</span><span class="n">sigma_tau</span> <span class="o">*</span> <span class="n">delta_dv_i</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">N_line</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">sig_N_line</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">N_line</span><span class="p">):</span>
+        <span class="n">log_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">N_line</span><span class="p">)</span>
+        <span class="n">err_log_N</span> <span class="o">=</span> <span class="n">sig_N_line</span> <span class="o">/</span> <span class="p">(</span><span class="n">N_line</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">N_line</span><span class="p">,</span> <span class="n">sig_N_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">log_N</span><span class="p">,</span> <span class="n">err_log_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;N&#39;</span><span class="p">:</span><span class="n">N_line</span><span class="p">,</span> <span class="s1">&#39;N_err&#39;</span><span class="p">:</span><span class="n">sig_N_line</span><span class="p">,</span> <span class="s1">&#39;logN&#39;</span><span class="p">:</span><span class="n">log_N</span><span class="p">,</span> <span class="s1">&#39;err_logN&#39;</span><span class="p">:</span><span class="n">err_log_N</span><span class="p">,</span> <span class="s1">&#39;flag&#39;</span><span class="p">:</span><span class="n">flag</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+
+<div class="viewcode-block" id="total_column_density">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.total_column_density">[docs]</a>
+<span class="k">def</span> <span class="nf">total_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">abs_cat</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">lambda1</span><span class="p">,</span> <span class="n">lambda2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to calculate total apparent column density (inverse-variance weighted) for a doublet using Savage &amp; Sembach 1991 method</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        F_lambda (array): continuum normalized flux</span>
+<span class="sd">        error (array): continuum normalized errors</span>
+<span class="sd">        wavelength (array): observed wavelength</span>
+<span class="sd">        abs_cat (table): absorber table for the individual absorber (must contain Z_ABS, {absorber}_line12_EW, and {absorber}_line12_EW_ERROR, e.g. CIV_1548_EW)</span>
+<span class="sd">        f1 (float): oscillator strength of first line</span>
+<span class="sd">        f2 (float): oscillator strength of second line</span>
+<span class="sd">        lambda1 (tuple): key and rest-frame wavelength of first line</span>
+<span class="sd">        lambda2 (tuple): key and rest-frame wavelength of second line</span>
+<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        results (dict): dictionary containing apparent column density and error</span>
+<span class="sd">        and flag showing if its saturated</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        for fN flag, description:</span>
+<span class="sd">        1: WEIGHTED, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak line is not available) -1: FAIL&#39;,</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">z</span> <span class="o">=</span> <span class="n">abs_cat</span><span class="p">[</span><span class="s2">&quot;Z_ABS&quot;</span><span class="p">]</span>
+    <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="n">lambda1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">lambda2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">ew1</span><span class="p">,</span> <span class="n">ew2</span> <span class="o">=</span> <span class="n">abs_cat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lambda1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_EW&quot;</span><span class="p">],</span> <span class="n">abs_cat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lambda2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_EW&quot;</span><span class="p">]</span>
+    <span class="n">err_ew1</span><span class="p">,</span> <span class="n">err_ew2</span> <span class="o">=</span> <span class="n">abs_cat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lambda1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_EW_ERROR&quot;</span><span class="p">],</span> <span class="n">abs_cat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lambda2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_EW_ERROR&quot;</span><span class="p">]</span>
+
+    <span class="n">dr</span><span class="p">,</span> <span class="n">dr_error</span> <span class="o">=</span> <span class="n">calculate_doublet_ratio</span><span class="p">(</span><span class="n">ew1</span><span class="p">,</span> <span class="n">ew2</span><span class="p">,</span> <span class="n">err_ew1</span><span class="p">,</span> <span class="n">err_ew2</span><span class="p">)</span>
+    <span class="n">sflag</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">dr</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">dr_error</span> <span class="k">else</span> <span class="mi">1</span>
+
+    <span class="n">results1</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
+    <span class="n">results2</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
+
+    <span class="n">N1</span><span class="p">,</span> <span class="n">N2</span> <span class="o">=</span> <span class="n">results1</span><span class="p">[</span><span class="s2">&quot;N&quot;</span><span class="p">],</span> <span class="n">results2</span><span class="p">[</span><span class="s2">&quot;N&quot;</span><span class="p">]</span>
+    <span class="n">sig_N1</span><span class="p">,</span> <span class="n">sig_N2</span> <span class="o">=</span> <span class="n">results1</span><span class="p">[</span><span class="s2">&quot;N_err&quot;</span><span class="p">],</span> <span class="n">results2</span><span class="p">[</span><span class="s2">&quot;N_err&quot;</span><span class="p">]</span>
+    <span class="n">flag1</span><span class="p">,</span> <span class="n">flag2</span> <span class="o">=</span> <span class="n">results1</span><span class="p">[</span><span class="s2">&quot;flag&quot;</span><span class="p">],</span> <span class="n">results2</span><span class="p">[</span><span class="s2">&quot;flag&quot;</span><span class="p">]</span>
+
+    <span class="n">log_N</span><span class="p">,</span> <span class="n">err_log_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">if</span> <span class="n">dr</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">dr_error</span><span class="p">:</span>
+        <span class="c1"># Unsaturated</span>
+        <span class="k">if</span> <span class="n">flag1</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">flag2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">w1</span><span class="p">,</span> <span class="n">w2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sig_N1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sig_N2</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">N_tot</span> <span class="o">=</span> <span class="p">(</span><span class="n">w1</span> <span class="o">*</span> <span class="n">N1</span> <span class="o">+</span> <span class="n">w2</span> <span class="o">*</span> <span class="n">N2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">w1</span> <span class="o">+</span> <span class="n">w2</span><span class="p">)</span>
+            <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">w1</span> <span class="o">+</span> <span class="n">w2</span><span class="p">))</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># weighted</span>
+        <span class="k">elif</span> <span class="n">flag1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">N_tot</span><span class="p">,</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">N1</span><span class="p">,</span> <span class="n">sig_N1</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># first line only</span>
+        <span class="k">elif</span> <span class="n">flag2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">N_tot</span><span class="p">,</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">N2</span><span class="p">,</span> <span class="n">sig_N2</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># second line only</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">N_tot</span> <span class="o">=</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Saturated</span>
+        <span class="k">if</span> <span class="n">flag1</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">flag2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">delta_logN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">N2</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">N1</span><span class="p">)</span>
+            <span class="n">correction</span> <span class="o">=</span> <span class="n">ss1991_correction</span><span class="p">(</span><span class="n">delta_logN</span><span class="p">)</span>
+            <span class="n">log_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">N2</span><span class="p">)</span> <span class="o">+</span> <span class="n">correction</span>
+            <span class="n">err_log_N</span> <span class="o">=</span> <span class="n">sig_N2</span> <span class="o">/</span> <span class="p">(</span><span class="n">N2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+            <span class="n">N_tot</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="n">log_N</span>
+            <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">N_tot</span> <span class="o">*</span> <span class="n">err_log_N</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># S&amp;S corrected weak line</span>
+        <span class="k">elif</span> <span class="n">flag2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">N_tot</span><span class="p">,</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">N2</span><span class="p">,</span> <span class="n">sig_N2</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># lower limit from weak line</span>
+        <span class="k">elif</span> <span class="n">flag1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">N_tot</span><span class="p">,</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">N1</span><span class="p">,</span> <span class="n">sig_N1</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># lower limit from strong line</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">N_tot</span> <span class="o">=</span> <span class="n">N_tot_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">val_flag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">log_N</span><span class="p">):</span>
+        <span class="n">log_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">N_tot</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">N_tot</span><span class="p">)</span> <span class="ow">and</span> <span class="n">N_tot</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">err_log_N</span> <span class="o">=</span> <span class="n">N_tot_err</span> <span class="o">/</span> <span class="p">(</span><span class="n">N_tot</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">N_tot</span><span class="p">)</span> <span class="ow">and</span> <span class="n">N_tot</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">Table</span><span class="p">({</span><span class="s1">&#39;LOG10N&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">log_N</span><span class="p">],</span> <span class="s1">&#39;SIG_LOG10N&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">err_log_N</span><span class="p">],</span> <span class="s1">&#39;SATURATION&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">sflag</span><span class="p">],</span> <span class="s1">&#39;fN&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">val_flag</span><span class="p">]})</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="compute_single_column_density">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.compute_single_column_density">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_single_column_density</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to compute column density of one absorbers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">dv</span> <span class="o">=</span> <span class="n">args</span>
+    <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">dv</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="return_total_column_density_table">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.return_total_column_density_table">[docs]</a>
+<span class="k">def</span> <span class="nf">return_total_column_density_table</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">nproc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Function to calculate total column density of metal doublets using</span>
+<span class="sd">    apparent optical depth method</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input (str): input spectra file</span>
+<span class="sd">        absorber (str): absorber name (MgII, CIV, OVI, FeII, AlIII, SiIV, NV)</span>
+<span class="sd">        output (str): output absorber catalog filename</span>
+<span class="sd">        dv (float): maximum velocity range to be considered for optical depth calculation</span>
+<span class="sd">        nproc (int): number of cpus for multiprocessing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        appends an extra HDU: COLUMN_DENSITY in the absorber catalog output filename</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">.spec</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">tt</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s2">&quot;ABSORBER&quot;</span><span class="p">)</span>
+    <span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">tt</span><span class="p">[</span><span class="s2">&quot;INDEX_SPEC&quot;</span><span class="p">])</span>
+    <span class="n">F_lambda</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span>
+    <span class="n">error_F_lambda</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span>
+    <span class="n">wavelength</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
+
+    <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">oscillator_strengths</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f1&#39;</span><span class="p">],</span> <span class="n">oscillator_strengths</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f2&#39;</span><span class="p">]</span>
+    <span class="n">l1_key</span><span class="p">,</span> <span class="n">l2_key</span> <span class="o">=</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="p">(</span><span class="n">l1_key</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1_key</span><span class="p">]),</span> <span class="p">(</span><span class="n">l2_key</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2_key</span><span class="p">])</span>
+
+    <span class="n">nabs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
+
+    <span class="n">args_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">error_F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nabs</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: Starting column density calculation with </span><span class="si">{</span><span class="n">nproc</span><span class="si">}</span><span class="s2"> processes&quot;</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">nproc</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">compute_single_column_density</span><span class="p">,</span> <span class="n">args_list</span><span class="p">)</span>
+
+    <span class="c1"># Combine into single table</span>
+    <span class="n">N_table</span> <span class="o">=</span> <span class="n">vstack</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">N_table</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;10N&quot;</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
+            <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;cm^-2&quot;</span>
+            <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Num of zeros = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">N_table</span><span class="p">[</span><span class="s2">&quot;LOG10N&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Column density took = </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1"> [sec]&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">N_table</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2025-07-09.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

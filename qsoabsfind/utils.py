@@ -372,11 +372,14 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     del_v1_sq = v1_sig**2 - res1**2
     del_v2_sq = v2_sig**2 - res2**2
 
+    is_resolved1 = del_v1_sq >= 0
+    is_resolved2 = del_v2_sq >= 0
+
     # Correct for instrumental resolution
     # Set to 0 if the fitted  width is less than rest-frame instrumental width
     # One line may resolved and one may be not, so this condition is a little relaxed
-    corr_del_v1_sq = np.sqrt(del_v1_sq) if del_v1_sq >= 0 else 0.0
-    corr_del_v2_sq = np.sqrt(del_v2_sq) if del_v2_sq >= 0 else 0.0
+    corr_del_v1_sq = np.sqrt(del_v1_sq) if is_resolved1 else 0.0
+    corr_del_v2_sq = np.sqrt(del_v2_sq) if is_resolved2 else 0.0
 
     return corr_del_v1_sq, corr_del_v2_sq
 

@@ -58,6 +58,14 @@ qsoabsfind.utils module
    :undoc-members:
    :show-inheritance:
 
+qsoabsfind.columndensity module
+-----------------------
+
+.. automodule:: qsoabsfind.columndensity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

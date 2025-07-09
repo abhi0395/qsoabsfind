@@ -3,17 +3,64 @@
 qsoabsfind's documentation
 ===========================
 
-``qsoabsfind`` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM).
 
-Currently, the package supports only **Mg II (2796, 2803 Å)** and **C IV (1548, 1550 Å)** doublets.
+Supported Metal Doublet Systems
+-------------------------------
 
-Features
+.. list-table::
+   :widths: 15 12 20 12 20
+   :header-rows: 1
+
+   * - Absorber
+     - Line 1 (Å)
+     - Oscillator Strength 1
+     - Line 2 (Å)
+     - Oscillator Strength 2
+   * - Mg II (Mg⁺)
+     - 2796.35
+     - 0.6123
+     - 2803.52
+     - 0.3054
+   * - C IV (C³⁺)
+     - 1548.20
+     - 0.1900
+     - 1550.77
+     - 0.0952
+   * - O VI (O⁵⁺)
+     - 1031.93
+     - 0.1329
+     - 1037.62
+     - 0.0661
+   * - N V (N⁴⁺)
+     - 1238.82
+     - 0.1570
+     - 1242.80
+     - 0.0782
+   * - Si IV (Si³⁺)
+     - 1393.76
+     - 0.5140
+     - 1402.77
+     - 0.2553
+   * - Al III (Al²⁺)
+     - 1854.72
+     - 0.5390
+     - 1862.79
+     - 0.2680
+   * - Fe II (Fe⁺)
+     - 2586.65
+     - 0.0691
+     - 2600.17
+     - 0.2394
+
+Key Features
 --------
 
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
 - **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
 
 .. toctree::
@@ -22,6 +69,8 @@ Features
 
    installation
    fileformat
+   examplerun
+   searchwindows
    qsoabsfind
 
 
@@ -44,7 +93,6 @@ Contact
 
 | Abhijeet Anand
 | Lawrence Berkeley National Lab
-|
 
 For questions or feedback, please contact: `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
 
