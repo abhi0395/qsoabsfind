@@ -85,7 +85,7 @@ class TestQSOAbsFind(unittest.TestCase):
         self.assertGreater(len(desi_results['index_spec']), 0)
 
         # checking if AODM column density part passes
-        if len(sdss_results['index_spec']) > 0:
+        if sdss_results['z_abs'][0] > 0:
             spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = sdss_results['index_spec'][0])
             F_lambda = spec.flux
             error = spec.error
