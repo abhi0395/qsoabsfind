@@ -8,6 +8,7 @@ from .utils import double_gaussian
 from .absorberutils import redshift_estimate
 from .config import load_constants
 
+# Constants
 constants = load_constants()
 lines = constants.lines
 doublet_keys = constants.doublet_keys

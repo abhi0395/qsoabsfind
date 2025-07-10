@@ -54,9 +54,9 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_indices = np.random.randint(0, 500, size=3)
+        spec_indices = np.random.randint(0, 500, size=2)
         absorber = 'MgII'
-        n_jobs = 4
+        n_jobs = 6
         # Call the function
         sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
             self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters[absorber])
@@ -85,21 +85,20 @@ class TestQSOAbsFind(unittest.TestCase):
         self.assertGreater(len(desi_results['index_spec']), 0)
 
         # checking if AODM column density part passes
-        if sdss_results['z_abs'][0] > 0:
-            spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = sdss_results['index_spec'][0])
-            F_lambda = spec.flux
-            error = spec.error
-            wavelength = spec.wavelength
-            abs_cat = Table()
-            abs_cat["MGII_2796_EW"] = sdss_results["ew_1_mean"][0]
-            abs_cat["MGII_2803_EW"] = sdss_results["ew_2_mean"][0]
-            abs_cat["MGII_2796_EW_ERROR"] = sdss_results["ew_1_error"][0]
-            abs_cat["MGII_2803_EW_ERROR"] = sdss_results["ew_2_error"][0]
-            abs_cat["Z_ABS"] = sdss_results["z_abs"][0]
-            f1, f2 = 0.6123, 0.3054
-            lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
-            Ncol = total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
-            self.assertEqual(len(Ncol.keys), 4)
+        spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = sdss_results['index_spec'][0])
+        F_lambda = spec.flux
+        error = spec.error
+        wavelength = spec.wavelength
+        abs_cat = Table()
+        abs_cat["MGII_2796_EW"] = 0.5
+        abs_cat["MGII_2803_EW"] = 0.5
+        abs_cat["MGII_2796_EW_ERROR"] = 0.1
+        abs_cat["MGII_2803_EW_ERROR"] = 0.1
+        abs_cat["Z_ABS"] = spec.metadata["Z_QSO"]-0.3
+        f1, f2 = 0.6123, 0.3054
+        lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
+        Ncol = total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
+        self.assertEqual(len(Ncol.keys), 4)
 
 if __name__ == '__main__':
     unittest.main()

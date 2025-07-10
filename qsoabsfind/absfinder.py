@@ -26,8 +26,11 @@ from .config import load_constants
 from .spec import QSOSpecRead
 import time
 
+# Constants
 constants = load_constants()
-lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light
+lines = constants.lines
+oscillator_parameters = constants.oscillator_parameters
+speed_of_light = constants.speed_of_light
 doublet_keys  = constants.doublet_keys
 
 def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):

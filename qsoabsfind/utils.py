@@ -12,16 +12,13 @@ import re
 from importlib.metadata import version, PackageNotFoundError
 from .config import load_constants
 
-# Configure logging
-#logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set the logging level for Matplotlib to WARNING to suppress DEBUG messages
-#logging.getLogger('matplotlib').setLevel(logging.WARNING)
-
+# Constants
 constants = load_constants()
-lines, amplitude_dict, speed_of_light = constants.lines, constants.amplitude_dict, constants.speed_of_light
+lines = constants.lines
+amplitude_dict = constants.amplitude_dict
+speed_of_light = constants.speed_of_light
 doublet_keys = constants.doublet_keys
-
 
 def get_package_versions():
     """
@@ -99,7 +96,7 @@ def gauss_two_lines_kernel(x, a):
     a1 = a[0]
     a2 = a[3]
 
-    norm_constant = -1#/((a1+a2)*(2*np.pi*a[1]**2)**0.5)
+    norm_constant = -1
 
     return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5 + 1
 

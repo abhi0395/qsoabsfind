@@ -7,8 +7,10 @@ from .config import load_constants
 from .utils import elapsed
 from numba import jit
 
+# Constants
 constants = load_constants()
-lines, speed_of_light = constants.lines, constants.speed_of_light
+lines = constants.lines
+speed_of_light = constants.speed_of_light
 doublet_keys = constants.doublet_keys
 
 @jit(nopython=True)
