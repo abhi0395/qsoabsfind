@@ -21,8 +21,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Search Windows" href="searchwindows.html" />
-    <link rel="prev" title="File formats" href="fileformat.html" /> 
+    <link rel="next" title="Full qsoabsfind API reference" href="qsoabsfind.html" />
+    <link rel="prev" title="Search Windows" href="searchwindows.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,7 +48,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#your-input-spectra-absorber-search-without-column-densities"><strong>1. Your input spectra</strong> (absorber search without column densities):</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#your-input-spectra-absorber-search-with-column-densities"><strong>2. Your input spectra</strong> (absorber search with column densities):</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ready-to-run-examples">Ready to run examples</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sdss-spectra-mgii-search-without-column-densities"><strong>1. SDSS spectra</strong> (MgII search, without column densities):</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#desi-dr1-spectra-mgii-without-column-densities"><strong>2. DESI DR1 spectra</strong> (MgII, without column densities):</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sdss-dr16-spectra-mgii-with-column-densities"><strong>3. SDSS DR16 spectra</strong> (MgII, with column densities):</a></li>
@@ -56,7 +60,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#useful-notes">Useful notes:</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -87,6 +90,34 @@
   <section id="running-examples">
 <h1>Running examples<a class="headerlink" href="#running-examples" title="Link to this heading"></a></h1>
 <p>Before running, please read <a class="reference internal" href="fileformat.html"><span class="doc">File formats</span></a>.</p>
+<section id="your-input-spectra-absorber-search-without-column-densities">
+<h2><strong>1. Your input spectra</strong> (absorber search without column densities):<a class="headerlink" href="#your-input-spectra-absorber-search-without-column-densities" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span><span class="nv">$input</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--constant-file<span class="w"> </span><span class="nv">$your_constant</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--absorber<span class="w"> </span><span class="nv">$your_absorber</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--output<span class="w"> </span><span class="nv">$output</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--headers<span class="w"> </span><span class="nv">SURVEY</span><span class="o">=</span><span class="nv">$YOUR_SURVEY</span><span class="w"> </span><span class="nv">AUTHOR</span><span class="o">=</span><span class="nv">$YOUR_NAME</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--ncpus<span class="w"> </span><span class="m">10</span>
+</pre></div>
+</div>
+</section>
+<section id="your-input-spectra-absorber-search-with-column-densities">
+<h2><strong>2. Your input spectra</strong> (absorber search with column densities):<a class="headerlink" href="#your-input-spectra-absorber-search-with-column-densities" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span><span class="nv">$input</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--constant-file<span class="w"> </span><span class="nv">$your_constant</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--absorber<span class="w"> </span><span class="nv">$your_absorber</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--output<span class="w"> </span><span class="nv">$output</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--headers<span class="w"> </span><span class="nv">SURVEY</span><span class="o">=</span><span class="nv">$YOUR_SURVEY</span><span class="w"> </span><span class="nv">AUTHOR</span><span class="o">=</span><span class="nv">$YOUR_NAME</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--ncpus<span class="w"> </span><span class="m">10</span>
+<span class="w">           </span>--coldens
+<span class="w">           </span>--dv<span class="w"> </span><span class="m">300</span>
+</pre></div>
+</div>
+</section>
+<section id="ready-to-run-examples">
+<h2>Ready to run examples<a class="headerlink" href="#ready-to-run-examples" title="Link to this heading"></a></h2>
+<p>I have provided an example QSO spectra file, <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code>, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
+</section>
 <section id="sdss-spectra-mgii-search-without-column-densities">
 <h2><strong>1. SDSS spectra</strong> (MgII search, without column densities):<a class="headerlink" href="#sdss-spectra-mgii-search-without-column-densities" title="Link to this heading"></a></h2>
 <p>I have provided an example QSO spectra file, <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code>, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
@@ -131,10 +162,10 @@
 <section id="description">
 <h2>Description:<a class="headerlink" href="#description" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">input_fits_file</span></code>: Input QSO spectra FITS file (e.g., <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code> or <code class="docutils literal notranslate"><span class="pre">data/desi/qso_test_spectra.fits</span></code>)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">constant_file</span></code>: Your constants file (e.g., <code class="docutils literal notranslate"><span class="pre">data/sdss/sdss_constants.py</span></code> or <code class="docutils literal notranslate"><span class="pre">data/desi/desi_constants.py</span></code>) or your customized file</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">output</span></code>: Output filename to save absorber catalog</p></li>
-<li><p><cite>absorber</cite>: MgII, CIV, FeII, NV, OVI, SiIV, AlIII</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--input_fits_file</span></code>: Input QSO spectra FITS file (e.g., <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code> or <code class="docutils literal notranslate"><span class="pre">data/desi/qso_test_spectra.fits</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--constant_file</span></code>: Your constants file (e.g., <code class="docutils literal notranslate"><span class="pre">data/sdss/sdss_constants.py</span></code> or <code class="docutils literal notranslate"><span class="pre">data/desi/desi_constants.py</span></code>) or your customized file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--output</span></code>: Output filename to save absorber catalog</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--absorber</span></code>: MgII, CIV, FeII, NV, OVI, SiIV, AlIII</p></li>
 </ul>
 </section>
 <section id="useful-notes">
@@ -155,15 +186,15 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="fileformat.html" class="btn btn-neutral float-left" title="File formats" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="searchwindows.html" class="btn btn-neutral float-right" title="Search Windows" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="searchwindows.html" class="btn btn-neutral float-left" title="Search Windows" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="qsoabsfind.html" class="btn btn-neutral float-right" title="Full qsoabsfind API reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-09.
+      <span class="lastupdated">Last updated on 2025-07-10.
       </span></p>
   </div>
 

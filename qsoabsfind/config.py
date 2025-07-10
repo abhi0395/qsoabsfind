@@ -16,7 +16,7 @@ import os
 import importlib.util
 import qsoabsfind.constants as default_constants
 
-def load_constants(verbose=False):
+def load_constants(constants_file=None, verbose=False):
     """
     Load constants used by qsoabsfind.
 
@@ -25,12 +25,17 @@ def load_constants(verbose=False):
     as the constants module. If the variable is unset or invalid, it falls back
     to the built-in constants in `qsoabsfind.constants`.
 
-    Returns
+    Args:
+        constants_file (str): constant filename (optional)
+        verbose (bool): if want to print statements
+
+    Returns:
     -------
     module
         The module (either user-defined or default) containing the constants.
     """
-    constants_file = os.environ.get('QSO_CONSTANTS_FILE')
+    if constants_file is None:
+        constants_file = os.environ.get('QSO_CONSTANTS_FILE')
 
     # Check if the environment variable for the constants file is set
     if constants_file and os.path.isfile(constants_file):

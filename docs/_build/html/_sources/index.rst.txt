@@ -3,7 +3,7 @@
 qsoabsfind's documentation
 ===========================
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM).
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
 Supported Metal Doublet Systems
 -------------------------------
@@ -55,12 +55,13 @@ Supported Metal Doublet Systems
 
 Key Features
 --------
-
+- **Automated Search Window**: The code dynamically defines the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the `Search Window Documentation <https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html>`_.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
+- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection.
 - **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
 
 .. toctree::
@@ -69,8 +70,8 @@ Key Features
 
    installation
    fileformat
-   examplerun
    searchwindows
+   examplerun
    qsoabsfind
 
 
@@ -87,14 +88,15 @@ If you use this code in your analysis, please cite `Anand, Nelson & Kauffmann 20
 
 If you use this **codebase**, please also cite the associated `Zenodo record <https://zenodo.org/records/15685771>`_. Additionally, consider starring the repository if you find it useful or use it in your work.
 
-
-Contact
--------
-
-| Abhijeet Anand
-| Lawrence Berkeley National Lab
+Contact & Issues
+---------------
 
 For questions or feedback, please contact: `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
+
+
+| Thanks,
+| Abhijeet Anand
+| Lawrence Berkeley National Lab
 
 
 Indices and tables

@@ -48,8 +48,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -79,7 +79,7 @@
              
   <section id="qsoabsfind-s-documentation">
 <span id="qsoabsfind"></span><h1>qsoabsfind’s documentation<a class="headerlink" href="#qsoabsfind-s-documentation" title="Link to this heading"></a></h1>
-<p><cite>qsoabsfind</cite> is a Python module designed to detect absorbers with doublet properties in <strong>SDSS</strong> and <strong>DESI</strong> like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM).</p>
+<p><cite>qsoabsfind</cite> is a Python module designed to detect absorbers with doublet properties in <strong>SDSS</strong> and <strong>DESI</strong> like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.</p>
 <section id="supported-metal-doublet-systems">
 <h2>Supported Metal Doublet Systems<a class="headerlink" href="#supported-metal-doublet-systems" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
@@ -147,11 +147,13 @@
 <section id="key-features">
 <h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
 <ul class="simple">
+<li><p><strong>Automated Search Window</strong>: The code dynamically defines the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the <a class="reference external" href="https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html">Search Window Documentation</a>.</p></li>
 <li><p><strong>Adaptive S/N convolution</strong>: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.</p></li>
 <li><p><strong>Rigorous selection criteria</strong>: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.</p></li>
 <li><p><strong>Gaussian profile fitting</strong>: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.</p></li>
 <li><p><strong>Instrumental correction</strong>: Corrects measured line widths for instrumental resolution to infer intrinsic properties.</p></li>
 <li><p><strong>Column Densities</strong>: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract">Savage &amp; Sembach 1991</a>).</p></li>
+<li><p><strong>Flexible Search Parameters:</strong> Supports both default settings and user-provided custom search parameters for metal absorber detection.</p></li>
 <li><p><strong>Parallel processing</strong>: Supports efficient computation across large datasets using Python’s <code class="docutils literal notranslate"><span class="pre">multiprocessing</span></code> module.</p></li>
 </ul>
 <div class="toctree-wrapper compound">
@@ -159,8 +161,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 </div>
@@ -174,13 +176,14 @@
 <p>If you use this code in your analysis, please cite <a class="reference external" href="https://arxiv.org/abs/2103.15842">Anand, Nelson &amp; Kauffmann 2021</a> and <a class="reference external" href="https://arxiv.org/abs/2504.20299">Anand et al. 2025</a>. The BibTeX entries for these papers can be found <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation">here (2021 paper)</a> and <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation">here (2025 paper)</a>.</p>
 <p>If you use this <strong>codebase</strong>, please also cite the associated <a class="reference external" href="https://zenodo.org/records/15685771">Zenodo record</a>. Additionally, consider starring the repository if you find it useful or use it in your work.</p>
 </section>
-<section id="contact">
-<h2>Contact<a class="headerlink" href="#contact" title="Link to this heading"></a></h2>
+<section id="contact-issues">
+<h2>Contact &amp; Issues<a class="headerlink" href="#contact-issues" title="Link to this heading"></a></h2>
+<p>For questions or feedback, please contact: <a class="reference external" href="mailto:abhijeetanand2011&#37;&#52;&#48;gmail&#46;com">abhijeetanand2011<span>&#64;</span>gmail<span>&#46;</span>com</a> or, preferably, open a GitHub issue on the code <a class="reference external" href="https://github.com/abhi0395/qsoabsfind">repo</a>.</p>
 <div class="line-block">
+<div class="line">Thanks,</div>
 <div class="line">Abhijeet Anand</div>
 <div class="line">Lawrence Berkeley National Lab</div>
 </div>
-<p>For questions or feedback, please contact: <a class="reference external" href="mailto:abhijeetanand2011&#37;&#52;&#48;gmail&#46;com">abhijeetanand2011<span>&#64;</span>gmail<span>&#46;</span>com</a> or, preferably, open a GitHub issue on the code <a class="reference external" href="https://github.com/abhi0395/qsoabsfind">repo</a>.</p>
 </section>
 </section>
 <section id="indices-and-tables">
@@ -203,7 +206,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-09.
+      <span class="lastupdated">Last updated on 2025-07-10.
       </span></p>
   </div>
 

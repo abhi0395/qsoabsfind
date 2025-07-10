@@ -47,11 +47,11 @@ Mg II (2796, 2803 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 C IV (1548, 1550 Å)
 --------------------
@@ -61,11 +61,11 @@ C IV (1548, 1550 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}})) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}})) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 O VI (1032, 1038 Å)
 --------------------
@@ -75,11 +75,11 @@ O VI (1032, 1038 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 N V (1238, 1242 Å)
 --------------------
@@ -89,11 +89,11 @@ N V (1238, 1242 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\beta}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\beta}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 Si IV (1394, 1403 Å)
 ---------------------
@@ -103,11 +103,11 @@ Si IV (1394, 1403 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 Al III (1854, 1862 Å)
 ----------------------
@@ -117,11 +117,11 @@ Al III (1854, 1862 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 
 Fe II (2586, 2600 Å)
 ---------------------
@@ -131,9 +131,9 @@ Fe II (2586, 2600 Å)
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \delta\lambda
+    \lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \delta\lambda
+    \lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}
 

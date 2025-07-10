@@ -8,20 +8,30 @@ from qsoabsfind.config import load_constants
 from qsoabsfind.columndensity import total_column_density
 from qsoabsfind.spec import QSOSpecRead
 
-constants = load_constants()
-
 class TestQSOAbsFind(unittest.TestCase):
 
     def setUp(self):
         # Set the file path to the data file
+
         #SDSS
-        self.sdss_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/sdss', 'qso_test_spectra.fits')
+        self.sdss_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/sdss',
+                                           'qso_test_spectra.fits')
+        self.sdss_constant_file = os.path.join(os.path.dirname(__file__), '..', 'data/sdss',            'sdss_constants.py')
+
         # Ensure the file exists
-        self.assertTrue(os.path.exists(self.sdss_fits_file), f"File {self.sdss_fits_file} does not exist")
+        self.assertTrue(os.path.exists(self.sdss_fits_file), f"File {self.sdss_fits_file} does not  exist")
+        self.assertTrue(os.path.exists(self.sdss_constant_file), f"File {self.sdss_constant_file} does not  exist")
+
         #DESI
-        self.desi_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/desi',            'qso_test_spectra.fits')
+        self.desi_fits_file = os.path.join(os.path.dirname(__file__), '..', 'data/desi',          'qso_test_spectra.fits')
+        self.desi_constant_file = os.path.join(os.path.dirname(__file__), '..', 'data/desi',            'desi_constants.py')
+
         # Ensure the file exists
         self.assertTrue(os.path.exists(self.desi_fits_file), f"File {self.desi_fits_file} does not  exist")
+        self.assertTrue(os.path.exists(self.desi_constant_file), f"File {self.desi_constant_file} does not  exist")
+
+        self.sdss_constants = load_constants(constants_file=self.sdss_constant_file)
+        self.desi_constants = load_constants(constants_file=self.desi_constant_file)
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
@@ -29,12 +39,11 @@ class TestQSOAbsFind(unittest.TestCase):
         absorber="MgII"
         # Call the function
         sdss_result = read_single_spectrum_and_find_absorber(
-            self.sdss_fits_file, spec_index, absorber, **constants.search_parameters[absorber])
+            self.sdss_fits_file, spec_index, absorber, **self.sdss_constants.search_parameters[absorber])
 
         desi_absorber="CIV"
-        constants.search_parameters[desi_absorber]["logwave"]=False
         desi_result = read_single_spectrum_and_find_absorber(
-            self.desi_fits_file, spec_index, desi_absorber, **constants.search_parameters[desi_absorber])
+            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters[desi_absorber])
 
         # Validate the output
         self.assertIsInstance(sdss_result, tuple)
@@ -50,12 +59,11 @@ class TestQSOAbsFind(unittest.TestCase):
         n_jobs = 4
         # Call the function
         sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            self.sdss_fits_file, spec_indices, absorber, n_jobs, **constants.search_parameters[absorber])
+            self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters[absorber])
 
         desi_absorber='CIV'
-        constants.search_parameters[desi_absorber]["logwave"]=False
         desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **constants.search_parameters[desi_absorber])
+            self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **self.desi_constants.search_parameters[desi_absorber])
 
         # Validate the output
         self.assertIsInstance(sdss_results, dict)

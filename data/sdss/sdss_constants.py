@@ -23,11 +23,6 @@ speed_of_light = 3e5  # Speed of light in km/s
 doublet_keys = {
         'MgII': ('MgII_2796', 'MgII_2803'),
         'CIV':  ('CIV_1548', 'CIV_1550'),
-        'OVI':  ('OVI_1032', 'OVI_1038'),
-        'NV':   ('NV_1238', 'NV_1242'),
-        'SiIV': ('SiIV_1394', 'SiIV_1403'),
-        'AlIII': ('AlIII_1855', 'AlIII_1863'),
-        'FeII': ('FeII_2586', 'FeII_2600')
     }
 
 # ==============================
@@ -94,7 +89,6 @@ search_parameters = {
 amplitude_dict = {
     'MgII': 0.94,
     'CIV': 0.75,
-    'FeII': 0.75
 }
 
 # ==============================

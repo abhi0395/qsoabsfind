@@ -3,6 +3,38 @@ Running examples
 
 Before running, please read :doc:`File formats <fileformat>`.
 
+**1. Your input spectra** (absorber search without column densities):
+-----------------------------------------------
+
+.. code-block:: bash
+
+    qsoabsfind --input-fits-file $input \
+               --constant-file $your_constant \
+               --absorber $your_absorber \
+               --output $output \
+               --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
+               --ncpus 10
+
+**2. Your input spectra** (absorber search with column densities):
+-----------------------------------------------
+
+.. code-block:: bash
+
+    qsoabsfind --input-fits-file $input \
+               --constant-file $your_constant \
+               --absorber $your_absorber \
+               --output $output \
+               --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
+               --ncpus 10
+               --coldens
+               --dv 300
+
+
+Ready to run examples
+------------------
+
+I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+
 **1. SDSS spectra** (MgII search, without column densities):
 -----------------------------------------------
 
@@ -55,10 +87,10 @@ Here, ``--dv 300`` means the integration will be performed over ±300 km/s from 
 Description:
 ------------
 
-- ``input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
-- ``constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
-- ``output``: Output filename to save absorber catalog
-- `absorber`: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
+- ``--input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
+- ``--constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
+- ``--output``: Output filename to save absorber catalog
+- ``--absorber``: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
 
 
 Useful notes:
