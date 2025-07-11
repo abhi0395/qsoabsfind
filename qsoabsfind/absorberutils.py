@@ -543,9 +543,9 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
     # Convert velocity offset to redshift offset
     dz = (abs(lines['dv']) / speed_of_light) * (1 + zqso)
 
-    if absorber == 'MgII':
+    if absorber in ['MgII', 'FeII']:
         lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
-        lam_MgII = lines['MgI_2799'] * (1 + zqso - dz)
+        lam_MgII = lines['MgII_2799'] * (1 + zqso - dz)
         lam_start = max(min_wave, lam_CIV) + lam_edge_sep
         lam_end = min(max_wave, lam_MgII) - lam_edge_sep
 
@@ -555,7 +555,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
         lam_end = min(max_wave, lam_CIV) - lam_edge_sep
 
     elif absorber == 'OVI':
-        lam_OVI = lines['OVI_1032'] * (1 + zqso + dz)
+        lam_OVI = lines['OVI_1033'] * (1 + zqso + dz)
         lam_Lya = lines['Lya'] * (1 + zqso - dz)
         lam_start = max(min_wave, lam_OVI) + lam_edge_sep
         lam_end = min(max_wave, lam_Lya) - lam_edge_sep
@@ -568,9 +568,9 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
 
     elif absorber == 'SiIV':
         lam_Lya = lines['Lya'] * (1 + zqso + dz)
-        lam_CIV = lines['CIV_1549'] * (1 + zqso - dz)
+        lam_SiIV = lines['SiIV_1399'] * (1 + zqso - dz)
         lam_start = max(min_wave, lam_Lya) + lam_edge_sep
-        lam_end = min(max_wave, lam_CIV) - lam_edge_sep
+        lam_end = min(max_wave, lam_SiIV) - lam_edge_sep
 
     elif absorber == 'AlIII':
         lam_CIV = lines['CIV_1549'] * (1 + zqso + dz)
@@ -578,11 +578,6 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
         lam_start = max(min_wave, lam_CIV) + lam_edge_sep
         lam_end = min(max_wave, lam_AlIII) - lam_edge_sep
 
-    elif absorber == 'FeII':
-        lam_AlIII = lines['AlIII_1857'] * (1 + zqso + dz)
-        lam_MgII = lines['MgI_2799'] * (1 + zqso - dz)
-        lam_start = max(min_wave, lam_AlIII) + lam_edge_sep
-        lam_end = min(max_wave, lam_MgII) - lam_edge_sep
 
     else:
         raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")

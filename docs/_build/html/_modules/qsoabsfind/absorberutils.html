@@ -84,8 +84,10 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 <span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
 
+<span class="c1"># Constants</span>
 <span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
-<span class="n">lines</span><span class="p">,</span> <span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
+<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
+<span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
 <span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
 
 <div class="viewcode-block" id="find_valid_indices">
@@ -653,9 +655,9 @@
     <span class="c1"># Convert velocity offset to redshift offset</span>
     <span class="n">dz</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="s1">&#39;dv&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">speed_of_light</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="s1">&#39;FeII&#39;</span><span class="p">]:</span>
         <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_MgII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgI_2799&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
+        <span class="n">lam_MgII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2799&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
         <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
         <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_MgII</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
@@ -665,7 +667,7 @@
         <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
     <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;OVI&#39;</span><span class="p">:</span>
-        <span class="n">lam_OVI</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1032&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+        <span class="n">lam_OVI</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
         <span class="n">lam_Lya</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
         <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_OVI</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
         <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_Lya</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
@@ -678,9 +680,9 @@
 
     <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;SiIV&#39;</span><span class="p">:</span>
         <span class="n">lam_Lya</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
+        <span class="n">lam_SiIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;SiIV_1399&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
         <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_Lya</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
+        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_SiIV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
     <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;AlIII&#39;</span><span class="p">:</span>
         <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
@@ -688,11 +690,6 @@
         <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
         <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_AlIII</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;FeII&#39;</span><span class="p">:</span>
-        <span class="n">lam_AlIII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;AlIII_1857&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_MgII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgI_2799&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_AlIII</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_MgII</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber, it must be from </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -769,7 +766,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-10.
+      <span class="lastupdated">Last updated on 2025-07-11.
       </span></p>
   </div>
 

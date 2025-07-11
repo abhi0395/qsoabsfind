@@ -37,37 +37,37 @@ lines = {
     # CIV doublet
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
-    'CIV_1549': 1549.48,  # average of the CIV doublet
+    'CIV_1549': 1549.48,  # CIV emission from quasar
 
     # MgII doublet
     'MgII_2796': 2796.35,
     'MgII_2803': 2803.52,
-    'MgI_2799': 2799.117,  # average of the MgII doublet
+    'MgII_2799': 2799.117,  # MgII emission from quasar
 
     # OVI doublet
     'OVI_1032': 1031.926,
     'OVI_1038': 1037.617,
-    'OVI_1035': 1034.77,  # average of the OVI doublet
+    'OVI_1033': 1033.82,  # OVI emission from Quasar
 
     # NV doublet
     'NV_1238': 1238.821,
     'NV_1242': 1242.804,
-    'NV_1240': 1240.81,  # average of the NV doublet
+    'NV_1240': 1240.81,  # NV emission from Quasar
 
     # SiIV doublet
     'SiIV_1394': 1393.755,
     'SiIV_1403': 1402.770,
-    'SiIV_1399': 1398.26,  # average of the SiIV doublet
+    'SiIV_1399': 1399.8,  # SiIV emission from Quasar
 
     # AlIII doublet
     'AlIII_1855': 1854.716,
     'AlIII_1863': 1862.790,
-    'AlIII_1857': 1858.753,  # average of the AlIII doublet
+    'AlIII_1857': 1857.4,  # AlIII emission from Quasar
 
     # FeII lines (two strongest)
     'FeII_2586': 2586.650,
     'FeII_2600': 2600.173,
-    'FeII_2593': 2593.4115,  # average of the FeII doublet
+    'MgII_2799': 2799.117,  # MgII emission from quasar
 
     'dv': 5000  # velocity offset from quasars redshift in km/s
 }

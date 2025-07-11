@@ -100,7 +100,7 @@
 <section id="parameter-definitions">
 <h2>Parameter Definitions<a class="headerlink" href="#parameter-definitions" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(\lambda_{\mathrm{min}}, \lambda_{\mathrm{max}}\)</span>: Full observed-frame wavelength coverage of the spectrum.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}\)</span>: Full observed-frame wavelength coverage of the spectrum.</p></li>
 <li><p><span class="math notranslate nohighlight">\(z_{\mathrm{QSO}}\)</span>: Emission redshift of the background quasar.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\Delta z\)</span> is derived from the velocity offset parameter (<cite>lines[“dv”]</cite>, from <cite>constants.py</cite>) to avoid regions close to emission lines.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\Delta\lambda_{\mathrm{edge}}\)</span> is a offset from edges to avoid noisy regions during convolution or feature detection near the wavelength edges.</p></li>
@@ -126,31 +126,31 @@
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="c-iv-1548-1550-a">
 <h2>C IV (1548, 1550 Å)<a class="headerlink" href="#c-iv-1548-1550-a" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Lyα forest edge (1310 Å), red side - C IV (1549.5 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - Outside Si II forest (&gt;1310 Å), red side - C IV (1549.5 Å)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}})) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}}+ \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="o-vi-1032-1038-a">
 <h2>O VI (1032, 1038 Å)<a class="headerlink" href="#o-vi-1032-1038-a" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - O VI λ1032, red side - Lyα (1215.67 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - O VI (1033.82 Å), red side - Lyα (1215.67 Å)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="n-v-1238-1242-a">
 <h2>N V (1238, 1242 Å)<a class="headerlink" href="#n-v-1238-1242-a" title="Link to this heading"></a></h2>
@@ -159,42 +159,42 @@
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\beta}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\beta}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="si-iv-1394-1403-a">
 <h2>Si IV (1394, 1403 Å)<a class="headerlink" href="#si-iv-1394-1403-a" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Lyα (1215.67 Å), red side - C IV (1549.5 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - Lyα (1215.67 Å), red side - Si IV (1399.8 Å)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{SiIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="al-iii-1854-1862-a">
 <h2>Al III (1854, 1862 Å)<a class="headerlink" href="#al-iii-1854-1862-a" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Al III (1858.8 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Al III (1857.4 Å)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 <section id="fe-ii-2586-2600-a">
 <h2>Fe II (2586, 2600 Å)<a class="headerlink" href="#fe-ii-2586-2600-a" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Al III (1858.8 Å), red side - Mg II (2799.1 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{start}} = \max(\lambda_{\mathrm{min}}, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} + \Delta z)) + \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
-\[\lambda_{\mathrm{end}} = \min(\lambda_{\mathrm{max}}, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)) - \Delta\lambda_{\mathrm{edge}}\]</div>
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 </section>
 
@@ -210,7 +210,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-10.
+      <span class="lastupdated">Last updated on 2025-07-11.
       </span></p>
   </div>
 
