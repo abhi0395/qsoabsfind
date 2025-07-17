@@ -10,6 +10,7 @@ import multiprocessing
 from multiprocessing import Pool
 from .absfinder import read_single_spectrum_and_find_absorber
 from .io import save_results_to_fits
+from .absorberutils import return_search_window_wavelength_range
 from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
@@ -135,6 +136,8 @@ def main():
         key, value = header.split('=')
         headers[key] = {"value": value, "comment": ""}
 
+    lam_blue, lam_red = return_search_window_wavelength_range(args.absorber)
+
     # Add search parameters and package versions to headers
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
@@ -146,7 +149,10 @@ def main():
         'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
         'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
         'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error (use_covariance)'},
-        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'}, 'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'}
+        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'},
+        'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'},
+        'BLUE_LAM': {"value": lam_blue, "comment": 'blue end of quasar-rest frame (Ang) wavelength for absorber search'},
+        'RED_LAM': {"value": lam_red, "comment": 'red end of quasar-rest frame (Ang) wavelength for absorber search'},
     })
 
     if args.coldens:

@@ -105,7 +105,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
 
     # Print progress for every spectrum processed
-    elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is: \n")
+    elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
+    print('-------\n')
 
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 

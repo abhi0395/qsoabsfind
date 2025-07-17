@@ -37,7 +37,9 @@ lines = {
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
     'CIV_1549': 1549.48,  # # average of the CIV doublet
-    'dv': 5000         # velocity offset from quasars redshift in km/s
+    'dv': 5000,         # velocity offset from quasars redshift in km/s
+    'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
+    'end_rest_wave':None # red end of rest-frame quasar wavelength, None --> default
 }
 
 # ==============================
