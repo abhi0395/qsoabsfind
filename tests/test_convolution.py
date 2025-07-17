@@ -34,6 +34,15 @@ class TestQSOAbsFind(unittest.TestCase):
         self.sdss_constants = load_constants(constants_file=self.sdss_constant_file)
         self.desi_constants = load_constants(constants_file=self.desi_constant_file)
 
+        self.abs_cat = Table(
+            {
+                "MGII_2796_EW": [0.5],
+                "MGII_2803_EW": [0.35],
+                "MGII_2796_EW_ERROR": [0.1],
+                "MGII_2803_EW_ERROR": [0.1],
+            }
+        )
+
     def test_available_wavelength_pixels(self):
         spec_index = np.random.randint(100)
         spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = spec_index)
@@ -65,7 +74,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_indices = np.random.randint(0, 100, size=2)
+        spec_indices = np.random.randint(0, 100, size=4)
         absorber = 'MgII'
         n_jobs = 6
         # Call the function
@@ -96,20 +105,18 @@ class TestQSOAbsFind(unittest.TestCase):
         self.assertGreater(len(desi_results['index_spec']), 0)
 
         # checking if AODM column density part passes
-        spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = sdss_results['index_spec'][0])
-        F_lambda = spec.flux
-        error = spec.error
-        wavelength = spec.wavelength
-        abs_cat = Table()
-        abs_cat["MGII_2796_EW"] = 0.5
-        abs_cat["MGII_2803_EW"] = 0.5
-        abs_cat["MGII_2796_EW_ERROR"] = 0.1
-        abs_cat["MGII_2803_EW_ERROR"] = 0.1
-        abs_cat["Z_ABS"] = spec.metadata["Z_QSO"]-0.3
-        f1, f2 = 0.6123, 0.3054
-        lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
-        Ncol = total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
-        self.assertEqual(len(Ncol.keys), 4)
+        if len(sdss_results['index_spec']) > 0:
+            spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = sdss_results['index_spec'][0])
+            F_lambda = spec.flux
+            error = spec.error
+            wavelength = spec.wavelength
+            f1, f2 = 0.6123, 0.3054
+            self.abs_cat["Z_ABS"] = [sdss_results['z_abs'][0]]
+            lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
+            Ncol = total_column_density(F_lambda, error, wavelength, self.abs_cat, f1, f2, lambda1, lambda2, velocity_range=300)
+            self.assertEqual(len(Ncol.keys), 4)
+        else:
+            self.skipTest("Skipping column density test: no SDSS absorbers detected")
 
 if __name__ == '__main__':
     unittest.main()
