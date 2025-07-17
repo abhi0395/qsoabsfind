@@ -634,6 +634,56 @@
     <span class="k">return</span> <span class="n">z_corr</span><span class="p">,</span> <span class="n">z_err</span></div>
 
 
+<div class="viewcode-block" id="return_search_window_wavelength_range">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.return_search_window_wavelength_range">[docs]</a>
+<span class="k">def</span> <span class="nf">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return default red and blue end rest-frame quasar emission wavelength range</span>
+<span class="sd">    that will be used to define the search windohe given absorber.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        (blue_end, red_end)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using user-defined wavelength search window&#39;</span><span class="p">)</span>
+        <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">]</span>
+        <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using default wavelength search window&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="s1">&#39;FeII&#39;</span><span class="p">]:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2799&#39;</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="mf">1310.0</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;OVI&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;NV&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lyb_1026&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;NV_1240&#39;</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;SiIV&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;SiIV_1399&#39;</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;AlIII&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;AlIII_1857&#39;</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber, it must be from </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span></div>
+
+
+
 <div class="viewcode-block" id="get_search_limits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.get_search_limits">[docs]</a>
 <span class="k">def</span> <span class="nf">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
@@ -643,10 +693,9 @@
 <span class="sd">    Args:</span>
 <span class="sd">        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)</span>
 <span class="sd">        zqso (float): Quasar emission redshift</span>
-<span class="sd">        min_wave, max_wave (float): Observed wavelength coverage</span>
-<span class="sd">        lines (dict): Dictionary of rest wavelengths and dv offset</span>
+<span class="sd">        min_wave (float): minimum Observed wavelength</span>
+<span class="sd">        max_wave (float): maximum Observed wavelength</span>
 <span class="sd">        lam_edge_sep (float): Padding in angstroms to avoid edge artifacts</span>
-<span class="sd">        speed_of_light (float): Speed of light in km/s</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        lam_start, lam_end (float): Observed-frame wavelength limits</span>
@@ -655,47 +704,17 @@
     <span class="c1"># Convert velocity offset to redshift offset</span>
     <span class="n">dz</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="s1">&#39;dv&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">speed_of_light</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="s1">&#39;FeII&#39;</span><span class="p">]:</span>
-        <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_MgII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2799&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_MgII</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
+    <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">)</span>
 
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
-        <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="mf">1310.0</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">))</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>  <span class="c1"># Cooksey+2013</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: wavelength search window in quasar-rest frame: </span><span class="si">{</span><span class="n">lam_blue</span><span class="p">,</span><span class="w"> </span><span class="n">lam_red</span><span class="si">}</span><span class="s1"> Angstroms&#39;</span><span class="p">)</span>
 
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;OVI&#39;</span><span class="p">:</span>
-        <span class="n">lam_OVI</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_Lya</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_OVI</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_Lya</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
+    <span class="n">lam_blue_obs</span> <span class="o">=</span> <span class="n">lam_blue</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
+    <span class="n">lam_red_obs</span> <span class="o">=</span> <span class="n">lam_red</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
 
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;NV&#39;</span><span class="p">:</span>
-        <span class="n">lam_Lyb</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lyb_1026&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_NV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;NV_1240&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_Lyb</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_NV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
-
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;SiIV&#39;</span><span class="p">:</span>
-        <span class="n">lam_Lya</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_SiIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;SiIV_1399&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_Lya</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_SiIV</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
-
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;AlIII&#39;</span><span class="p">:</span>
-        <span class="n">lam_CIV</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_AlIII</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;AlIII_1857&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
-        <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_CIV</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
-        <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_AlIII</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
-
-
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber, it must be from </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">lam_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_wave</span><span class="p">,</span> <span class="n">lam_blue_obs</span><span class="p">)</span> <span class="o">+</span> <span class="n">lam_edge_sep</span>
+    <span class="n">lam_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_red_obs</span><span class="p">)</span> <span class="o">-</span> <span class="n">lam_edge_sep</span>
 
     <span class="k">return</span> <span class="n">lam_start</span><span class="p">,</span> <span class="n">lam_end</span></div>
-
 
 
 <div class="viewcode-block" id="absorber_search_window">
@@ -766,7 +785,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-11.
+      <span class="lastupdated">Last updated on 2025-07-17.
       </span></p>
   </div>
 

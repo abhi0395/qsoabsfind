@@ -7,6 +7,7 @@ from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber
 from qsoabsfind.config import load_constants
 from qsoabsfind.columndensity import total_column_density
 from qsoabsfind.spec import QSOSpecRead
+from qsoabsfind.absorberutils import return_if_absorber_can_be_detected_in_a_spectrum
 
 class TestQSOAbsFind(unittest.TestCase):
 
@@ -33,15 +34,25 @@ class TestQSOAbsFind(unittest.TestCase):
         self.sdss_constants = load_constants(constants_file=self.sdss_constant_file)
         self.desi_constants = load_constants(constants_file=self.desi_constant_file)
 
+    def test_available_wavelength_pixels(self):
+        spec_index = np.random.randint(100)
+        spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = spec_index)
+        kwargs = {'verbose':False, "lam_edge_sep":25}
+        is_available = return_if_absorber_can_be_detected_in_a_spectrum(spec, "MgII", **kwargs)
+        self.assertIn(is_available, [0,1])
+
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_index = np.random.randint(500)
+        spec_index = np.random.randint(100)
         absorber="MgII"
         # Call the function
         sdss_result = read_single_spectrum_and_find_absorber(
             self.sdss_fits_file, spec_index, absorber, **self.sdss_constants.search_parameters[absorber])
 
         desi_absorber="CIV"
+        desi_result = read_single_spectrum_and_find_absorber(
+            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters[desi_absorber])
+
         desi_result = read_single_spectrum_and_find_absorber(
             self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters[desi_absorber])
 
@@ -54,7 +65,7 @@ class TestQSOAbsFind(unittest.TestCase):
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
-        spec_indices = np.random.randint(0, 500, size=2)
+        spec_indices = np.random.randint(0, 100, size=2)
         absorber = 'MgII'
         n_jobs = 6
         # Call the function

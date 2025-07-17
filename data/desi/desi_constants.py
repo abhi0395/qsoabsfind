@@ -30,17 +30,25 @@ doublet_keys = {
 # ==============================
 
 lines = {
-    'Lya': 1215.16,
-    'MgII_2796': 2796.35,
-    'MgII_2803': 2803.52,
-    'MgII_2799': 2799.117, # average of the MgII doublet
+    # Lyman series
+    'Lya': 1215.67,
+    'Lyb_1026': 1025.72,
+
+    # CIV doublet
     'CIV_1548': 1548.20,
     'CIV_1550': 1550.77,
-    'CIV_1549': 1549.48,  # average of the CIV doublet
-    'dv': 5000,         # velocity offset from quasars redshift in km/s
-    'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
-    'end_rest_wave':None # red end of rest-frame quasar wavelength, None --> default
+    'CIV_1549': 1549.48,  # CIV emission from quasar
+
+    # MgII doublet
+    'MgII_2796': 2796.35,
+    'MgII_2803': 2803.52,
+    'MgII_2799': 2799.117,  # MgII emission from quasar
+
+    'dv': 5000,  # velocity offset from quasars redshift in km/s
+    'start_rest_wave':1310, # blue end of rest-frame quasar wavelength, None --> default
+    'end_rest_wave':1520 # red end of rest-frame quasar wavelength, None --> default
 }
+
 
 # ==============================
 # Default Signal Parameters
@@ -49,7 +57,7 @@ lines = {
 ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels) for convolution
 pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
 mult_resi = 1                         # Multiplication factor for residual spectrum
-lam_sep = 300                         # Wavelength cut from spectrum edges (Ang)
+lam_sep = 25                       # Wavelength cut from spectrum edges (Ang)
 
 # ==============================
 # Search Parameter Dictionary

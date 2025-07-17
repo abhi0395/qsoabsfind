@@ -37,10 +37,31 @@ To convert a velocity offset :math:`\Delta v` (in km/s) into a redshift offset:
 
 where :math:`c` is the speed of light.
 
-Below we summarize the logic used for each metal doublet:
+User-defined wavelength boundaries (in quasar rest-frame):
+~~~~~~~~~~~~~~~~~~~~
+
+The code allows users to provide the wavelength boundaries (in the quasar rest-frame) to define the absorber search window. Details are provided below.
+
+- **Emission lines**:
+    - Blue side: ``constants.lines["start_rest_wave"]``
+    - Red side: ``constants.lines["end_rest_wave"]``
+
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\rm start}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\rm end}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+
+
+Default search window logic used for each metal doublet:
+~~~~~~~~~~~~~~~~~~~~
 
 Mg II (2796, 2803 Å)
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)
 - **Search window**:
@@ -54,7 +75,7 @@ Mg II (2796, 2803 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 C IV (1548, 1550 Å)
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - Outside Si II forest (>1310 Å), red side - C IV (1549.5 Å)
 - **Search window**:
@@ -68,7 +89,7 @@ C IV (1548, 1550 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 O VI (1032, 1038 Å)
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - O VI (1033.82 Å), red side - Lyα (1215.67 Å)
 - **Search window**:
@@ -82,7 +103,7 @@ O VI (1032, 1038 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 N V (1238, 1242 Å)
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - Lyβ (1025.72 Å), red side - N V (1240.8 Å)
 - **Search window**:
@@ -96,7 +117,7 @@ N V (1238, 1242 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 Si IV (1394, 1403 Å)
----------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - Lyα (1215.67 Å), red side - Si IV (1399.8 Å)
 - **Search window**:
@@ -110,7 +131,7 @@ Si IV (1394, 1403 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{SiIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 Al III (1854, 1862 Å)
-----------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - C IV (1549.5 Å), red side - Al III (1857.4 Å)
 - **Search window**:
@@ -124,7 +145,7 @@ Al III (1854, 1862 Å)
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 Fe II (2586, 2600 Å)
----------------------
+~~~~~~~~~~~~~~~~~~~~
 
 - **Emission lines**: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)
 - **Search window**:

@@ -656,3 +656,68 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         elapsed(start, f"INFO: final wave window selection for {absorber} took")
 
     return lam_search, residual, error_residual
+
+def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs):
+    """Check if an absorber can be searched in a given QSO spectrum.
+
+    This function loads a single QSO spectrum from a FITS file,
+    removes NaNs, and determines if the absorber's search window
+    falls within the spectrum's observed wavelength range.
+
+    Args:
+        spectra (object): spec.QSOSpecRead object
+        absorber (str): Absorber name (e.g., 'MgII', 'CIV', 'OVI', etc.).
+        kwargs (dict): search parameters as described in qsoabsfind.constants()
+
+    Returns:
+        int: 1 if the absorber can be searched in the spectrum, 0 otherwise.
+
+    Notes:
+        - Assumes input spectra are already normalized (flux / continuum).
+        - Checks whether enough search window pixels are available after masking NaNs.
+    """
+    import time
+    from astropy.table import Table
+    start_time = time.time()
+
+    spectra.metadata = Table(spectra.metadata)  # in case spectra.metadata is a Row
+
+    if 'Z' in spectra.metadata.colnames:
+        spectra.metadata.rename_column('Z', 'Z_QSO')
+
+    z_qso = spectra.metadata['Z_QSO']
+    lam_obs = spectra.wavelength
+
+    if lam_obs.size <= 10:
+        return 0
+
+    # Define the wavelength range for searching the absorber
+    min_wave, max_wave = lam_obs.min(), lam_obs.max()
+
+    # Retrieve flux and error data, ensuring consistent dtype for Numba compatibility
+    residual = spectra.flux.astype('float64')
+    error = spectra.error.astype('float64')
+    lam_obs = lam_obs.astype('float64')
+
+    # Remove NaN values from the arrays
+    non_nan_indices = ~np.isnan(residual)
+    lam_obs = lam_obs[non_nan_indices]
+    residual = residual[non_nan_indices]
+    error = error[non_nan_indices]
+
+    # Identify the wavelength region for searching the specified absorber
+    lam_search, unmsk_residual, unmsk_error = absorber_search_window(
+        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave,
+        lam_edge_sep=kwargs["lam_edge_sep"], verbose=kwargs["verbose"]
+    )
+
+    # Verify that the arrays are of equal size
+    assert lam_search.size == unmsk_residual.size == unmsk_error.size, \
+        "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
+
+    print(f'INFO: Time took to find available search pixels: {time.time()-start_time:.3f} [sec]')
+
+    if lam_search.size <= 10:
+        return 0
+    else:
+        return 1

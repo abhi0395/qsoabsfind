@@ -67,7 +67,6 @@ lines = {
     # FeII lines (two strongest)
     'FeII_2586': 2586.650,
     'FeII_2600': 2600.173,
-    'MgII_2799': 2799.117,  # MgII emission from quasar
 
     'dv': 5000,  # velocity offset from quasars redshift in km/s
     'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default

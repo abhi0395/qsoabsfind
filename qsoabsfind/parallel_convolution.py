@@ -185,7 +185,7 @@ def main():
     spec_indices = parse_qso_sequence(args.n_qso)
 
     # define number of CPUs cores
-    n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 2)) ## getting some CPUs for safe I/O processing
+    n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 1)) ## getting some CPUs for safe I/O processing
     print(f'INFO: number of CPUs used = {n_jobs}')
 
     # Run the convolution method in parallel

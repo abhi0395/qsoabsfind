@@ -73,6 +73,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.median_selection_after_combining"><code class="docutils literal notranslate"><span class="pre">median_selection_after_combining()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.redshift_estimate"><code class="docutils literal notranslate"><span class="pre">redshift_estimate()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber"><code class="docutils literal notranslate"><span class="pre">remove_Mg_falsely_come_from_Fe_absorber()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.return_search_window_wavelength_range"><code class="docutils literal notranslate"><span class="pre">return_search_window_wavelength_range()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber"><code class="docutils literal notranslate"><span class="pre">z_abs_from_same_metal_absorber()</span></code></a></li>
 </ul>
 </li>
@@ -477,11 +478,9 @@ convolution array over a window defined by pm_pixel.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>absorber</strong> (<em>str</em>) – Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)</p></li>
 <li><p><strong>zqso</strong> (<em>float</em>) – Quasar emission redshift</p></li>
-<li><p><strong>min_wave</strong> (<em>float</em>) – Observed wavelength coverage</p></li>
-<li><p><strong>max_wave</strong> (<em>float</em>) – Observed wavelength coverage</p></li>
-<li><p><strong>lines</strong> (<em>dict</em>) – Dictionary of rest wavelengths and dv offset</p></li>
+<li><p><strong>min_wave</strong> (<em>float</em>) – minimum Observed wavelength</p></li>
+<li><p><strong>max_wave</strong> (<em>float</em>) – maximum Observed wavelength</p></li>
 <li><p><strong>lam_edge_sep</strong> (<em>float</em>) – Padding in angstroms to avoid edge artifacts</p></li>
-<li><p><strong>speed_of_light</strong> (<em>float</em>) – Speed of light in km/s</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -616,6 +615,21 @@ i.e., false positive due to Fe lines.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="qsoabsfind.absorberutils.return_search_window_wavelength_range">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">return_search_window_wavelength_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#return_search_window_wavelength_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.return_search_window_wavelength_range" title="Link to this definition"></a></dt>
+<dd><p>Return default red and blue end rest-frame quasar emission wavelength range
+that will be used to define the search windohe given absorber.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>absorber</strong> (<em>str</em>) – Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(blue_end, red_end)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1376,7 +1390,7 @@ and flag showing if its saturated</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-11.
+      <span class="lastupdated">Last updated on 2025-07-17.
       </span></p>
   </div>
 
