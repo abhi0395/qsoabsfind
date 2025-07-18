@@ -14,6 +14,14 @@ Usage:
 
 speed_of_light = 3e5  # Speed of light in km/s
 
+continuum_systematic_error = 0.05
+# Fixed fractional error due to continuum normalization (5%)
+# Used in estimating the uncertainty on column density
+# arising from continuum placement uncertainties.
+# Currently set empirically — a more optimal estimate can be obtained
+# by stacking continuum-normalized residual spectra in the observed frame
+# and measuring the standard deviation from unity.
+
 # supported absorbers
 doublet_keys = {
         'MgII': ('MgII_2796', 'MgII_2803'),

@@ -6,7 +6,6 @@ Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.
 """
 
 import numpy as np
-from astropy.io import fits
 from astropy.table import Table, vstack
 from multiprocessing import Pool
 import time
@@ -23,7 +22,6 @@ speed_of_light = constants.speed_of_light
 oscillator_strengths = constants.oscillator_parameters
 lines = constants.lines
 doublet_keys = constants.doublet_keys
-
 
 def ss1991_correction(delta_logN):
     """
@@ -50,7 +48,7 @@ def ss1991_correction(delta_logN):
     return correction
 
 
-def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac=0.05):
+def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac):
 
     """ Function to calculate optical depth (tau) of absorption feature
 
@@ -62,7 +60,6 @@ def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac=0.05):
     Returns:
         apparent optical depth array and corresponding error arrays
     """
-
     F_lambda = np.clip(F_lambda, 0.005, 1)  # Avoid log(0) issues
     tau = -np.log(F_lambda)
     sigma_tau_cont = np.log(1 + continuum_error_frac * np.exp(tau))
@@ -94,7 +91,7 @@ def velocity_from_wavelength(lambda_array, lambda_0, z):
 
 # Function to calculate total column density integrated over velocity range
 
-def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, velocity_range=300):
+def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum_error_frac, velocity_range):
 
     """Function to calculate apparent column density for one line using Savage & Sembach 1991 method
 
@@ -105,6 +102,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, velocity_
         z (float): redshift of absorber
         f (float): oscillator strength of line transition
         lambda_0 (float): rest-frame wavelength of given absorber
+        continuum_error_frac (float): systematics on continuum normalized flux
         velocity_range (float): +/- velocity_range will be used for column density integration
 
     Returns:
@@ -121,9 +119,8 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, velocity_
     sel = (~np.isnan(F_lam)) & (F_lam >0.005) & (F_lam < 1 + err_F_lam)
     F_lam = F_lam[sel]
     delta_dv_i = v_array[velocity_filter][sel]
-    dv_i = dv_absorber[velocity_filter][sel]
     err_F_lam = err_F_lam[sel]
-    tau, sigma_tau = optical_depth(F_lam, err_F_lam)
+    tau, sigma_tau = optical_depth(F_lam, err_F_lam, continuum_error_frac)
 
     k_norm = 10**14.5762 / (lambda_0 * f)
 
@@ -144,7 +141,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, velocity_
     return results
 
 
-def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, velocity_range=300):
+def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, continuum_error_frac, velocity_range):
 
     """Function to calculate total apparent column density (inverse-variance weighted) for a doublet using Savage & Sembach 1991 method
 
@@ -157,6 +154,7 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
         f2 (float): oscillator strength of second line
         lambda1 (tuple): key and rest-frame wavelength of first line
         lambda2 (tuple): key and rest-frame wavelength of second line
+        continuum_error_frac (float): systematics on continuum normalized flux
         velocity_range (float): +/- velocity_range will be used for column density integration
 
     Returns:
@@ -177,8 +175,8 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2)
     sflag = 0 if dr > 2 - dr_error else 1
 
-    results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1, velocity_range=velocity_range)
-    results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2, velocity_range=velocity_range)
+    results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range)
+    results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2, continuum_error_frac=continuum_error_frac, velocity_range=velocity_range)
 
     N1, N2 = results1["N"], results2["N"]
     sig_N1, sig_N2 = results1["N_err"], results2["N_err"]
@@ -237,7 +235,7 @@ def compute_single_column_density(args):
     return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, velocity_range=dv)
 
 
-def return_total_column_density_table(input, absorber, output, dv, nproc=None):
+def return_total_column_density_table(input, absorber, output, continuum_error_frac=0.05, dv=300, nproc=None):
 
     """ Function to calculate total column density of metal doublets using
     apparent optical depth method
@@ -246,7 +244,8 @@ def return_total_column_density_table(input, absorber, output, dv, nproc=None):
         input (str): input spectra file
         absorber (str): absorber name (MgII, CIV, OVI, FeII, AlIII, SiIV, NV)
         output (str): output absorber catalog filename
-        dv (float): maximum velocity range to be considered for optical depth calculation
+        continuum_error_frac (float): systematics on continuum normalized flux (default: 0.05)
+        dv (float): maximum velocity range to be considered for optical depth calculation (default 300 km/s)
         nproc (int): number of cpus for multiprocessing
 
     Returns:
@@ -269,7 +268,7 @@ def return_total_column_density_table(input, absorber, output, dv, nproc=None):
     nabs = len(tt)
 
     args_list = [
-        (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, dv)
+        (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, continuum_error_frac, dv)
         for i in range(nabs)
     ]
 

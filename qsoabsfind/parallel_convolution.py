@@ -153,6 +153,7 @@ def main():
         'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'},
         'BLUE_LAM': {"value": lam_blue, "comment": 'blue end of quasar-rest frame (Ang) wavelength for absorber search'},
         'RED_LAM': {"value": lam_red, "comment": 'red end of quasar-rest frame (Ang) wavelength for absorber search'},
+        'CONTERR': {"value": constants.continuum_systematic_error, "comment": 'systematic error in continuum normalization'},
     })
 
     if args.coldens:
@@ -204,7 +205,7 @@ def main():
     if args.coldens:
         from .columndensity import return_total_column_density_table
         from .io import append_table_to_fits
-        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, args.dv, n_jobs)
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, constants.continuum_error_frac, args.dv, n_jobs)
         append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing
