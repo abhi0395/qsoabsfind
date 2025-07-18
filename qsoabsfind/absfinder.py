@@ -214,6 +214,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         combined_final_our_z = []
 
         for sig_ker in width_kernel:
+            print(f'INFO: convolving for {sig_ker}.')
             line_centre = (line1 + line2) / 2
 
             conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, amp_ratio=line_ratio)
@@ -226,15 +227,16 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
-
+            print(f'INFO: sigma cut for potential candidates...')
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
             final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
             combined_final_our_z.append(final_our_z)
-
+        print(f'INFO: combining redshifts...')
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber, delta_z=del_z)
         combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
+        print(f'INFO: first set of potential candidates: {combined_final_our_z}')
 
         if len(combined_final_our_z)>0:
             z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
@@ -256,7 +258,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             vel_disp2 = np.zeros(len(z_abs))
 
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
-
+            print(f'INFO: performing final selection based on physical properties..')
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
@@ -317,7 +319,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             sn2_all = sn2_all[valid_indices]
             vel_disp1 = vel_disp1[valid_indices]
             vel_disp2 = vel_disp2[valid_indices]
-
+            print(f'INFO: final candidates: {pure_z_abs}')
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
                     match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(pure_z_abs, lam_obs, residual, error, d_pix, logwave)
