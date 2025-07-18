@@ -91,16 +91,16 @@ C IV (1548, 1550 Å)
 O VI (1032, 1038 Å)
 ~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - O VI (1033.82 Å), red side - Lyα (1215.67 Å)
+- **Emission lines**: blue side -  500 Å (arbitrary low), red side - O VI (1033.82 Å)
 - **Search window**:
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, 500\times(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 N V (1238, 1242 Å)
 ~~~~~~~~~~~~~~~~~~~~

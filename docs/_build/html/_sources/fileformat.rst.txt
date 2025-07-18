@@ -11,7 +11,7 @@ The input `fits file` must have the following HDU extensions:
 - **ERROR**: Error on residuals.
 - **METADATA**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
-I have also provided two example QSO spectra FITS files. 1) `data/sdss/qso_test_spectra.fits`, which contains 500 continuum-normalized SDSS QSO spectra. 2) `data/desi/qso_test_spectra.fits`, which contains 500 continuum-normalized DESI DR1 QSO spectra. You can use these files to test an example run as described below.
+I have also provided two example QSO spectra FITS files. 1) `data/sdss/qso_test_spectra.fits`, which contains 100 continuum-normalized SDSS QSO spectra. 2) `data/desi/qso_test_spectra.fits`, which contains 100 continuum-normalized DESI DR1 QSO spectra. You can use these files to test an example run as described below.
 
 Constant File (Optional)
 ------------------------

@@ -88,8 +88,8 @@ Important Instructions
 
 - Before running the module, please read the [datamodel](https://github.com/abhi0395/qsoabsfind/blob/main/data/datamodel.rst). The instructions for the input and output files are provided there.
 - I have also provided two example QSO spectra files:
-  -  `data/sdss/qso_test_spectra.fits` : 500 continuum-normalized spectra from [SDSS DR16](https://www.sdss4.org/dr17/algorithms/qso_catalog/)
-  -  `data/desi/qso_test_spectra.fits` : 500 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
+  -  `data/sdss/qso_test_spectra.fits` : 100 continuum-normalized spectra from [SDSS DR16](https://www.sdss4.org/dr17/algorithms/qso_catalog/)
+  -  `data/desi/qso_test_spectra.fits` : 100 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
 - You can use these files to test an example run as described below.
 
 Running as bash script:
@@ -174,8 +174,8 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
-Thanks,  
-Abhijeet Anand  
+Thanks,
+Abhijeet Anand
 Lawrence Berkeley National Lab
 
 

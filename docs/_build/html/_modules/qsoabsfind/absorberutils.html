@@ -662,8 +662,10 @@
             <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
 
         <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;OVI&#39;</span><span class="p">:</span>
-            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span>
-            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span>
+            <span class="c1"># assuming 3600 to be starting wavelength</span>
+            <span class="c1"># and maximum redshift of quasar to be 6 in SDSS/DESI like spectra</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="mi">3600</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mf">6.2</span><span class="p">)</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span>
 
         <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;NV&#39;</span><span class="p">:</span>
             <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lyb_1026&#39;</span><span class="p">]</span>
@@ -775,6 +777,74 @@
 
     <span class="k">return</span> <span class="n">lam_search</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error_residual</span></div>
 
+
+<div class="viewcode-block" id="return_if_absorber_can_be_detected_in_a_spectrum">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.return_if_absorber_can_be_detected_in_a_spectrum">[docs]</a>
+<span class="k">def</span> <span class="nf">return_if_absorber_can_be_detected_in_a_spectrum</span><span class="p">(</span><span class="n">spectra</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if an absorber can be searched in a given QSO spectrum.</span>
+
+<span class="sd">    This function loads a single QSO spectrum from a FITS file,</span>
+<span class="sd">    removes NaNs, and determines if the absorber&#39;s search window</span>
+<span class="sd">    falls within the spectrum&#39;s observed wavelength range.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        spectra (object): spec.QSOSpecRead object</span>
+<span class="sd">        absorber (str): Absorber name (e.g., &#39;MgII&#39;, &#39;CIV&#39;, &#39;OVI&#39;, etc.).</span>
+<span class="sd">        kwargs (dict): search parameters as described in qsoabsfind.constants()</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: 1 if the absorber can be searched in the spectrum, 0 otherwise.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        - Assumes input spectra are already normalized (flux / continuum).</span>
+<span class="sd">        - Checks whether enough search window pixels are available after masking NaNs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">time</span>
+    <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>  <span class="c1"># in case spectra.metadata is a Row</span>
+
+    <span class="k">if</span> <span class="s1">&#39;Z&#39;</span> <span class="ow">in</span> <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+        <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">rename_column</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="s1">&#39;Z_QSO&#39;</span><span class="p">)</span>
+
+    <span class="n">z_qso</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;Z_QSO&#39;</span><span class="p">]</span>
+    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
+
+    <span class="k">if</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="c1"># Define the wavelength range for searching the absorber</span>
+    <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+    <span class="c1"># Retrieve flux and error data, ensuring consistent dtype for Numba compatibility</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Remove NaN values from the arrays</span>
+    <span class="n">non_nan_indices</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span>
+    <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">lam_obs</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">]</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">]</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">non_nan_indices</span><span class="p">]</span>
+
+    <span class="c1"># Identify the wavelength region for searching the specified absorber</span>
+    <span class="n">lam_search</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">unmsk_error</span> <span class="o">=</span> <span class="n">absorber_search_window</span><span class="p">(</span>
+        <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">z_qso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span>
+        <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;verbose&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Verify that the arrays are of equal size</span>
+    <span class="k">assert</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_error</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> \
+        <span class="s2">&quot;Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error&quot;</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Time took to find available search pixels: </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1"> [sec]&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span></div>
+
 </pre></div>
 
            </div>
@@ -785,7 +855,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-17.
+      <span class="lastupdated">Last updated on 2025-07-18.
       </span></p>
   </div>
 

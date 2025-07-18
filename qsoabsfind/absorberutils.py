@@ -550,8 +550,10 @@ def return_search_window_wavelength_range(absorber):
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            lam_blue = lines['OVI_1033']
-            lam_red = lines['Lya']
+            # assuming 3600 to be starting wavelength
+            # and maximum redshift of quasar to be 6 in SDSS/DESI like spectra
+            lam_blue = 3600/(1+6.2)
+            lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
             lam_blue = lines['Lyb_1026']

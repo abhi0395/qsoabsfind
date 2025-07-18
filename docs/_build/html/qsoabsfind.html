@@ -73,6 +73,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.median_selection_after_combining"><code class="docutils literal notranslate"><span class="pre">median_selection_after_combining()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.redshift_estimate"><code class="docutils literal notranslate"><span class="pre">redshift_estimate()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.remove_Mg_falsely_come_from_Fe_absorber"><code class="docutils literal notranslate"><span class="pre">remove_Mg_falsely_come_from_Fe_absorber()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.return_if_absorber_can_be_detected_in_a_spectrum"><code class="docutils literal notranslate"><span class="pre">return_if_absorber_can_be_detected_in_a_spectrum()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.return_search_window_wavelength_range"><code class="docutils literal notranslate"><span class="pre">return_search_window_wavelength_range()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.absorberutils.z_abs_from_same_metal_absorber"><code class="docutils literal notranslate"><span class="pre">z_abs_from_same_metal_absorber()</span></code></a></li>
 </ul>
@@ -617,6 +618,35 @@ i.e., false positive due to Fe lines.</p>
 <dd class="field-odd"><p>numpy.ndarray</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="qsoabsfind.absorberutils.return_if_absorber_can_be_detected_in_a_spectrum">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">return_if_absorber_can_be_detected_in_a_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spectra</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absorber</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#return_if_absorber_can_be_detected_in_a_spectrum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.return_if_absorber_can_be_detected_in_a_spectrum" title="Link to this definition"></a></dt>
+<dd><p>Check if an absorber can be searched in a given QSO spectrum.</p>
+<p>This function loads a single QSO spectrum from a FITS file,
+removes NaNs, and determines if the absorber’s search window
+falls within the spectrum’s observed wavelength range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spectra</strong> (<em>object</em>) – spec.QSOSpecRead object</p></li>
+<li><p><strong>absorber</strong> (<em>str</em>) – Absorber name (e.g., ‘MgII’, ‘CIV’, ‘OVI’, etc.).</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – search parameters as described in qsoabsfind.constants()</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1 if the absorber can be searched in the spectrum, 0 otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Assumes input spectra are already normalized (flux / continuum).</p></li>
+<li><p>Checks whether enough search window pixels are available after masking NaNs.</p></li>
+</ul>
 </dd></dl>
 
 <dl class="py function">
@@ -1390,7 +1420,7 @@ and flag showing if its saturated</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-17.
+      <span class="lastupdated">Last updated on 2025-07-18.
       </span></p>
   </div>
 
