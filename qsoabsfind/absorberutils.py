@@ -674,7 +674,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     Returns:
         int: 1 if the absorber can be searched in the spectrum, 0 otherwise.
 
-    Notes:
+    Note:
         - Assumes input spectra are already normalized (flux / continuum).
         - Checks whether enough search window pixels are available after masking NaNs.
     """

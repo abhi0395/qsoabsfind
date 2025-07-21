@@ -19,7 +19,7 @@ Usage:
 
 speed_of_light = 3e5  # Speed of light in km/s
 
-continuum_systematic_error = 0.05
+continuum_error_frac = 0.05
 # Fixed fractional error due to continuum normalization (5%)
 # Used in estimating the uncertainty on column density
 # arising from continuum placement uncertainties.

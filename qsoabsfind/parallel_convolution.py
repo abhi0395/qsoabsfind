@@ -153,7 +153,7 @@ def main():
         'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'},
         'BLUE_LAM': {"value": lam_blue, "comment": 'blue end of quasar-rest frame (Ang) wavelength for absorber search'},
         'RED_LAM': {"value": lam_red, "comment": 'red end of quasar-rest frame (Ang) wavelength for absorber search'},
-        'CONTERR': {"value": constants.continuum_systematic_error, "comment": 'systematic error in continuum normalization'},
+        'CONTERR': {"value": constants.continuum_error_frac, "comment": 'systematic error in continuum normalization'},
     })
 
     if args.coldens:

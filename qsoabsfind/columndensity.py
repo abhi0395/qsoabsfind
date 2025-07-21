@@ -231,17 +231,17 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
 def compute_single_column_density(args):
     """Function to compute column density of one absorbers
     """
-    flux, error, wavelength, tt_row, f1, f2, l1, l2, dv = args
-    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, velocity_range=dv)
+    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv = args
+    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac=continuum_error_frac, velocity_range=dv)
 
 
-def return_total_column_density_table(input, absorber, output, continuum_error_frac=0.05, dv=300, nproc=None):
+def return_total_column_density_table(spectra_fits, absorber, output, continuum_error_frac=0.05, dv=300, nproc=None):
 
     """ Function to calculate total column density of metal doublets using
     apparent optical depth method
 
     Args:
-        input (str): input spectra file
+        spectra_fits (str): input spectra file
         absorber (str): absorber name (MgII, CIV, OVI, FeII, AlIII, SiIV, NV)
         output (str): output absorber catalog filename
         continuum_error_frac (float): systematics on continuum normalized flux (default: 0.05)
@@ -256,7 +256,7 @@ def return_total_column_density_table(input, absorber, output, continuum_error_f
     start = time.time()
 
     tt = Table.read(output, hdu="ABSORBER")
-    spectra = QSOSpecRead(input, autoload=True, index=tt["INDEX_SPEC"])
+    spectra = QSOSpecRead(spectra_fits, autoload=True, index=tt["INDEX_SPEC"])
     F_lambda = spectra.flux
     error_F_lambda = spectra.error
     wavelength = spectra.wavelength

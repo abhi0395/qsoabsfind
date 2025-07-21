@@ -235,6 +235,7 @@
         <span class="s1">&#39;LAM_ESEP&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">][</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;lambda edges to avoid noisy regions (lam_edge_sep)&#39;</span><span class="p">},</span>
         <span class="s1">&#39;BLUE_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">lam_blue</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;blue end of quasar-rest frame (Ang) wavelength for absorber search&#39;</span><span class="p">},</span>
         <span class="s1">&#39;RED_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">lam_red</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;red end of quasar-rest frame (Ang) wavelength for absorber search&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;CONTERR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">constants</span><span class="o">.</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;systematic error in continuum normalization&#39;</span><span class="p">},</span>
     <span class="p">})</span>
 
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">coldens</span><span class="p">:</span>
@@ -286,7 +287,7 @@
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">coldens</span><span class="p">:</span>
         <span class="kn">from</span> <span class="nn">.columndensity</span> <span class="kn">import</span> <span class="n">return_total_column_density_table</span>
         <span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">append_table_to_fits</span>
-        <span class="n">col_tt</span> <span class="o">=</span> <span class="n">return_total_column_density_table</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input_fits_file</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">dv</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">)</span>
+        <span class="n">col_tt</span> <span class="o">=</span> <span class="n">return_total_column_density_table</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input_fits_file</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">dv</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">)</span>
         <span class="n">append_table_to_fits</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">col_tt</span><span class="p">,</span> <span class="s1">&#39;COLUMN_DENSITY&#39;</span><span class="p">)</span>
 
     <span class="c1"># End timing</span>
@@ -307,7 +308,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-18.
+      <span class="lastupdated">Last updated on 2025-07-21.
       </span></p>
   </div>
 

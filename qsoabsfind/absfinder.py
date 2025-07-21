@@ -178,6 +178,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         del_z = line_sep / (0.5 * (line1+line2))
 
         if verbose:
+            print(f'INFO: For {absorber}, theoretical oscillator strength ratio: {line_ratio}')
             print('INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
 
         if not logwave:
@@ -227,11 +228,13 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
-            print(f'INFO: sigma cut for potential candidates...')
+            print('INFO: sigma cut for potential candidates...')
+
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
             final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
             combined_final_our_z.append(final_our_z)
-        print(f'INFO: combining redshifts...')
+
+        print('INFO: combining redshifts...')
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber, delta_z=del_z)

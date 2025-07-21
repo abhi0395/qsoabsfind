@@ -83,7 +83,6 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">vstack</span>
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
 <span class="kn">import</span> <span class="nn">time</span>
@@ -100,7 +99,6 @@
 <span class="n">oscillator_strengths</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">oscillator_parameters</span>
 <span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
 <span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
-
 
 <div class="viewcode-block" id="ss1991_correction">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.ss1991_correction">[docs]</a>
@@ -132,7 +130,7 @@
 
 <div class="viewcode-block" id="optical_depth">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.optical_depth">[docs]</a>
-<span class="k">def</span> <span class="nf">optical_depth</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">sigma_F_lambda</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">optical_depth</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">sigma_F_lambda</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot; Function to calculate optical depth (tau) of absorption feature</span>
 
@@ -144,7 +142,6 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        apparent optical depth array and corresponding error arrays</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="n">F_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Avoid log(0) issues</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">)</span>
     <span class="n">sigma_tau_cont</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">continuum_error_frac</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span>
@@ -182,7 +179,7 @@
 
 <div class="viewcode-block" id="single_column_density">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.single_column_density">[docs]</a>
-<span class="k">def</span> <span class="nf">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">lambda_0</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">lambda_0</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to calculate apparent column density for one line using Savage &amp; Sembach 1991 method</span>
 
@@ -193,6 +190,7 @@
 <span class="sd">        z (float): redshift of absorber</span>
 <span class="sd">        f (float): oscillator strength of line transition</span>
 <span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber</span>
+<span class="sd">        continuum_error_frac (float): systematics on continuum normalized flux</span>
 <span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
 
 <span class="sd">    Returns:</span>
@@ -209,9 +207,8 @@
     <span class="n">sel</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">F_lam</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">F_lam</span> <span class="o">&gt;</span><span class="mf">0.005</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">F_lam</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">err_F_lam</span><span class="p">)</span>
     <span class="n">F_lam</span> <span class="o">=</span> <span class="n">F_lam</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span>
     <span class="n">delta_dv_i</span> <span class="o">=</span> <span class="n">v_array</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">][</span><span class="n">sel</span><span class="p">]</span>
-    <span class="n">dv_i</span> <span class="o">=</span> <span class="n">dv_absorber</span><span class="p">[</span><span class="n">velocity_filter</span><span class="p">][</span><span class="n">sel</span><span class="p">]</span>
     <span class="n">err_F_lam</span> <span class="o">=</span> <span class="n">err_F_lam</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span>
-    <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_tau</span> <span class="o">=</span> <span class="n">optical_depth</span><span class="p">(</span><span class="n">F_lam</span><span class="p">,</span> <span class="n">err_F_lam</span><span class="p">)</span>
+    <span class="n">tau</span><span class="p">,</span> <span class="n">sigma_tau</span> <span class="o">=</span> <span class="n">optical_depth</span><span class="p">(</span><span class="n">F_lam</span><span class="p">,</span> <span class="n">err_F_lam</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">)</span>
 
     <span class="n">k_norm</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mf">14.5762</span> <span class="o">/</span> <span class="p">(</span><span class="n">lambda_0</span> <span class="o">*</span> <span class="n">f</span><span class="p">)</span>
 
@@ -235,7 +232,7 @@
 
 <div class="viewcode-block" id="total_column_density">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.total_column_density">[docs]</a>
-<span class="k">def</span> <span class="nf">total_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">abs_cat</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">lambda1</span><span class="p">,</span> <span class="n">lambda2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="mi">300</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">total_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">abs_cat</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">lambda1</span><span class="p">,</span> <span class="n">lambda2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to calculate total apparent column density (inverse-variance weighted) for a doublet using Savage &amp; Sembach 1991 method</span>
 
@@ -248,6 +245,7 @@
 <span class="sd">        f2 (float): oscillator strength of second line</span>
 <span class="sd">        lambda1 (tuple): key and rest-frame wavelength of first line</span>
 <span class="sd">        lambda2 (tuple): key and rest-frame wavelength of second line</span>
+<span class="sd">        continuum_error_frac (float): systematics on continuum normalized flux</span>
 <span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
 
 <span class="sd">    Returns:</span>
@@ -268,8 +266,8 @@
     <span class="n">dr</span><span class="p">,</span> <span class="n">dr_error</span> <span class="o">=</span> <span class="n">calculate_doublet_ratio</span><span class="p">(</span><span class="n">ew1</span><span class="p">,</span> <span class="n">ew2</span><span class="p">,</span> <span class="n">err_ew1</span><span class="p">,</span> <span class="n">err_ew2</span><span class="p">)</span>
     <span class="n">sflag</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">dr</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">dr_error</span> <span class="k">else</span> <span class="mi">1</span>
 
-    <span class="n">results1</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
-    <span class="n">results2</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
+    <span class="n">results1</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span><span class="n">continuum_error_frac</span><span class="o">=</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
+    <span class="n">results2</span> <span class="o">=</span> <span class="n">single_column_density</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">velocity_range</span><span class="p">)</span>
 
     <span class="n">N1</span><span class="p">,</span> <span class="n">N2</span> <span class="o">=</span> <span class="n">results1</span><span class="p">[</span><span class="s2">&quot;N&quot;</span><span class="p">],</span> <span class="n">results2</span><span class="p">[</span><span class="s2">&quot;N&quot;</span><span class="p">]</span>
     <span class="n">sig_N1</span><span class="p">,</span> <span class="n">sig_N2</span> <span class="o">=</span> <span class="n">results1</span><span class="p">[</span><span class="s2">&quot;N_err&quot;</span><span class="p">],</span> <span class="n">results2</span><span class="p">[</span><span class="s2">&quot;N_err&quot;</span><span class="p">]</span>
@@ -327,23 +325,24 @@
 <span class="k">def</span> <span class="nf">compute_single_column_density</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to compute column density of one absorbers</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">dv</span> <span class="o">=</span> <span class="n">args</span>
-    <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">dv</span><span class="p">)</span></div>
+    <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">dv</span> <span class="o">=</span> <span class="n">args</span>
+    <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">dv</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="return_total_column_density_table">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.return_total_column_density_table">[docs]</a>
-<span class="k">def</span> <span class="nf">return_total_column_density_table</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">nproc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">return_total_column_density_table</span><span class="p">(</span><span class="n">spectra_fits</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">nproc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot; Function to calculate total column density of metal doublets using</span>
 <span class="sd">    apparent optical depth method</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        input (str): input spectra file</span>
+<span class="sd">        spectra_fits (str): input spectra file</span>
 <span class="sd">        absorber (str): absorber name (MgII, CIV, OVI, FeII, AlIII, SiIV, NV)</span>
 <span class="sd">        output (str): output absorber catalog filename</span>
-<span class="sd">        dv (float): maximum velocity range to be considered for optical depth calculation</span>
+<span class="sd">        continuum_error_frac (float): systematics on continuum normalized flux (default: 0.05)</span>
+<span class="sd">        dv (float): maximum velocity range to be considered for optical depth calculation (default 300 km/s)</span>
 <span class="sd">        nproc (int): number of cpus for multiprocessing</span>
 
 <span class="sd">    Returns:</span>
@@ -354,7 +353,7 @@
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="n">tt</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s2">&quot;ABSORBER&quot;</span><span class="p">)</span>
-    <span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">tt</span><span class="p">[</span><span class="s2">&quot;INDEX_SPEC&quot;</span><span class="p">])</span>
+    <span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="n">spectra_fits</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">tt</span><span class="p">[</span><span class="s2">&quot;INDEX_SPEC&quot;</span><span class="p">])</span>
     <span class="n">F_lambda</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span>
     <span class="n">error_F_lambda</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span>
     <span class="n">wavelength</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
@@ -366,7 +365,7 @@
     <span class="n">nabs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tt</span><span class="p">)</span>
 
     <span class="n">args_list</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">(</span><span class="n">F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">error_F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">error_F_lambda</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nabs</span><span class="p">)</span>
     <span class="p">]</span>
 
@@ -399,7 +398,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-18.
+      <span class="lastupdated">Last updated on 2025-07-21.
       </span></p>
   </div>
 

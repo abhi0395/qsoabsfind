@@ -12,24 +12,26 @@ qsoabsfind
 [![Documentation Status](https://readthedocs.org/projects/qsoabsfind/badge/?version=latest)](https://qsoabsfind.readthedocs.io/en/latest/?badge=latest)
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives. The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
+
+The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
 ### Supported Metal Doublets Systems
 
-| Absorber | Line 1 (Å) | oscillator strength 1     | Line 2 (Å) | oscillator strength 1     |
-|----------|------------|--------|------------|--------|
-| Mg II (Mg⁺)   | 2796.35    | 0.6123 | 2803.52    | 0.3054 |
-| C IV (C³⁺)   | 1548.20    | 0.1900 | 1550.77    | 0.0952 |
-| O VI (O⁵⁺)    | 1031.93    | 0.1329 | 1037.62    | 0.0661 |
-| N V (N⁴⁺)    | 1238.82    | 0.1570 | 1242.80    | 0.0782 |
-| Si IV (Si³⁺)   | 1393.76    | 0.5140 | 1402.77    | 0.2553 |
-| Al III (Al²⁺)   | 1854.72    | 0.5390 | 1862.79    | 0.2680 |
-| Fe II (Fe⁺)  | 2586.65    | 0.0691 | 2600.17    | 0.2394 |
+| Absorber | Line 1 (Å)  | Line 2 (Å) |
+|----------|--------|------------|
+| Mg II (Mg⁺)   | 2796.35    | 2803.52     |
+| C IV (C³⁺)   | 1548.20    | 1550.77     |
+| O VI (O⁵⁺)    | 1031.93    | 1037.62     |
+| N V (N⁴⁺)    | 1238.82    | 1242.80     |
+| Si IV (Si³⁺)   | 1393.76    | 1402.77     |
+| Al III (Al²⁺)   | 1854.72     | 1862.79    |
+| Fe II (Fe⁺)  | 2586.65     | 2600.17     |
 
 
 Key Features
 --------
-- **Automated Search Window**: The code dynamically defines the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html).
+- **Automated Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter config file.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
