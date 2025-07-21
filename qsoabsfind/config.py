@@ -44,8 +44,8 @@ def load_constants(constants_file=None, verbose=False):
             user_constants = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(user_constants)
             return user_constants
-        except Exception as e:
-            print(f"Error loading user constants: {e}. Falling back to default constants.")
+        except Exception as exc:
+            print(f"Error loading user constants: {exc}. Falling back to default constants.")
             return default_constants
     else:
         if verbose:

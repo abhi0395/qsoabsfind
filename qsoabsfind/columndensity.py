@@ -5,10 +5,10 @@ using Apparent Optical Depth Method (AODM) of Savage & Sembach 1991
 Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.
 """
 
+import time
+from multiprocessing import Pool
 import numpy as np
 from astropy.table import Table, vstack
-from multiprocessing import Pool
-import time
 from .absorberutils import calculate_doublet_ratio
 from .config import load_constants
 

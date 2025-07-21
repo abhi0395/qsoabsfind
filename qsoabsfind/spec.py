@@ -1,15 +1,15 @@
 """
 This script contains a class and functions to read a given spectra fits file.
 """
-
-from .io import read_fits_file
-from .utils import elapsed
 import time
 import os
+from .io import read_fits_file
+from .utils import elapsed
 
 class QSOSpecRead:
     """
-    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions."""
+    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.
+    """
 
     def __init__(self, fits_file, index=None, autoload=False, verbose=True):
         """
@@ -56,8 +56,8 @@ class QSOSpecRead:
             dict or Table: The metadata data with keywords (if asdict=True), otherwise a Table
         """
         if self.metadata is None:
-            raise ValueError(f"ERROR: there is no metadata available, use read_fits()")
-        if asdict:
+            raise ValueError("ERROR: there is no metadata available, use read_fits()")
+        elif asdict:
             details_dict = {key: self.metadata[key] for key in self.metadata.dtype.names}
             return details_dict
         else:

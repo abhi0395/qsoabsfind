@@ -2,7 +2,7 @@
 This script contains functions to read and write files.
 """
 import os
-import astropy.io.fits as fits
+from astropy.io import fits
 import numpy as np
 from astropy.table import Table
 from .config import load_constants

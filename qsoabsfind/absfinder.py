@@ -1,11 +1,11 @@
 """
 This script contains a function to run convolution based absorber finder on a single spectrum.
 """
-
-import numpy as np
-from astropy.table import Table
 from functools import reduce
 from operator import add
+import time
+import numpy as np
+from astropy.table import Table
 from .utils import convolution_fun, vel_dispersion, elapsed
 from .absorberutils import (
     estimate_local_sigma_conv_array,
@@ -24,7 +24,6 @@ from .ew import (
 )
 from .config import load_constants
 from .spec import QSOSpecRead
-import time
 
 # Constants
 constants = load_constants()
@@ -102,7 +101,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
         print(f'INFO: search absorber = {absorber}')
         print(f'INFO: Z_QSO = {z_qso[0]}')
 
-    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **kwargs)
 
     # Print progress for every spectrum processed
     elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
@@ -111,9 +110,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
-lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
-mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -129,8 +126,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         error (numpy.array): error on residuals
         lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).
         unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)
-        unmsk_error (numpy.array): error on residuals array in search wavelength region
-        ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
+        ker_width_pix (int or list): List of kernel widths in pixels, default=5
         coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
         mult_resi (float): Factor to shift the residual up or down. Default is 1.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
@@ -209,6 +205,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         lower_del_lam = line_sep - d_pix
         upper_del_lam = line_sep + d_pix
 
+        if isinstance(ker_width_pixels, int):
+            ker_width_pixels = [ker_width_pix]
         # Kernel width computation
         width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
 
@@ -242,7 +240,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         print(f'INFO: first set of potential candidates: {combined_final_our_z}')
 
         if len(combined_final_our_z)>0:
-            z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
+            z_abs, _, fit_param, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
 
             pure_z_abs = np.zeros(len(z_abs))

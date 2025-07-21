@@ -1,14 +1,15 @@
 """
 This script contains a function that runs the absorber finder in parallel for many spectra.
 """
-
-import numpy as np
 import argparse
 import time
 import os
 import multiprocessing
 from multiprocessing import Pool
+import numpy as np
 from .absfinder import read_single_spectrum_and_find_absorber
+from .columndensity import return_total_column_density_table
+from .io import append_table_to_fits
 from .io import save_results_to_fits
 from .absorberutils import return_search_window_wavelength_range
 from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence
@@ -157,7 +158,7 @@ def main():
     })
 
     if args.coldens:
-        print(f'INFO: Will also calculate column densities using apparent optical depth method (AODM)')
+        print('INFO: Will also calculate column densities using apparent optical depth method (AODM)')
         headers.update({
                 'N_METHOD': {
                     'value': 'AODM',
@@ -203,8 +204,6 @@ def main():
         print(f'INFO: No {args.absorber} absorbers found, no file saved..')
 
     if args.coldens:
-        from .columndensity import return_total_column_density_table
-        from .io import append_table_to_fits
         col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, constants.continuum_error_frac, args.dv, n_jobs)
         append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 

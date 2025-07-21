@@ -3,9 +3,9 @@ This script contains a function to find metal absorbers in QSO spectra.
 """
 
 import numpy as np
+from numba import jit
 from .config import load_constants
 from .utils import elapsed
-from numba import jit
 
 # Constants
 constants = load_constants()
