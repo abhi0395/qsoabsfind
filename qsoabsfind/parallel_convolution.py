@@ -108,8 +108,8 @@ def main():
     parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
     parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
 
-    print(f"Script started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    print("==========")
+    print(f"\nINFO: Script started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("==========\n")
     args = parser.parse_args()
 
     # Set the environment variable for the constants file
@@ -212,9 +212,9 @@ def main():
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Script ended at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     print(f"Elapsed time: {elapsed_time:.2f} seconds")
-    print("===========")
+    print(f"INFO: Script ended at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    print("===========\n")
 
 if __name__ == "__main__":
     main()
