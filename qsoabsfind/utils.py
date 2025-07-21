@@ -100,7 +100,38 @@ def gauss_two_lines_kernel(x, a):
 
     return norm_constant * (-a1 * np.exp(-((x - a[1]) / a[2]) ** 2 / 2) - a2 * np.exp(-((x - a[4]) / a[5]) ** 2 / 2)) * 0.5 + 1
 
-def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, index, amp_ratio=0.5):
+def compute_doublet_amplitudes(A1_input, f1, f2):
+    """
+    Computes amplitudes for the first and second lines of a doublet
+    based on the user-defined A1_input and oscillator strengths f1 and f2.
+
+    Ensures that both amplitudes remain <= 1.
+
+    Args:
+        A1_input (float): Desired amplitude of the stronger line (usually <= 1).
+        f1 (float): Oscillator strength of the first line.
+        f2 (float): Oscillator strength of the second line.
+
+    Returns:
+        (A1, A2): Tuple of amplitudes for line1 and line2
+    """
+
+    # Normalize f1 and f2 such that max(A1, A2) = A1_input if possible
+    ratio = f2 / f1
+    A2 = A1_input * ratio
+
+    # If A2 exceeds 1, we need to scale both amplitudes down
+    if A2 > 1.0:
+        scale = 1.0 / A2
+        A1 = A1_input * scale
+        A2 = 1.0
+    else:
+        A1 = A1_input
+
+    return A1, A2
+
+
+def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, index, f1, f2):
     """
     Convolves the spectrum with a Gaussian kernel.
 
@@ -111,7 +142,8 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
         log (bool): if log bins should be used for wavelength
         wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)
         index (int): QSO index
-        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).
+        f1 (float): Oscillator strength of the first line.
+        f2 (float): Oscillator strength of the second line.
 
     Returns:
         numpy.ndarray: The convolved residual array.
@@ -120,7 +152,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
         raise ValueError(f"Unsupported absorber type. Available types are: {list(amplitude_dict.keys())}")
 
     A_main = amplitude_dict[absorber]
-    A_secondary = A_main * amp_ratio
+    A_main, A_secondary = compute_doublet_amplitudes(A_main, f1, f2)
     ct = 10
     # extract lambdas for the doublet
     lambda1, lambda2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]

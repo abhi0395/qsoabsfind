@@ -218,7 +218,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             print(f'INFO: convolving for {sig_ker}.')
             line_centre = (line1 + line2) / 2
 
-            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, amp_ratio=line_ratio)
+            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, f1=f1, f2=f2)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
