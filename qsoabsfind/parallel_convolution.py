@@ -201,6 +201,7 @@ def main():
     # only save absorber file if there at least one absorber is detected
     if len(results["index_spec"])>0:
         # Save the results to a FITS file
+        print(f'INFO: Number of {args.absorber} systems found: {len(results["index_spec"])}')
         save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
     else:
         print(f'INFO: No {args.absorber} absorbers found, no file saved..')
