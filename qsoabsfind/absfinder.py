@@ -206,7 +206,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         upper_del_lam = line_sep + d_pix
 
         if isinstance(ker_width_pixels, int):
-            ker_width_pixels = [ker_width_pix]
+            ker_width_pixels = [ker_width_pixels]
         # Kernel width computation
         width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
 
