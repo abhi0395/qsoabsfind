@@ -677,6 +677,8 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     Note:
         - Assumes input spectra are already normalized (flux / continuum).
         - Checks whether enough search window pixels are available after masking NaNs.
+        - Users can define 'snr_cut' in kwargs to check if the median SNR > kwargs['snr_cut']
+        in the absorber search wavelength region.
     """
     import time
     from astropy.table import Table
@@ -721,5 +723,11 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
 
     if lam_search.size <= 10:
         return 0
-    else:
-        return 1
+
+    if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
+        snr_median = np.nanmedian(unmsk_residual / unmsk_error)
+        print(f'INFO: Checking SNR in the wavelength search region (median SNR = {snr_median:.2f}, threshold = {kwargs["snr_cut"]})')
+        if snr_median <= kwargs["snr_cut"]:
+            return 0
+
+    return 1
