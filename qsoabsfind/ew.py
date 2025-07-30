@@ -207,7 +207,8 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
     #defining wwavelength range for Gaussian fitting
     sigma = d_pix*15
-    # assuming maximum line width of d_pix * 15, can be larger/smaller, but this is a reasonable assumption.
+    # assuming maximum line width of d_pix * 15,
+    # can be larger/smaller, but this is a reasonable assumption.
     ix0 = line_centre1 -  sigma
     ix1 = line_centre2 +  sigma
 
@@ -242,6 +243,19 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             fitted_l2 = fitting_param_for_spectrum[k][4]*(1+absorber_redshift[k])
             std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+absorber_redshift[k])
             std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+absorber_redshift[k])
+
+            obs_sig1 = fitting_param_for_spectrum[k][2]*(1+absorber_redshift[k])
+            obs_sig2 = fitting_param_for_spectrum[k][5]*(1+absorber_redshift[k])
+            obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, 0.54 * amp_first_nmf, fitted_l2, obs_sig2]
+
+            obs_fitting_param_for_spectrum, obs_fitting_param_std_for_spectrum, _, _, _,_ = double_curve_fit(
+                index, double_gaussian, lam_fit * (1+absorber_redshift[k]), nmf_resi, error_fit=error_flux, bounds=None, init_cond=obs_init_cond, iter_n=2000)
+
+            fitted_l1 = obs_fitting_param_for_spectrum[1]
+            fitted_l2 = obs_fitting_param_for_spectrum[4]
+
+            std_fitted_l1 = obs_fitting_param_std_for_spectrum[1]
+            std_fitted_l2 = obs_fitting_param_std_for_spectrum[4]
 
             z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
 
