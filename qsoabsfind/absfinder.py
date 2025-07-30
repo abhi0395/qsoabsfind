@@ -194,11 +194,11 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
         print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
 
-        bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
+        bd_ct, x_sep = 2.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         edge = 0.1
-        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma - edge, 2e-2, line2 - bd_ct * d_pix, del_sigma - edge])),
+        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, max(0.1,del_sigma - edge), 2e-2, line2 - bd_ct * d_pix, max(0.1, del_sigma - edge)])),
                  (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])))
 
         # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
@@ -289,7 +289,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
 
-                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 >=0 and vel2 >=0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
+                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 >=0 and vel2 >=0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1 and abs(vel1-vel2)<=100:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]

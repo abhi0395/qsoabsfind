@@ -271,7 +271,7 @@ def group_and_select_weighted_redshift(redshifts, fluxes, delta_z):
 
     return best_redshifts
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, gamma=3):
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, gamma=4):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
