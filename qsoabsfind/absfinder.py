@@ -268,7 +268,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                         gaussian_parameters = np.array(fit_param_temp[0])
-                        lam_rest = lam_obs / (1 + z_abs[m])
+                        lam_rest = lam_obs / (1 + z_new)
                         c0 = gaussian_parameters[1]
                         c1 = gaussian_parameters[4]
                         sig1, sig2  = gaussian_parameters[2], gaussian_parameters[5]
@@ -276,7 +276,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                         sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
 
                         # resolution corrected velocity dispersion (should be greater than 0)
-                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_abs[m], lam_obs)
+                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_new, lam_obs)
 
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
                         # usually 1 < DR < line_ratio (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts

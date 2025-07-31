@@ -142,8 +142,8 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
             delta1 = dpix * (lam_rest[1]-lam_rest[0])
             delta2 = delta1
     else:
-        nsig = 4 # for gaussian more than 99.7 percentile data is within 4sigma
-        delta1, delta2 = nsig * sig2, nsig * sig2
+        nsig = 3 # for gaussian more than 99.7 percentile data is within 4sigma
+        delta1, delta2 = nsig * sig1, nsig * sig2
 
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
     ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
@@ -154,16 +154,15 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     err1 = error[ind1]
     err2 = error[ind2]
 
-    median = 1  # Assuming median residual value is 1
+    median = 1  # Assuming median residual value is 1, as it continuum-normalized
 
-    diff1 = np.abs(median - resi1)
-    diff2 = np.abs(median - resi2)
+    diff1 = median - resi1
+    diff2 = median - resi2
 
     sum_diff1 = np.nansum(diff1)
     sum_diff2 = np.nansum(diff2)
     sum_err1 = np.sqrt(np.nansum(err1**2))
     sum_err2 = np.sqrt(np.nansum(err2**2))
-
 
     mean_sn1, mean_sn2 = -1, -1 # in case failure
 
