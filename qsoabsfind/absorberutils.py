@@ -159,6 +159,9 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     diff1 = median - resi1
     diff2 = median - resi2
 
+    diff1[diff1<0] = 0
+    diff2[diff2<0] = 0
+
     sum_diff1 = np.nansum(diff1)
     sum_diff2 = np.nansum(diff2)
     sum_err1 = np.sqrt(np.nansum(err1**2))
