@@ -469,7 +469,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
 
             # Calculate differences between current absorber and others
             diff = np.abs(abs_z[k] - abs_z)
-            ix = np.where((diff > 0) & (diff <= thresh))[0]
+            ix = np.where((diff >= 0) & (diff <= thresh))[0]
 
             if ix.size > 0:
                 # Consider the current absorber and its closely spaced ones

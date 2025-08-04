@@ -12,6 +12,7 @@ from .config import load_constants
 constants = load_constants()
 lines = constants.lines
 doublet_keys = constants.doublet_keys
+oscillator_params = constants.oscillator_parameters
 
 def return_line_centers(use_kernel):
     """
@@ -157,6 +158,21 @@ def full_covariance_ew_errors(popt, pcov):
 
     return EW1_error, EW2_error, EW_total_error
 
+def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=5):
+    """Find better z estimate using flux minimum near expected line center."""
+    lam_expected = line_rest * (1 + z_guess)
+    delta = window * (wavelength[1] - wavelength[0])
+    mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
+
+    if np.any(mask):
+        idx_min = np.nanargmin(residual[mask])
+        lam_min = wavelength[mask][idx_min]
+        return lam_min / line_rest - 1
+    else:
+        return z_guess  # fallback
+
+
+
 def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, use_covariance=False):
     """
     Measures the properties of each potential absorber by fitting a double
@@ -204,6 +220,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     z_abs_err = np.zeros(size_array, dtype='float32')
 
     line_centre1, line_centre2 = return_line_centers(use_kernel)
+    amp_ratio = oscillator_params[f'{use_kernel}_f2'] / oscillator_params[f'{use_kernel}_f1']
 
     #defining wwavelength range for Gaussian fitting
     sigma = d_pix*15
@@ -221,6 +238,9 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
     for k in range(size_array):
         np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32) # for reproducibility
+        z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=5)
+        z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=5)
+        absorber_redshift[k] = 0.5 * (z1 + z2)
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
@@ -230,11 +250,12 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         if nmf_resi.size > 0 and not np.all(np.isnan(nmf_resi)):
             #random initial condition
             amp_first_nmf = max(0.05, 1 - np.nanmin(nmf_resi))
+            amp_second_nmf = min(0.95, amp_ratio * amp_first_nmf)
             line_first = line_centre1
             sigma1 = uniform(bound[0][2], bound[1][2])
             sigma2 = uniform(bound[0][5], bound[1][5])
             line_second = line_centre2
-            init_cond = [amp_first_nmf, line_first, sigma1, 0.54 * amp_first_nmf, line_second, sigma2]
+            init_cond = [amp_first_nmf, line_first, sigma1, amp_second_nmf, line_second, sigma2]
             # fitting in rest-frame
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
@@ -246,10 +267,10 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
             obs_sig1 = fitting_param_for_spectrum[k][2]*(1+absorber_redshift[k])
             obs_sig2 = fitting_param_for_spectrum[k][5]*(1+absorber_redshift[k])
-            obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, 0.65 * amp_first_nmf, fitted_l2, obs_sig2]
+            obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, amp_second_nmf, fitted_l2, obs_sig2]
 
             obs_fitting_param_for_spectrum, obs_fitting_param_std_for_spectrum, _, _, _,_ = double_curve_fit(
-                index, double_gaussian, lam_fit * (1+absorber_redshift[k]), nmf_resi, error_fit=error_flux, bounds=None, init_cond=obs_init_cond, iter_n=2500)
+                index, double_gaussian, lam_fit * (1+absorber_redshift[k]), nmf_resi, error_fit=error_flux, bounds=None, init_cond=obs_init_cond, iter_n=1000)
 
             fitted_l1 = obs_fitting_param_for_spectrum[1]
             fitted_l2 = obs_fitting_param_for_spectrum[4]
@@ -284,7 +305,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             error_flux = error[lam_ind]
 
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=2000)
+                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=2500)
 
             ## errors on EW
             if not use_covariance:
