@@ -181,9 +181,9 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             # per pixel resolution in case wavelength is on linear scale
             wave_res = np.nanmedian(np.diff(lam_search)) # robust to outliers
             resolution  = wave_res/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
-            del_sigma = np.nanmedian(resolution) * line1 / speed_of_light #this is just to define the lower boundary for gaussian sigma
-            mean_resolution = np.nanmean(resolution)
-
+            mean_resolution = np.nanmedian(resolution)
+            #this is just to define the lower boundary for gaussian sigma
+            del_sigma = mean_resolution * line1 / speed_of_light
         else:
             log_obs_wave = np.log10(lam_search)
             wave_res = np.nanmedian(np.diff(log_obs_wave))
@@ -192,9 +192,9 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             del_sigma /=2.355 ## FWHM sqrt(8ln2) #this is just to define the lower boundary for gaussian sigma
             mean_resolution = resolution
 
-        print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
+        print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s], del_sigma: {del_sigma}')
 
-        bd_ct, x_sep = 2.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
+        bd_ct, x_sep = 3.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         edge = 0.1
@@ -213,7 +213,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         combined_final_our_z = []
 
         for sig_ker in width_kernel:
-            print(f'INFO: convolving for {sig_ker}.')
+            print(f'INFO: convolving for kernel width: {sig_ker} Angstrom.')
             line_centre = (line1 + line2) / 2
 
             conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, f1=f1, f2=f2)
@@ -226,7 +226,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
-            print('INFO: sigma cut for potential candidates...')
+            print('INFO: sigma cut on convolved flux for potential candidates...')
 
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
             final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)

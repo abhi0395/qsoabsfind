@@ -3,6 +3,7 @@ This script contains a function to fit a given absorption profile with a double 
 """
 
 import numpy as np
+from numba import njit
 from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
@@ -31,7 +32,7 @@ def return_line_centers(use_kernel):
     return line_centre1, line_centre2
 
 # Example usage within double_curve_fit
-def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, bounds, init_cond, iter_n):
+def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, bounds, init_cond, maxefv):
     """
     Fits a double Gaussian function to the provided data.
 
@@ -43,7 +44,7 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
         error_fit (numpy.ndarray): Error array for the fitting.
         bounds (tuple): Bounds for the fitting parameters.
         init_cond (list or numpy.ndarray): Initial conditions for the fitting parameters.
-        iter_n (int): Maximum number of iterations for the fitting algorithm.
+        maxefv (int): Maximum number of iterations for the fitting algorithm.
 
     Returns:
         tuple: Contains the following elements:
@@ -66,7 +67,8 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
         popt, pcov = curve_fit(
             fun_to_run, lam_fit_range, nmf_resi_fit,
             bounds=bounds, sigma=error_fit, p0=init_cond,
-            maxfev=iter_n, absolute_sigma=True
+            maxfev=maxefv, absolute_sigma=True,
+            ftol=1e-4, xtol=1e-4
         )
         EW_first = popt[0] * np.sqrt(np.pi * 2 * popt[2] ** 2)
         EW_second = popt[3] * np.sqrt(np.pi * 2 * popt[5] ** 2)
@@ -85,7 +87,7 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
 
     return save_param_array, save_param_error, EW_first, EW_second, EW_total, save_param_cov
 
-
+@njit
 def calculate_ew_errors(popt, perr):
     """
     Calculate the errors in the equivalent widths (EW) using the errors in
@@ -171,9 +173,65 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=5):
     else:
         return z_guess  # fallback
 
+def initialize_output_arrays(size_array, nparm):
+    """
+    Function to return arrays for storing Absorber fit parameters
 
+    Args:
+        size_array (int): number of redshifts
+        nparm (int): number of Gaussian parameters
+    Returns:
+        tuple of arrays
+    """
+    return (
+        np.zeros((size_array, nparm)),  # fitting_param_for_spectrum
+        np.zeros((size_array, nparm)),  # fitting_param_std_for_spectrum
+        np.zeros((size_array, nparm, nparm)),  # fitting_param_pcov_for_spectrum
+        np.zeros(size_array, dtype='float32'),  # EW_first_line
+        np.zeros(size_array, dtype='float32'),  # EW_second_line
+        np.zeros(size_array, dtype='float32'),  # EW_first_line_error
+        np.zeros(size_array, dtype='float32'),  # EW_second_line_error
+        np.zeros(size_array, dtype='float32'),  # EW_total
+        np.zeros(size_array, dtype='float32'),  # EW_total_error
+        np.zeros(size_array, dtype='float32')   # z_abs_err
+    )
 
-def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, use_covariance=False):
+def get_rest_frame_values(wavelength, flux, error, z, ix0, ix1):
+    """
+    Get rest-frame arrays from observed frame
+
+    Args:
+        wavelength (array): Observed wavelength
+        flux (array): Observed residual
+        error (array): corresponding error array
+        z (float): absorber redshift
+        ix0 (float): start wavelength in rest-frame
+        ix1 (float): end wavelength in rest-frame
+    Returns:
+        wavelength, flux and error
+    """
+    lam_rest = wavelength / (1 + z)
+    lam_ind = np.where((lam_rest >= ix0) & (lam_rest <= ix1))[0]
+    return lam_rest[lam_ind], flux[lam_ind], error[lam_ind]
+
+def get_observed_frame_values(fit_params, redshift):
+    """
+    Get observed-frame parameters
+
+    Args:
+        fit_params (np.ndarray): rest-frame Gaussian parameters
+        redshift (float): absorber redshift
+    Returns:
+        observed wavelengths for line1, line2, and sigmas
+    """
+    l1_obs = fit_params[1] * (1 + redshift)
+    l2_obs = fit_params[4] * (1 + redshift)
+    sig1_obs = fit_params[2] * (1 + redshift)
+    sig2_obs = fit_params[5] * (1 + redshift)
+    return l1_obs, l2_obs, sig1_obs, sig2_obs
+
+def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=1000, use_covariance=False):
+
     """
     Measures the properties of each potential absorber by fitting a double
     Gaussian to the absorption feature and measuring the equivalent width (EW)
@@ -188,6 +246,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         bound (tuple): Bounds for the fitting parameters.
         use_kernel (str, optional): Kernel type ('MgII, FeII, CIV, NV, OVI, SiIV, AlIII).
         d_pix (float, optional): wavelength pixel for tolerance
+        num_iter (int): similar to maxefv option in curve_fit, maximum number of iterations for function evalution (default 1000)
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
 
     Returns:
@@ -204,138 +263,87 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     """
 
     z_abs_array = np.array(absorber_redshift)
-
     size_array = z_abs_array.size
+    nparm = 6
 
-    nparm = 6 # 6 parameter double Gaussian
-    fitting_param_for_spectrum = np.zeros((size_array, nparm))
-    fitting_param_std_for_spectrum = np.zeros((size_array, nparm))
-    fitting_param_pcov_for_spectrum = np.zeros((size_array, nparm, nparm)) #covariance matrix from curve_fit
-    EW_first_line = np.zeros(size_array, dtype='float32')
-    EW_second_line = np.zeros(size_array, dtype='float32')
-    EW_first_line_error = np.zeros(size_array, dtype='float32')
-    EW_second_line_error = np.zeros(size_array, dtype='float32')
-    EW_total = np.zeros(size_array, dtype='float32')
-    EW_total_error = np.zeros(size_array, dtype='float32')
-    z_abs_err = np.zeros(size_array, dtype='float32')
+    (fitting_param, fitting_param_std, fitting_param_pcov,
+     EW1, EW2, EW1_err, EW2_err, EW_total, EW_total_err, z_abs_err) = initialize_output_arrays(size_array, nparm)
 
-    line_centre1, line_centre2 = return_line_centers(use_kernel)
+    line1, line2 = return_line_centers(use_kernel)
     amp_ratio = oscillator_params[f'{use_kernel}_f2'] / oscillator_params[f'{use_kernel}_f1']
-
-    #defining wwavelength range for Gaussian fitting
-    sigma = d_pix*15
-    # assuming maximum line width of d_pix * 15,
-    # can be larger/smaller, but this is a reasonable assumption.
-    ix0 = line_centre1 -  sigma
-    ix1 = line_centre2 +  sigma
+    sigma = d_pix * 15
+    ix0, ix1 = line1 - sigma, line2 + sigma
+    pixel_width = 5
 
     if size_array == 0:
-        return (
-            z_abs_array, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
-            EW_first_line, EW_second_line, EW_total,
-            EW_first_line_error, EW_second_line_error, EW_total_error
-        )
+        return z_abs_array, fitting_param, fitting_param_std, EW1, EW2, EW_total, EW1_err, EW2_err, EW_total_err
 
     for k in range(size_array):
-        np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32) # for reproducibility
-        z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=5)
-        z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=5)
-        absorber_redshift[k] = 0.5 * (z1 + z2)
-        absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
-        lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-        lam_fit = absorber_rest_lam[lam_ind]
-        nmf_resi = flux[lam_ind]
-        error_flux = error[lam_ind]
-        uniform = np.random.uniform
+        np.random.seed(int(z_abs_array[k] * 1e6) % 2**32)
+
+        z1 = find_z_from_minimum(wavelength, flux, line1, z_abs_array[k], window=pixel_width)
+        z2 = find_z_from_minimum(wavelength, flux, line2, z_abs_array[k], window=pixel_width)
+        z_abs_array[k] = (line1 * z1 + line2 * z2) / (line1 + line1)
+
+        lam_fit, nmf_resi, error_flux = get_rest_frame_values(wavelength, flux, error, z_abs_array[k], ix0, ix1)
+
         if nmf_resi.size > 0 and not np.all(np.isnan(nmf_resi)):
-            #random initial condition
-            amp_first_nmf = max(0.05, 1 - np.nanmin(nmf_resi))
-            amp_second_nmf = min(0.95, amp_ratio * amp_first_nmf)
-            line_first = line_centre1
-            sigma1 = uniform(bound[0][2], bound[1][2])
-            sigma2 = uniform(bound[0][5], bound[1][5])
-            line_second = line_centre2
-            init_cond = [amp_first_nmf, line_first, sigma1, amp_second_nmf, line_second, sigma2]
-            # fitting in rest-frame
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
+            amp1 = max(0.05, 1 - np.nanmin(nmf_resi))
+            amp2 = min(0.95, amp_ratio * amp1)
+            sigma1 = np.random.uniform(bound[0][2], bound[1][2])
+            sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+            init_cond = [amp1, line1, sigma1, amp2, line2, sigma2]
 
-            fitted_l1 = fitting_param_for_spectrum[k][1]*(1+absorber_redshift[k]) # in observed frame
-            fitted_l2 = fitting_param_for_spectrum[k][4]*(1+absorber_redshift[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+absorber_redshift[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+absorber_redshift[k])
+            fit, fit_std, ew1, ew2, ew_total, _ = double_curve_fit(
+                index, double_gaussian, lam_fit, nmf_resi, error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
 
-            obs_sig1 = fitting_param_for_spectrum[k][2]*(1+absorber_redshift[k])
-            obs_sig2 = fitting_param_for_spectrum[k][5]*(1+absorber_redshift[k])
-            obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, amp_second_nmf, fitted_l2, obs_sig2]
+            fitting_param[k] = fit
+            fitting_param_std[k] = fit_std
+            EW1[k], EW2[k], EW_total[k] = ew1, ew2, ew_total
 
-            obs_fitting_param_for_spectrum, obs_fitting_param_std_for_spectrum, _, _, _,_ = double_curve_fit(
-                index, double_gaussian, lam_fit * (1+absorber_redshift[k]), nmf_resi, error_fit=error_flux, bounds=None, init_cond=obs_init_cond, iter_n=1000)
+            l1_obs, l2_obs, sig1_obs, sig2_obs = get_observed_frame_values(fit, z_abs_array[k])
+            obs_init_cond = [amp1, l1_obs, sig1_obs, amp2, l2_obs, sig2_obs]
 
-            fitted_l1 = obs_fitting_param_for_spectrum[1]
-            fitted_l2 = obs_fitting_param_for_spectrum[4]
+            obs_fit, obs_fit_std, *_ = double_curve_fit(
+                index, double_gaussian, lam_fit * (1 + z_abs_array[k]), nmf_resi, error_flux,
+                bounds=None, init_cond=obs_init_cond, maxefv=num_iter)
 
-            std_fitted_l1 = obs_fitting_param_std_for_spectrum[1]
-            std_fitted_l2 = obs_fitting_param_std_for_spectrum[4]
+            z_abs_array[k], z_abs_err[k] = redshift_estimate(
+                obs_fit[1], obs_fit[4], obs_fit_std[1], obs_fit_std[4], line1, line2)
 
-            z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
+            lam_fit, nmf_resi, error_flux = get_rest_frame_values(wavelength, flux, error, z_abs_array[k], ix0, ix1)
 
-            #best-fit corresponding to this best redshift
-            absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
-            lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-            lam_fit = absorber_rest_lam[lam_ind]
-            nmf_resi = flux[lam_ind]
-            error_flux = error[lam_ind]
+            fit, fit_std, ew1, ew2, ew_total, pcov = double_curve_fit(
+                index, double_gaussian, lam_fit, nmf_resi, error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
 
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=1000)
+            fitting_param[k] = fit
+            fitting_param_std[k] = fit_std
+            fitting_param_pcov[k] = pcov
+            EW1[k], EW2[k], EW_total[k] = ew1, ew2, ew_total
 
-            fitted_l1 = fitting_param_for_spectrum[k][1]*(1+z_abs_array[k]) # in observed frame
-            fitted_l2 = fitting_param_for_spectrum[k][4]*(1+z_abs_array[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+z_abs_array[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+z_abs_array[k])
+            l1_obs, l2_obs = fit[1] * (1 + z_abs_array[k]), fit[4] * (1 + z_abs_array[k])
+            std_l1, std_l2 = fit_std[1] * (1 + z_abs_array[k]), fit_std[4] * (1 + z_abs_array[k])
+            z_abs_array[k], z_abs_err[k] = redshift_estimate(l1_obs, l2_obs, std_l1, std_l2, line1, line2)
 
-            z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
-
-            #best-fit corresponding to this best redshift
-            absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
-            lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-            lam_fit = absorber_rest_lam[lam_ind]
-            nmf_resi = flux[lam_ind]
-            error_flux = error[lam_ind]
-
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, iter_n=2500)
-
-            ## errors on EW
             if not use_covariance:
-                EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = calculate_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])
+                EW1_err[k], EW2_err[k], EW_total_err[k] = calculate_ew_errors(fit, fit_std)
             else:
-                EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = full_covariance_ew_errors(fitting_param_for_spectrum[k], fitting_param_pcov_for_spectrum[k])
+                EW1_err[k], EW2_err[k], EW_total_err[k] = full_covariance_ew_errors(fit, pcov)
 
-            if np.all(np.isnan(EW_first_line[k])) or np.all(np.isnan(EW_second_line[k])) or np.all(np.isnan(EW_total[k])):
-                fitting_param_for_spectrum[k] = np.zeros(nparm)
-                fitting_param_std_for_spectrum[k] = np.zeros(nparm)
-                EW_first_line[k] = 0
-                EW_second_line[k] = 0
-                EW_total[k] = 0
-                EW_first_line_error[k] = 0
-                EW_second_line_error[k] = 0
-                EW_total_error[k] = 0
-                z_abs_err[k] = 0
+            if np.all(np.isnan([ew1, ew2, ew_total])):
+                fitting_param[k] = 0
+                fitting_param_std[k] = 0
+                fitting_param_pcov[k] = 0
+                EW1[k], EW2[k], EW_total[k] = 0, 0, 0
+                EW1_err[k], EW2_err[k], EW_total_err[k], z_abs_err[k] = 0, 0, 0, 0
         else:
-            EW_first_line[k] = 0
-            EW_second_line[k] = 0
-            EW_total[k] = 0
-            EW_first_line_error[k] = 0
-            EW_second_line_error[k] = 0
-            EW_total_error[k] = 0
-            fitting_param_for_spectrum[k] = np.zeros(nparm)
-            fitting_param_std_for_spectrum[k] = np.zeros(nparm)
-            z_abs_err[k] = 0
+            fitting_param[k] = 0
+            fitting_param_std[k] = 0
+            fitting_param_pcov[k] = 0
+            EW1[k], EW2[k], EW_total[k] = 0, 0, 0
+            EW1_err[k], EW2_err[k], EW_total_err[k], z_abs_err[k] = 0, 0, 0, 0
 
     return (
-        z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
-        EW_first_line, EW_second_line, EW_total,
-        EW_first_line_error, EW_second_line_error, EW_total_error
+        z_abs_array, z_abs_err, fitting_param, fitting_param_std,
+        EW1, EW2, EW_total, EW1_err, EW2_err, EW_total_err
     )

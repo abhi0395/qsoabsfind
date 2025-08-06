@@ -521,8 +521,13 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
     err1 = (std_fitted_obs_l1 / line1)
     err2 = (std_fitted_obs_l2 / line2)
 
-    z_corr = 0.5 * (z1 + z2)  # New redshifts computed using line centers of the first and second Gaussian
-    z_err = np.sqrt(0.25 * (err1**2 + err2**2))
+    # New redshifts computed using line centers
+    # of the first and second Gaussian using a weighted mean
+
+    w1 = line1 / (line1 + line2)
+    w2 = line2 / (line1 + line2)
+    z_corr = w1 * z1 + w2 * z2
+    z_err = np.sqrt((w1 * err1)**2 + (w2 * err2)**2)
 
     return z_corr, z_err
 
