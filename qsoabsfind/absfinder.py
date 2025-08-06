@@ -181,7 +181,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             # per pixel resolution in case wavelength is on linear scale
             wave_res = np.nanmedian(np.diff(lam_search)) # robust to outliers
             resolution  = wave_res/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
-            mean_resolution = np.nanmedian(resolution)
+            mean_resolution = np.nanmean(resolution)
             #this is just to define the lower boundary for gaussian sigma
             del_sigma = mean_resolution * line1 / speed_of_light
         else:
@@ -194,7 +194,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
         print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s], del_sigma: {del_sigma}')
 
-        bd_ct, x_sep = 3.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
+        bd_ct, x_sep = 2.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         edge = 0.1
