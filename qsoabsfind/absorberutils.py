@@ -400,7 +400,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         (vel1 >= 0, f"{vel1} >= 0",
          "vel1 >=0"),
         (vel2 >= 0, f"{vel2} >= 0",
-         "vel1 >=0"),
+         "vel2 >=0"),
         (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
          "min_dr < dr < max_dr"),
         (ew1_snr > 1, f"{ew1_snr} > 1",
@@ -619,7 +619,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
             - z_err (float): Estimated error in the corrected redshift.
     """
     z1 = (fitted_obs_l1 / line1) - 1
-    z2 = (fitted_obs_l2 / line2) - 1
+    z2 = ((line2 - line1) * (1 + z1) + fitted_obs_l1) / line2 - 1
 
     err1 = (std_fitted_obs_l1 / line1)
     err2 = (std_fitted_obs_l2 / line2)
