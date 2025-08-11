@@ -230,10 +230,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32) # for reproducibility
         z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=window)
         z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=window)
-        print(f'INFO: first guess: {absorber_redshift[k]}')
-
         absorber_redshift[k] = (line_centre1 * z1 + line_centre2 * z2) / (line_centre1 + line_centre1)
-        print(f'INFO: second guess: {absorber_redshift[k]}')
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
@@ -272,7 +269,6 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             std_fitted_l2 = obs_fitting_param_std_for_spectrum[4]
 
             z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
-            print(f'INFO: third guess: {z_abs_array[k]}')
 
             # # best-fit corresponding to this best redshift
             absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
@@ -290,8 +286,6 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+z_abs_array[k])
 
             z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
-            print(f'INFO: final redshift measured: {z_abs_array[k]}')
-            print('------')
 
             # #best-fit corresponding to this best redshift
             absorber_rest_lam = wavelength / (1 + z_abs_array[k]) # rest-frame conversion of wavelength
