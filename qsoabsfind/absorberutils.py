@@ -273,7 +273,51 @@ def group_and_select_weighted_redshift(redshifts, fluxes, delta_z):
 
     return best_redshifts
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, gamma=4):
+def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9):
+    """Estimate absorber redshift from the minimum flux near the expected line center.
+
+    Given an initial redshift guess, this function identifies a symmetric window
+    around the expected observed-frame line center and finds the pixel with the
+    minimum residual (flux) within that window. The wavelength of that minimum is
+    converted back to a refined redshift for the line.
+
+    Args:
+        wavelength (numpy.ndarray): Observed-frame wavelength array, monotonically
+            increasing and aligned with `residual`.
+        residual (numpy.ndarray): Residual/flux array aligned with `wavelength`.
+            May contain NaNs; the minimum is computed with `np.nanargmin`.
+        line_rest (float): Rest-frame wavelength (in the same units as `wavelength`)
+            of the spectral line used for refinement (e.g., 1548.204 A for C IV).
+        z_guess (float): Initial absorber redshift guess.
+        window (int, optional): Half-window size in **pixels** for the local search
+            around the expected line center. Defaults to 9. The search range is
+            ±`window` × (wavelength pixel spacing).
+
+    Returns:
+        float: Refined redshift estimate computed as `(λ_min / line_rest) - 1`, where
+        `λ_min` is the observed-frame wavelength at the minimum residual within the
+        search window. If no pixels fall within the window, returns `z_guess`.
+
+    Notes:
+        - If the search window contains only NaNs, `np.nanargmin` will raise a
+          `ValueError`. Consider pre-filtering `residual` or guarding with
+          `np.isfinite` if this is a possibility in your data.
+        - The window is defined in **observed-frame** wavelength by converting the
+          pixel count to Δλ using the local pixel spacing.
+    """
+    lam_expected = line_rest * (1 + z_guess)
+    delta = window * (wavelength[1] - wavelength[0])
+    mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
+
+    if np.any(mask):
+        idx_min = np.nanargmin(residual[mask])
+        lam_min = wavelength[mask][idx_min]
+        return lam_min / line_rest - 1
+    else:
+        return z_guess  # fallback
+
+
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=9, gamma=4):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
@@ -286,12 +330,23 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
         use_kernel (str, optional): Kernel type.
         delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.
+        window (int): window size for redshift estimate (default 9)
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
 
     Returns:
         list: List after grouping contiguous pixels for each spectrum.
     """
+
     thresh  = lines[doublet_keys[use_kernel][0]]
+    thresh1  = lines[doublet_keys[use_kernel][1]]
+    new_z = []
+    for z in combined_final_our_z:
+        z1 = find_z_from_minimum(lam_search, residual, thresh, z, window=window)
+        z2 = find_z_from_minimum(lam_search, residual, thresh1, z, window=window)
+        nz = (thresh * z1 + thresh1 * z2) / (thresh + thresh1)
+        new_z.append(nz)
+
+    combined_final_our_z = new_z
 
     z_ind = []  # Final list of median redshifts for each spectrum
     ct = 2
@@ -321,6 +376,54 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         return z_ind
     else:
         return combined_final_our_z
+
+def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
+                             lower_del_lam, c0, c1, upper_del_lam,
+                             sn1, sn_line1, sn2, sn_line2,
+                             vel1, vel2, min_dr, dr, max_dr,
+                             ew1_snr, ew2_snr, vmax=120):
+    """Check absorber selection criteria, print details, and count satisfied conditions."""
+    conds = [
+        ((gaussian_parameters > bound[0] + 0.001).all(),
+         f"{gaussian_parameters} > {bound[0] + 0.001}",
+         "gaussian_parameters > bound[0] + 0.001"),
+        ((gaussian_parameters < bound[1] - 0.001).all(),
+         f"{gaussian_parameters} < {bound[1] - 0.001}",
+         "gaussian_parameters < bound[0] - 0.001"),
+        (lower_del_lam <= c1 - c0 <= upper_del_lam,
+         f"{lower_del_lam} <= {c1 - c0} <= {upper_del_lam}",
+         "lower_del_lam <= c1 - c0 <= upper_del_lam"),
+        (sn1 >= sn_line1, f"{sn1} >= {sn_line1}",
+         "sn1 >= sn_line1"),
+        (sn2 >= sn_line2, f"{sn2} >= {sn_line2}",
+         "sn2 >= sn_line2"),
+        (vel1 >= 0, f"{vel1} >= 0",
+         "vel1 >=0"),
+        (vel2 >= 0, f"{vel2} >= 0",
+         "vel1 >=0"),
+        (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
+         "min_dr < dr < max_dr"),
+        (ew1_snr > 1, f"{ew1_snr} > 1",
+         "ew1_snr > 1"),
+        (ew2_snr > 1, f"{ew2_snr} > 1",
+         "ew2_snr > 1"),
+        (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
+         f"|vel1 - vel2| < = {vmax}")
+    ]
+
+    true_count = sum(c[0] for c in conds)
+    false_count = len(conds) - true_count
+    result = all(c[0] for c in conds)
+
+    print(f"INFO: QSO_INDEX = {qso_id}, Condition checks for Z_ABS = {zabs}:")
+    for i, (status, detail, text) in enumerate(conds, 1):
+        print(f"INFO: {text}: {status}")
+
+    print(f"INFO: Summary: {true_count} / {len(conds)} conditions satisfied, {false_count} failed.")
+    print(f"INFO: Final result: {result}")
+    print('=========')
+
+    return result
 
 def remove_Mg_falsely_come_from_Fe_absorber(z_after_grouping, lam_obs, residual, error, d_pix, logwave):
     """

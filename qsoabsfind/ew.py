@@ -7,6 +7,7 @@ from numba import njit
 from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
+from .absorberutils import find_z_from_minimum
 from .config import load_constants
 
 # Constants
@@ -160,20 +161,7 @@ def full_covariance_ew_errors(popt, pcov):
 
     return EW1_error, EW2_error, EW_total_error
 
-def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=5):
-    """Find better z estimate using flux minimum near expected line center."""
-    lam_expected = line_rest * (1 + z_guess)
-    delta = window * (wavelength[1] - wavelength[0])
-    mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
-
-    if np.any(mask):
-        idx_min = np.nanargmin(residual[mask])
-        lam_min = wavelength[mask][idx_min]
-        return lam_min / line_rest - 1
-    else:
-        return z_guess  # fallback
-
-def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=500, use_covariance=False):
+def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=500, window=9, use_covariance=False):
     """
     Measures the properties of each potential absorber by fitting a double
     Gaussian to the absorption feature and measuring the equivalent width (EW)
@@ -186,8 +174,9 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
         error (numpy.ndarray): Error array corresponding to the flux.
         absorber_redshift (list): List of potential absorbers identified previously.
         bound (tuple): Bounds for the fitting parameters.
-        use_kernel (str, optional): Kernel type ('MgII, FeII, CIV, NV, OVI, SiIV, AlIII).
-        d_pix (float, optional): wavelength pixel for tolerance
+        use_kernel (str): Kernel type ('MgII, FeII, CIV, NV, OVI, SiIV, AlIII).
+        d_pix (float): wavelength pixel for tolerance
+        window (int): window size for redshift estimate (default 9)
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
 
     Returns:
@@ -228,7 +217,6 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     # can be larger/smaller, but this is a reasonable assumption.
     ix0 = line_centre1 -  sigma
     ix1 = line_centre2 +  sigma
-    pixel_width = 9
 
     # no available redshift, just return arrays of zeros
     if size_array == 0:
@@ -240,13 +228,11 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
     for k in range(size_array):
         np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32) # for reproducibility
-        z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=pixel_width)
-        z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=pixel_width)
+        z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=window)
+        z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=window)
 
-        print(f'INFO: first guess: {absorber_redshift[k]}')
         absorber_redshift[k] = (line_centre1 * z1 + line_centre2 * z2) / (line_centre1 + line_centre1)
 
-        print(f'INFO: second guess: {absorber_redshift[k]}')
         absorber_rest_lam = wavelength / (1 + absorber_redshift[k]) # rest-frame conversion of wavelength
         lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
         lam_fit = absorber_rest_lam[lam_ind]
@@ -312,14 +298,6 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=2 * num_iter)
-
-            ## final redshift
-            fitted_l1 = fitting_param_for_spectrum[k][1]*(1+z_abs_array[k]) # in observed frame
-            fitted_l2 = fitting_param_for_spectrum[k][4]*(1+z_abs_array[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+z_abs_array[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+z_abs_array[k])
-
-            z_abs_array[k], z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
 
             ## errors on EW
             if not use_covariance:

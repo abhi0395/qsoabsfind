@@ -17,7 +17,8 @@ from .absorberutils import (
     absorber_search_window,
     find_valid_indices,
     calculate_doublet_ratio,
-    group_and_select_weighted_redshift
+    group_and_select_weighted_redshift,
+    check_absorber_selection
 )
 from .ew import (
     measure_absorber_properties_double_gaussian
@@ -235,9 +236,10 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         print('INFO: combining redshifts...')
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
+        print(f'INFO: potential candidates before combining: {combined_final_our_z}')
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber, delta_z=del_z)
         combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
-        print(f'INFO: first set of potential candidates: {combined_final_our_z}')
+        print(f'INFO: potential candidates after combining: {combined_final_our_z}')
 
         if len(combined_final_our_z)>0:
             z_abs, _, fit_param, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
@@ -288,8 +290,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-
-                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 >=0 and vel2 >=0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1 and abs(vel1-vel2)<=100:
+                        good = check_absorber_selection(spec_index, z_new, gaussian_parameters, bound,
+                             lower_del_lam, c0, c1, upper_del_lam,
+                             sn1, sn_line1, sn2, sn_line2,
+                             vel1, vel2, min_dr, dr, max_dr,
+                             ew1_snr, ew2_snr)
+                        if good:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
