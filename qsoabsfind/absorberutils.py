@@ -417,7 +417,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
 
     print(f"INFO: QSO_INDEX = {qso_id}, Condition checks for Z_ABS = {zabs}:")
     for i, (status, detail, text) in enumerate(conds, 1):
-        print(f"INFO: {text}: {status}")
+        print(f"INFO: {text}: {detail}: {status}")
 
     print(f"INFO: Summary: {true_count} / {len(conds)} conditions satisfied, {false_count} failed.")
     print(f"INFO: Final result: {result}")
@@ -618,6 +618,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
             - z_corr (float): mean redshift estimated from the Gaussian fitting parameters.
             - z_err (float): Estimated error in the corrected redshift.
     """
+
     z1 = (fitted_obs_l1 / line1) - 1
     z2 = ((line2 - line1) * (1 + z1) + fitted_obs_l1) / line2 - 1
 

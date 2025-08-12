@@ -393,9 +393,19 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     lam_obs1 = (1 + z) * c1
     lam_obs2 = (1 + z) * c2
 
+    # Get per-line instrumental sigma_v (km/s)
+    if np.isscalar(resolution):
+        res1 = float(resolution)
+        res2 = float(resolution)
+    else:
+        # Interpolate instrumental sigma_v at the exact observed wavelengths
+        # Assumes obs_wave is monotonic and same length as resolution.
+        res1 = float(np.interp(lam_obs1, obs_wave, resolution))
+        res2 = float(np.interp(lam_obs2, obs_wave, resolution))
+
     # Get per-line resolution (scalar or from array)
-    res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
-    res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
+    #res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
+    #res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
 
     #Gaussian quadrature correction
     del_v1_sq = v1_sig**2 - res1**2
@@ -405,10 +415,10 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     is_resolved2 = del_v2_sq >= 0
 
     # Correct for instrumental resolution
-    # Set to 0 if the fitted  width is less than rest-frame instrumental width
+    # Set to NaN if the fitted  width is less than rest-frame instrumental width
     # One line may resolved and one may be not, so this condition is a little relaxed
-    corr_del_v1_sq = np.sqrt(del_v1_sq) if is_resolved1 else -1
-    corr_del_v2_sq = np.sqrt(del_v2_sq) if is_resolved2 else -1
+    corr_del_v1_sq = np.sqrt(del_v1_sq) if is_resolved1 else np.nan
+    corr_del_v2_sq = np.sqrt(del_v2_sq) if is_resolved2 else np.nan
 
     return corr_del_v1_sq, corr_del_v2_sq
 

@@ -169,10 +169,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         else:
             line1, line2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
             f1, f2 = oscillator_parameters[f'{absorber}_f1'], oscillator_parameters[f'{absorber}_f2']
-            line_ratio = max(f1, f2) / min(f1, f2)
+            prod1 = f1 * line1
+            prod2 = f2 * line2
+            line_ratio = max(prod1, prod2) / min(prod1, prod2)
 
         line_sep = line2 - line1
-        del_z = line_sep / (0.5 * (line1+line2))
+        del_z = line_sep / line1
 
         if verbose:
             print(f'INFO: For {absorber}, theoretical oscillator strength ratio: {line_ratio}')
@@ -285,7 +287,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
                             dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
-                            min_dr, max_dr = 1 -  dr_error, line_ratio +  dr_error
+                            min_dr, max_dr = 1 - dr_error, line_ratio + dr_error
                             ew1_snr, ew2_snr = EW_first_temp_mean[0] / EW_first_error_temp[0], EW_second_temp_mean[0] / EW_second_error_temp[0]
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
