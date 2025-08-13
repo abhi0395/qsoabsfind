@@ -272,6 +272,13 @@ def modify_units(col_name, col):
     else:
         return str(col.unit) if col.unit is not None else None
 
+def numeric_key(filename):
+    """Extracts first integer from filename for sorting; falls back to name if no number found."""
+    import re
+    match = re.search(r'\d+', filename)
+    return int(match.group()) if match else float('inf')  # put no-number files at end
+
+
 def combine_fits_files(directory, output_file):
     """
     Combines data from several FITS files in a directory into a single FITS file.
@@ -292,7 +299,7 @@ def combine_fits_files(directory, output_file):
     primary_hdu = None
     formats = {}
     # Loop through each file in the directory
-    for i, file_name in enumerate(os.listdir(directory)):
+    for i, file_name in enumerate(sorted(os.listdir(directory), key=numeric_key)):
         if file_name.endswith('.fits'):
             file_path = os.path.join(directory, file_name)
             print(f"Processing file: {file_path}")

@@ -196,7 +196,7 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
 
     return fit_params_mean, fit_param_std, ew1_mean, ew2_mean, ew_total_mean, ew1_std, ew2_std, ew_total_std
 
-def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=500, window=9, use_covariance=False, nboot=None):
+def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=500, window=9, use_covariance=False, nboot=-1):
     """
     Measures the properties of each potential absorber by fitting a double
     Gaussian to the absorption feature and measuring the equivalent width (EW)
@@ -349,7 +349,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
 
             _, z_abs_err[k] = redshift_estimate(fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2, line_centre1, line_centre2)
 
-            if nboot and nmf_resi.size>0:
+            if nboot>0 and nmf_resi.size>0:
                 print(f'INFO: bootstrapping...')
                 fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],  EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k]= bootstrap_fitting_and_ew(index, nboot, z_abs_array[k], wavelength, flux, error, ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter)
             else:
