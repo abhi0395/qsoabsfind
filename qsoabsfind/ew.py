@@ -282,16 +282,23 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             line_second = line_centre2
             init_cond = [amp_first_nmf, line_first, sigma1, amp_second_nmf, line_second, sigma2]
             # fitting in rest-frame
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
+            # fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],_ = double_curve_fit(
+            #     index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
 
-            fitted_l1 = fitting_param_for_spectrum[k][1]*(1+absorber_redshift[k]) # in observed frame
-            fitted_l2 = fitting_param_for_spectrum[k][4]*(1+absorber_redshift[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+absorber_redshift[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+absorber_redshift[k])
+            # fitted_l1 = fitting_param_for_spectrum[k][1]*(1+absorber_redshift[k]) # in observed frame
+            # fitted_l2 = fitting_param_for_spectrum[k][4]*(1+absorber_redshift[k])
+            # std_fitted_l1 = fitting_param_std_for_spectrum[k][1]*(1+absorber_redshift[k])
+            # std_fitted_l2 = fitting_param_std_for_spectrum[k][4]*(1+absorber_redshift[k])
 
-            obs_sig1 = fitting_param_for_spectrum[k][2]*(1+absorber_redshift[k])
-            obs_sig2 = fitting_param_for_spectrum[k][5]*(1+absorber_redshift[k])
+            # obs_sig1 = fitting_param_for_spectrum[k][2]*(1+absorber_redshift[k])
+            # obs_sig2 = fitting_param_for_spectrum[k][5]*(1+absorber_redshift[k])
+            # obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, amp_second_nmf, fitted_l2, obs_sig2]
+
+            fitted_l1 = line_centre1*(1+absorber_redshift[k]) # in observed frame
+            fitted_l2 = line_centre2*(1+absorber_redshift[k])
+
+            obs_sig1 = sigma1*(1+absorber_redshift[k])
+            obs_sig2 = sigma2*(1+absorber_redshift[k])
             obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, amp_second_nmf, fitted_l2, obs_sig2]
 
             obs_fitting_param_for_spectrum, obs_fitting_param_std_for_spectrum, _, _, _,_ = double_curve_fit(

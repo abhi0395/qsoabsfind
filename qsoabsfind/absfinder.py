@@ -197,7 +197,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
         print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s], del_sigma: {del_sigma}')
 
-        bd_ct, x_sep = 2.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
+        bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         edge = 0.1
