@@ -111,7 +111,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -137,6 +137,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
         logwave (bool): if wavelength on log scale (default True for SDSS)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
+        nboot (int): if provided, will perform bootstrapping fitting (default None)
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -232,7 +233,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             print('INFO: sigma cut on convolved flux for potential candidates...')
 
             new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
-            final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
+            final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, residual, lam_obs, line1, line2, del_z)
             combined_final_our_z.append(final_our_z)
 
         print('INFO: combining redshifts...')
@@ -245,7 +246,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
         if len(combined_final_our_z)>0:
             z_abs, _, fit_param, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
-                index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
+                index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
 
             pure_z_abs = np.zeros(len(z_abs))
             pure_gauss_fit = np.zeros((len(z_abs), 6))
@@ -268,7 +269,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
                     z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
-                        index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix)
+                        index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
 
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                         gaussian_parameters = np.array(fit_param_temp[0])

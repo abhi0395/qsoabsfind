@@ -222,7 +222,7 @@ def group_contiguous_pixel(data, resi, avg):
     else:
         return groups
 
-def group_and_select_weighted_redshift(redshifts, fluxes, delta_z):
+def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, line1, line2, delta_z):
     """
     Group contiguous redshifts and select the highest weighted
     (corresponding to minimum flux) redshift from each group.
@@ -237,8 +237,16 @@ def group_and_select_weighted_redshift(redshifts, fluxes, delta_z):
     """
 
     # Ensure inputs are numpy arrays for easy manipulation
-    redshifts = np.array(redshifts)
+    all_redshifts = np.array(redshifts)
     fluxes = np.array(fluxes)
+    redshifts = []
+    for z in all_redshifts:
+        z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=9)
+        z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=9)
+        new_z = (z1 + z2) / 2
+        redshifts.append(new_z)
+
+    redshifts = np.array(redshifts)
 
     # Check if redshifts array is empty
     if len(redshifts) == 0:

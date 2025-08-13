@@ -192,6 +192,13 @@ def main():
     n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 1)) ## getting some CPUs for safe I/O processing
     print(f'INFO: number of CPUs used = {n_jobs}')
 
+    if "nboot" not in constants.search_parameters[args.absorber]:
+        constants.search_parameters[args.absorber]["nboot"] = None
+    else:
+        nboot = constants.search_parameters[args.absorber]["nboot"]
+        if nboot is not None and nboot>0:
+            print(f'INFO: Gaussian fitting Parameter estimation will be done with {nboot} bootstrapping estimation')
+
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
