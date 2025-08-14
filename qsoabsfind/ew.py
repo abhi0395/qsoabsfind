@@ -196,23 +196,7 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
 
     return fit_params_mean, fit_param_std, ew1_mean, ew2_mean, ew_total_mean, ew1_std, ew2_std, ew_total_std
 
-# @njit
-# def quick_significance_test_robust(flux_norm, fitted_model, error):
-#     """
-#     Significance test allowing for slight continuum variations.
-#     """
-#     # Fit a constant continuum level (1 parameter)
-#     continuum_level = np.ones_like(flux_norm)  # or weighted mean
-#     chi2_flat = np.sum(((flux_norm - continuum_level) / error) ** 2)
-
-#     # With absorption model
-#     chi2_with_lines = np.sum(((flux_norm - fitted_model) / error) ** 2)
-
-#     # Delta chi-square
-#     delta_chi2 = chi2_flat - chi2_with_lines
-
-#     return delta_chi2
-
+@njit
 def quick_significance_test(flux_norm, fitted_model, error,
                                   fitted_params=None, wavelength_rest=None,
                                   n_pixels=5):
