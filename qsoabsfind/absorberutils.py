@@ -130,7 +130,7 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
         log (bool): if wavelength bins are on log scale
 
     Returns:
-        tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.
+        tuple: Integrated signal-to-noise ratios (SNR) around the specified wavelengths.
                Returns (mean_sn1, mean_sn2).
     """
     if sig1 is None or sig2 is None:
@@ -158,9 +158,6 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
 
     diff1 = median - resi1
     diff2 = median - resi2
-
-    diff1[diff1<0] = 0
-    diff2[diff2<0] = 0
 
     sum_diff1 = np.nansum(diff1)
     sum_diff2 = np.nansum(diff2)
@@ -389,8 +386,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, vmax=120):
+                             ew1_snr, ew2_snr, delta_chi2, vmax=120):
     """Check absorber selection criteria, print details, and count satisfied conditions."""
+
     conds = [
         ((gaussian_parameters > bound[0] + 0.001).all(),
          f"{gaussian_parameters} > {bound[0] + 0.001}",
@@ -416,7 +414,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         (ew2_snr > 1, f"{ew2_snr} > 1",
          "ew2_snr > 1"),
         (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
-         f"|vel1 - vel2| < = {vmax}")
+         f"|vel1 - vel2| < = {vmax}"),
+         (delta_chi2 > 17, f"{delta_chi2} > 17",
+         "delta_chi2 > 17")
     ]
 
     true_count = sum(c[0] for c in conds)

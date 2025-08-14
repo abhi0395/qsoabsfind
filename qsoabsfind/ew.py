@@ -196,6 +196,23 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
 
     return fit_params_mean, fit_param_std, ew1_mean, ew2_mean, ew_total_mean, ew1_std, ew2_std, ew_total_std
 
+@njit
+def quick_significance_test_robust(flux_norm, fitted_model, error):
+    """
+    Significance test allowing for slight continuum variations.
+    """
+    # Fit a constant continuum level (1 parameter)
+    continuum_level = np.ones_like(flux_norm)  # or weighted mean
+    chi2_flat = np.sum(((flux_norm - continuum_level) / error) ** 2)
+
+    # With absorption model
+    chi2_with_lines = np.sum(((flux_norm - fitted_model) / error) ** 2)
+
+    # Delta chi-square
+    delta_chi2 = chi2_flat - chi2_with_lines
+
+    return delta_chi2
+
 def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix, num_iter=500, window=9, use_covariance=False, nboot=None):
     """
     Measures the properties of each potential absorber by fitting a double
@@ -243,6 +260,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
     EW_total = np.zeros(size_array, dtype='float32')
     EW_total_error = np.zeros(size_array, dtype='float32')
     z_abs_err = np.zeros(size_array, dtype='float32')
+    delta_chi2 = np.zeros(size_array, dtype='float32')
 
     line_centre1, line_centre2 = return_line_centers(use_kernel)
     amp_ratio = oscillator_params[f'{use_kernel}_f2'] / oscillator_params[f'{use_kernel}_f1']
@@ -340,9 +358,15 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k], fitting_param_pcov_for_spectrum[k] = double_curve_fit(
                 index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=2 * num_iter)
 
+            # model computation
+            fitted_model = double_gaussian(lam_fit, *fitting_param_for_spectrum[k])
+            delta_chi2[k] = quick_significance_test_robust(nmf_resi, fitted_model, error_flux)
+
             if nboot and nboot>0 and nmf_resi.size>0:
                 print(f'INFO: bootstrapping...')
                 fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], EW_first_line[k], EW_second_line[k], EW_total[k],  EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k]= bootstrap_fitting_and_ew(index, nboot, z_abs_array[k], wavelength, flux, error, ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter)
+                fitted_model = double_gaussian(lam_fit, *fitting_param_for_spectrum[k])
+                delta_chi2[k] = quick_significance_test_robust(nmf_resi, fitted_model, error)
             else:
                 # errors on EW
                 if not use_covariance:
@@ -360,6 +384,7 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
                 EW_second_line_error[k] = 0
                 EW_total_error[k] = 0
                 z_abs_err[k] = 0
+                delta_chi2[k] = 0
         else:
             EW_first_line[k] = 0
             EW_second_line[k] = 0
@@ -370,9 +395,11 @@ def measure_absorber_properties_double_gaussian(index, wavelength, flux, error, 
             fitting_param_for_spectrum[k] = np.zeros(nparm)
             fitting_param_std_for_spectrum[k] = np.zeros(nparm)
             z_abs_err[k] = 0
+            delta_chi2[k] = 0
 
     return (
         z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
         EW_first_line, EW_second_line, EW_total,
-        EW_first_line_error, EW_second_line_error, EW_total_error
+        EW_first_line_error, EW_second_line_error, EW_total_error,
+        delta_chi2
     )

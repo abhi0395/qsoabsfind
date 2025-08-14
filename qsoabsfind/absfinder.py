@@ -102,13 +102,13 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
         print(f'INFO: search absorber = {absorber}')
         print(f'INFO: Z_QSO = {z_qso[0]}')
 
-    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **kwargs)
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **kwargs)
 
     # Print progress for every spectrum processed
     elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
     print('-------\n')
 
-    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
+    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2)
 
 
 def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None):
@@ -245,7 +245,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         print(f'INFO: potential candidates after combining: {combined_final_our_z}')
 
         if len(combined_final_our_z)>0:
-            z_abs, _, fit_param, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
+            z_abs, _, fit_param, _, _, _, _, _, _, _,_ = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
 
             pure_z_abs = np.zeros(len(z_abs))
@@ -262,14 +262,16 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = np.zeros(len(z_abs))
             vel_disp1 = np.zeros(len(z_abs))
             vel_disp2 = np.zeros(len(z_abs))
+            delta_chi2_array = np.zeros(len(z_abs))
 
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
             print(f'INFO: performing final selection based on physical properties..')
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
-                    z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
+                    z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp, delta_chi2 = measure_absorber_properties_double_gaussian(
                         index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
+                    delta_chi2 = delta_chi2[0]
 
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                         gaussian_parameters = np.array(fit_param_temp[0])
@@ -297,7 +299,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr)
+                             ew1_snr, ew2_snr, delta_chi2)
                         if good:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
@@ -313,6 +315,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                             sn2_all[m] = sn2
                             vel_disp1[m] = vel1
                             vel_disp2[m] = vel2
+                            delta_chi2_array[m] = delta_chi2
 
             valid_indices = pure_z_abs != 0
             pure_z_abs = pure_z_abs[valid_indices]
@@ -329,6 +332,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = sn2_all[valid_indices]
             vel_disp1 = vel_disp1[valid_indices]
             vel_disp2 = vel_disp2[valid_indices]
+            delta_chi2_array = delta_chi2_array[valid_indices]
             print(f'INFO: final candidates: {pure_z_abs}')
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
@@ -354,6 +358,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 sn2_all = sn2_all[sel_indices]
                 vel_disp1 = vel_disp1[sel_indices]
                 vel_disp2 = vel_disp2[sel_indices]
+                delta_chi2_array = delta_chi2_array[sel_indices]
             else:
                 redshift_err = np.array([0])
                 pure_z_abs = np.array([0])
@@ -362,10 +367,11 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
                 sn1_all = sn2_all = np.array([0])
                 vel_disp1 = vel_disp2= np.array([0])
+                delta_chi2_array = np.array([0])
 
             not_found = max(1, len(pure_z_abs))
             index_spec = [spec_index for _ in range(not_found)]
             return (index_spec, pure_z_abs.tolist(), pure_gauss_fit.tolist(), pure_gauss_fit_std.tolist(), pure_ew_first_line_mean.tolist(), pure_ew_second_line_mean.tolist(), pure_ew_total_mean.tolist(),
-                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist(), vel_disp1.tolist(), vel_disp2.tolist())
+                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist(), vel_disp1.tolist(), vel_disp2.tolist(), delta_chi2_array.tolist())
         else:
-            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
