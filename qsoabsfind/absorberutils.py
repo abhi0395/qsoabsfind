@@ -240,7 +240,7 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
     for z in all_redshifts:
         z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=9)
         z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=9)
-        new_z = (z1 + z2) / 2
+        new_z = (line1 * z1 + line2 * z2) / (line1 + line2)
         redshifts.append(new_z)
 
     redshifts = np.array(redshifts)
@@ -278,7 +278,7 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
 
     return best_redshifts
 
-def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9):
+def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=False):
     """Estimate absorber redshift from the minimum flux near the expected line center.
 
     Given an initial redshift guess, this function identifies a symmetric window
@@ -296,7 +296,8 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9):
         z_guess (float): Initial absorber redshift guess.
         window (int, optional): Half-window size in **pixels** for the local search
             around the expected line center. Defaults to 9. The search range is
-            ±`window` × (wavelength pixel spacing).
+            +/- `window` x (wavelength pixel spacing).
+        log (bool): if wavelenght ins log-scale (default False)
 
     Returns:
         float: Refined redshift estimate computed as `(λ_min / line_rest) - 1`, where
@@ -308,10 +309,15 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9):
           `ValueError`. Consider pre-filtering `residual` or guarding with
           `np.isfinite` if this is a possibility in your data.
         - The window is defined in **observed-frame** wavelength by converting the
-          pixel count to Δλ using the local pixel spacing.
+          pixel count to delta λ using the local pixel spacing.
     """
     lam_expected = line_rest * (1 + z_guess)
-    delta = window * (wavelength[1] - wavelength[0])
+    if log:
+        del_log_lam = np.log10(wavelength[1]) - np.log10(wavelength[0])
+        delta = lam_expected * (10**(window * del_log_lam) - 1)
+    else:
+        delta_lam = (wavelength[1] - wavelength[0])
+        delta = window * delta_lam
     mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
 
     if np.any(mask):
@@ -320,7 +326,6 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9):
         return lam_min / line_rest - 1
     else:
         return z_guess  # fallback
-
 
 def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=9, gamma=4):
     """
