@@ -50,7 +50,7 @@ This implementation follows the methodology described by `Savage & Sembach (1991
 
 This optional HDU will contain:
 
-- **LOG10N**: (float), log of **total column density** (in cm<sup>-2</sup>), calculated from apparent optical depth method.
-- **SIG_LOG10N**: (float), uncertainty on log of **total column density** (in cm<sup>-2</sup>), calculated from apparent optical depth method.
+- **LOG10N**: (float), log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
+- **SIG_LOG10N**: (float), uncertainty on log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
 - **SATURATION**: (int), saturation flag, 1: saturated, 0: unsaturated
 - **fN**: (int), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.

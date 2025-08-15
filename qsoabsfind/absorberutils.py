@@ -4,6 +4,8 @@ This script contains a function to find metal absorbers in QSO spectra.
 
 import numpy as np
 from numba import jit
+import time
+from astropy.table import Table
 from scipy.stats import chi2
 from .config import load_constants
 from .utils import elapsed
@@ -305,7 +307,7 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=
         `λ_min` is the observed-frame wavelength at the minimum residual within the
         search window. If no pixels fall within the window, returns `z_guess`.
 
-    Notes:
+    Note:
         - If the search window contains only NaNs, `np.nanargmin` will raise a
           `ValueError`. Consider pre-filtering `residual` or guarding with
           `np.isfinite` if this is a possibility in your data.
@@ -804,11 +806,9 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     Note:
         - Assumes input spectra are already normalized (flux / continuum).
         - Checks whether enough search window pixels are available after masking NaNs.
-        - Users can define 'snr_cut' in kwargs to check if the median SNR > kwargs['snr_cut']
-        in the absorber search wavelength region.
+        - Users can define 'snr_cut' in kwargs to check if the median SNR > kwargs['snr_cut'] in the absorber search wavelength region.
     """
-    import time
-    from astropy.table import Table
+
     start_time = time.time()
 
     spectra.metadata = Table(spectra.metadata)  # in case spectra.metadata is a Row

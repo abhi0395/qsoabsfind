@@ -82,11 +82,6 @@ Contribution
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
 
-License
--------
-
-Copyright (c) 2021-2025 Abhijeet Anand.
-
 
 | Thanks,
 | Abhijeet Anand
