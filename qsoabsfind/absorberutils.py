@@ -4,6 +4,7 @@ This script contains a function to find metal absorbers in QSO spectra.
 
 import numpy as np
 from numba import jit
+from scipy.stats import chi2
 from .config import load_constants
 from .utils import elapsed
 
@@ -391,8 +392,10 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, vmax=120):
+                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120):
     """Check absorber selection criteria, print details, and count satisfied conditions."""
+
+    critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
 
     conds = [
         ((gaussian_parameters > bound[0] + 0.001).all(),
@@ -420,8 +423,8 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
          "ew2_snr > 1"),
         (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
          f"|vel1 - vel2| < = {vmax}"),
-         (delta_chi2 > 17, f"{delta_chi2} > 17",
-         "delta_chi2 > 17")
+         (delta_chi2 > critical_value, f"{delta_chi2} > {critical_value}",
+         f"delta_chi2 > {critical_value}")
     ]
 
     true_count = sum(c[0] for c in conds)

@@ -159,6 +159,7 @@ def main():
         'BLUE_LAM': {"value": lam_blue, "comment": 'blue end of quasar-rest frame (Ang) wavelength for absorber search'},
         'RED_LAM': {"value": lam_red, "comment": 'red end of quasar-rest frame (Ang) wavelength for absorber search'},
         'CONTERR': {"value": constants.continuum_error_frac, "comment": 'systematic error in continuum normalization'},
+        'CONFLEV': {"value": constants.search_parameters[args.absorber]["conf_level"], "comment": 'minimum confidence level for selection'},
     })
 
     if args.coldens:

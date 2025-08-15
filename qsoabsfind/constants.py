@@ -81,7 +81,6 @@ lines = {
     'end_rest_wave':None # red end of rest-frame quasar wavelength, None --> default
 }
 
-
 # ==============================
 # Default Signal Parameters
 # ==============================
@@ -108,6 +107,7 @@ default_search_params = {
     'use_covariance': False,
     'logwave': True,  # Assume SDSS-style linear by default
     'lam_edge_sep': lam_sep,
+    'conf_level':0.95, # 95 percent confidence level for absorber selection
     'verbose': True,
 }
 

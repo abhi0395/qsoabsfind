@@ -111,7 +111,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -138,6 +138,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         logwave (bool): if wavelength on log scale (default True for SDSS)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
         nboot (int): if provided, will perform bootstrapping fitting (default None)
+        conf_level (float): confidence level of absorber for chi2 statistics (default 0.95)
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -266,6 +267,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
             print(f'INFO: performing final selection based on physical properties..')
+            print(f'INFO: only absorbers with conf_level > {conf_level} will be selected')
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
@@ -299,7 +301,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2)
+                             ew1_snr, ew2_snr, delta_chi2, conf_level)
                         if good:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
