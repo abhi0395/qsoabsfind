@@ -83,6 +83,7 @@ search_parameters = {
         'use_covariance': False,
         'logwave': True,  # SDSS-like log-scaled wavelength
         'lam_edge_sep': lam_sep,
+        'conf_level':0.95, # 95 percent confidence level for absorber selection
         'verbose': True,
     },
     'CIV': {
@@ -96,6 +97,7 @@ search_parameters = {
         'use_covariance': False,
         'logwave': True,  # SDSS-like log-scaled wavelength
         'lam_edge_sep': lam_sep,
+        'conf_level':0.95, # 95 percent confidence level for absorber selection
         'verbose': True,
     }
 }

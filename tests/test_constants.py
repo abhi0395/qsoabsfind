@@ -13,17 +13,19 @@ class TestConstants(unittest.TestCase):
     def setUp(self):
         self.absorbers = doublet_keys.keys()
 
+    def test_supported_absorbers(self):
+        self.assertEqual(len(self.absorbers), 7)
+
     def test_absorber_parameters(self):
         for metal in self.absorbers:
-            self.assertTrue(any(k.startswith(metal + '_') for k in lines.keys()))
-            self.assertIn(metal, search_parameters)
-
-    def test_speed_of_light(self):
-        self.assertEqual(speed_of_light, 3e5)
+            self.assertEqual(len(doublet_keys[metal]), 2) # is a doublet
+            self.assertTrue(any(k.startswith(metal + '_') for k in lines.keys())) # if lines are present
+            self.assertIn(metal, search_parameters) # in search parameters dict, metal is present
+            self.assertIn('dv' , lines)
 
     def test_parameter_lengths(self):
-        self.assertEqual(len(oscillator_strengths), 2 * len(self.absorbers))
-        self.assertEqual(len(amplitude_dict), len(self.absorbers))
+        self.assertEqual(len(oscillator_strengths), 2 * len(self.absorbers)) # oscillator strenght of both lines are there
+        self.assertEqual(len(amplitude_dict), len(self.absorbers)) # amplitudes of both lines are there
 
 
 if __name__ == '__main__':

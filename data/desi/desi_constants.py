@@ -54,7 +54,7 @@ lines = {
 
     'dv': 5000,  # velocity offset from quasars redshift in km/s
     'start_rest_wave':1310, # blue end of rest-frame quasar wavelength, None --> default
-    'end_rest_wave':1520 # red end of rest-frame quasar wavelength, None --> default
+    'end_rest_wave':1520, # red end of rest-frame quasar wavelength, None --> default
 }
 
 
@@ -83,6 +83,7 @@ search_parameters = {
         'use_covariance': False,
         'logwave': False,  # DESI-like log-scaled wavelength
         'lam_edge_sep': lam_sep,
+        'conf_level':0.95, # 95 percent confidence level for absorber selection
         'verbose': True,
     },
     'CIV': {
@@ -96,6 +97,7 @@ search_parameters = {
         'use_covariance': False,
         'logwave': False,  # DESI-like linear wavelength
         'lam_edge_sep': lam_sep,
+        'conf_level':0.95, # 95 percent confidence level for absorber selection
         'verbose': True,
     }
 }
