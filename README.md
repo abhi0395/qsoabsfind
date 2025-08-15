@@ -31,14 +31,15 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 
 Key Features
 --------
-- **Automated Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter config file.
-- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
-- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
-- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
-- **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
-- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)).
+- **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter config file.
 - **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection.
+- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
+- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
+- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
+- **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)).
 - **Parallel processing**: Supports efficient computation across large datasets using Python's `multiprocessing` module.
+- **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
 
 
 Documentation
@@ -102,7 +103,6 @@ Running as bash script:
 
 ```sh
 qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-           --n-qso 500 \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
@@ -115,7 +115,6 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
 
 ```sh
 qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
-           --n-qso 500 \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=DESI AUTHOR=YOUR_NAME \
@@ -128,7 +127,6 @@ qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
 
 ```sh
 qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-           --n-qso 500 \
            --absorber MgII \
            --output test_MgII.fits \
            --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
@@ -176,8 +174,8 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
-Thanks,  
-Abhijeet Anand  
+Thanks,
+Abhijeet Anand
 Lawrence Berkeley National Lab
 
 

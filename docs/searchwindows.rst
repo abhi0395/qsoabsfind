@@ -1,7 +1,7 @@
-Search Windows
+Absorber Search Windows
 ==============
 
-For each absorber, we define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:
+For each absorber, user can define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:
 
 - We avoid regions near the quasar's own emission lines where intrinsic absorption may contaminate our detection.
 - We stay within the observed wavelength coverage.

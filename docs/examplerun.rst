@@ -33,12 +33,12 @@ Before running, please read :doc:`File formats <fileformat>`.
 Ready to run examples
 ------------------
 
-I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 **1. SDSS spectra** (MgII search, without column densities):
 -----------------------------------------------
 
-I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 .. code-block:: bash
 
@@ -52,7 +52,7 @@ I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``
 **2. DESI DR1 spectra** (MgII, without column densities):
 -----------------------------------------------
 
-Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 500 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
+Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
 
 .. code-block:: bash
 

@@ -38,6 +38,7 @@ The **output** `fits file` will have two (or three, optional) HDUs **ABSORBER** 
 - **${METAL}_EW_TOTAL**: (float), Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: (float), Uncertainties in total EW of the lines in Angstroms.
 - **${METAL}_${LINE}_VDISP**: (float), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
+- **DELTA_CHI2**: (float), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).
 
 
 **2) METADATA** HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.

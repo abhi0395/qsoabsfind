@@ -42,13 +42,15 @@ Supported Metal Doublet Systems
 Key Features
 --------
 - **Automated Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the `Search Window Documentation <https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html>`_. Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter config file.
-- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
-- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties.
-- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
-- **Instrumental correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
-- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
 - **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection.
+- **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
+- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
+- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
+- **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
 - **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
+- **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
+
 
 .. toctree::
    :maxdepth: 1
@@ -74,10 +76,16 @@ If you use this code in your analysis, please cite `Anand, Nelson & Kauffmann 20
 
 If you use this **codebase**, please also cite the associated `Zenodo record <https://zenodo.org/records/15685771>`_. Additionally, consider starring the repository if you find it useful or use it in your work.
 
-Contact & Issues
----------------
 
-For questions or feedback, please contact: `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
+Contribution
+------------
+
+Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to `abhijeetanand2011@gmail.com <mailto:abhijeetanand2011@gmail.com>`_ or, preferably, open a GitHub issue on the code `repo <https://github.com/abhi0395/qsoabsfind>`_.
+
+License
+-------
+
+Copyright (c) 2021-2025 Abhijeet Anand.
 
 
 | Thanks,
