@@ -1,9 +1,11 @@
-qsoabsfind
-============
+<div align="center">
+    <img src="https://raw.githubusercontent.com/qsoabsfind/ovi_support/docs/images/logo.png" width="450" height="205"/>
+</div>
 
-**The Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar**
+<br>
 
-<!-- [![github shields.io](https://img.shields.io/badge/GitHub-abhi0395%2Fqsoabsfind-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind)-->
+<div align="center">
+
 [![GitHub tag](https://img.shields.io/github/v/tag/abhi0395/qsoabsfind?sort=semver)](https://github.com/abhi0395/qsoabsfind/tags)
 [![arXiv-2103.15842](http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat)](https://arxiv.org/abs/2103.15842)
 [![arXiv-2504.20299](http://img.shields.io/badge/arXiv-2504.20299-orange.svg?style=flat)](https://arxiv.org/abs/2504.20299)
@@ -11,6 +13,10 @@ qsoabsfind
 [![codecov](https://codecov.io/gh/abhi0395/qsoabsfind/branch/ovi_support/graph/badge.svg)](https://codecov.io/gh/abhi0395/qsoabsfind)
 [![Documentation Status](https://readthedocs.org/projects/qsoabsfind/badge/?version=latest)](https://qsoabsfind.readthedocs.io/en/latest/?badge=latest)
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
+
+</div>
+
+## qsoabsfind: A Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar
 
 `qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
 
