@@ -26,13 +26,13 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 
 | Absorber | Line 1 (Å)  | Line 2 (Å) |
 |----------|--------|------------|
-| Mg II (Mg⁺)   | 2796.35    | 2803.52     |
-| C IV (C³⁺)   | 1548.20    | 1550.77     |
 | O VI (O⁵⁺)    | 1031.93    | 1037.62     |
 | N V (N⁴⁺)    | 1238.82    | 1242.80     |
 | Si IV (Si³⁺)   | 1393.76    | 1402.77     |
+| C IV (C³⁺)   | 1548.20    | 1550.77     |
 | Al III (Al²⁺)   | 1854.72     | 1862.79    |
 | Fe II (Fe⁺)  | 2586.65     | 2600.17     |
+| Mg II (Mg⁺)   | 2796.35    | 2803.52     |
 
 
 Key Features
