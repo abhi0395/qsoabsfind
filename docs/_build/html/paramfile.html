@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parameter File &mdash; qsoabsfind  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running examples" href="examplerun.html" />
+    <link rel="prev" title="Absorber Search Windows" href="searchwindows.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            qsoabsfind
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Parameter File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#constant-file-optional">Constant File (Optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-minimal-example-for-the-constants-py">A minimal example for the <code class="docutils literal notranslate"><span class="pre">constants.py</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">qsoabsfind</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Parameter File</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/abhi0395/qsoabsfind/blob/main/docs/paramfile.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="parameter-file">
+<h1>Parameter File<a class="headerlink" href="#parameter-file" title="Link to this heading"></a></h1>
+<section id="constant-file-optional">
+<h2>Constant File (Optional)<a class="headerlink" href="#constant-file-optional" title="Link to this heading"></a></h2>
+<p>Before using your own constants file, please set an environment variable <code class="docutils literal notranslate"><span class="pre">QSO_CONSTANTS_FILE</span></code> in your <code class="docutils literal notranslate"><span class="pre">bashrc</span></code> or <code class="docutils literal notranslate"><span class="pre">zshrc</span></code> file, and point it to the <code class="docutils literal notranslate"><span class="pre">qsoabsfind.constants</span></code> file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.</p>
+<p>The user-defined <strong>constants file</strong> must follow the same structure as the <a class="reference external" href="https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/constants.py">qsoabsfind.constants</a> file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the <cite>constant-file</cite> option.</p>
+</section>
+<section id="a-minimal-example-for-the-constants-py">
+<h2>A minimal example for the <code class="docutils literal notranslate"><span class="pre">constants.py</span></code><a class="headerlink" href="#a-minimal-example-for-the-constants-py" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">constants.py</span>
+
+<span class="sd">This module defines constants, line wavelengths, search parameters, and oscillator strengths</span>
+<span class="sd">used in QSO absorption line analysis.</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">    from constants import speed_of_light, lines, search_parameters, doublet_keys ...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Physical Constants</span>
+<span class="c1"># ==============================</span>
+
+<span class="n">speed_of_light</span> <span class="o">=</span> <span class="mf">3e5</span>  <span class="c1"># Speed of light in km/s</span>
+
+<span class="n">continuum_systematic_error</span> <span class="o">=</span> <span class="mf">0.05</span>
+<span class="c1"># Fixed fractional error due to continuum normalization (5%)</span>
+<span class="c1"># Used in estimating the uncertainty on column density</span>
+<span class="c1"># arising from continuum placement uncertainties.</span>
+<span class="c1"># Currently set empirically — a more optimal estimate can be obtained</span>
+<span class="c1"># by stacking continuum-normalized residual spectra in the observed frame</span>
+<span class="c1"># and measuring the standard deviation from unity.</span>
+
+<span class="c1"># Search absorber</span>
+<span class="n">doublet_keys</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;MgII&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">,</span> <span class="s1">&#39;MgII_2803&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Absorption Line Wavelengths (in Ang)</span>
+<span class="c1"># ==============================</span>
+
+<span class="n">lines</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Lyman series</span>
+    <span class="s1">&#39;Lya&#39;</span><span class="p">:</span> <span class="mf">1215.67</span><span class="p">,</span>
+    <span class="s1">&#39;Lyb_1026&#39;</span><span class="p">:</span> <span class="mf">1025.72</span><span class="p">,</span>
+
+    <span class="c1"># CIV doublet</span>
+    <span class="s1">&#39;CIV_1548&#39;</span><span class="p">:</span> <span class="mf">1548.20</span><span class="p">,</span>
+    <span class="s1">&#39;CIV_1550&#39;</span><span class="p">:</span> <span class="mf">1550.77</span><span class="p">,</span>
+    <span class="s1">&#39;CIV_1549&#39;</span><span class="p">:</span> <span class="mf">1549.48</span><span class="p">,</span>  <span class="c1"># CIV emission from quasar</span>
+
+    <span class="c1"># MgII doublet</span>
+    <span class="s1">&#39;MgII_2796&#39;</span><span class="p">:</span> <span class="mf">2796.35</span><span class="p">,</span>
+    <span class="s1">&#39;MgII_2803&#39;</span><span class="p">:</span> <span class="mf">2803.52</span><span class="p">,</span>
+    <span class="s1">&#39;MgII_2799&#39;</span><span class="p">:</span> <span class="mf">2799.117</span><span class="p">,</span>  <span class="c1"># MgII emission from quasar</span>
+
+    <span class="c1"># OVI doublet</span>
+    <span class="s1">&#39;OVI_1032&#39;</span><span class="p">:</span> <span class="mf">1031.926</span><span class="p">,</span>
+    <span class="s1">&#39;OVI_1038&#39;</span><span class="p">:</span> <span class="mf">1037.617</span><span class="p">,</span>
+    <span class="s1">&#39;OVI_1033&#39;</span><span class="p">:</span> <span class="mf">1033.82</span><span class="p">,</span>  <span class="c1"># OVI emission from Quasar</span>
+
+    <span class="c1"># NV doublet</span>
+    <span class="s1">&#39;NV_1238&#39;</span><span class="p">:</span> <span class="mf">1238.821</span><span class="p">,</span>
+    <span class="s1">&#39;NV_1242&#39;</span><span class="p">:</span> <span class="mf">1242.804</span><span class="p">,</span>
+    <span class="s1">&#39;NV_1240&#39;</span><span class="p">:</span> <span class="mf">1240.81</span><span class="p">,</span>  <span class="c1"># NV emission from Quasar</span>
+
+    <span class="c1"># SiIV doublet</span>
+    <span class="s1">&#39;SiIV_1394&#39;</span><span class="p">:</span> <span class="mf">1393.755</span><span class="p">,</span>
+    <span class="s1">&#39;SiIV_1403&#39;</span><span class="p">:</span> <span class="mf">1402.770</span><span class="p">,</span>
+    <span class="s1">&#39;SiIV_1399&#39;</span><span class="p">:</span> <span class="mf">1399.8</span><span class="p">,</span>  <span class="c1"># SiIV emission from Quasar</span>
+
+    <span class="c1"># AlIII doublet</span>
+    <span class="s1">&#39;AlIII_1855&#39;</span><span class="p">:</span> <span class="mf">1854.716</span><span class="p">,</span>
+    <span class="s1">&#39;AlIII_1863&#39;</span><span class="p">:</span> <span class="mf">1862.790</span><span class="p">,</span>
+    <span class="s1">&#39;AlIII_1857&#39;</span><span class="p">:</span> <span class="mf">1857.4</span><span class="p">,</span>  <span class="c1"># AlIII emission from Quasar</span>
+
+    <span class="c1"># FeII lines (two strongest)</span>
+    <span class="s1">&#39;FeII_2586&#39;</span><span class="p">:</span> <span class="mf">2586.650</span><span class="p">,</span>
+    <span class="s1">&#39;FeII_2600&#39;</span><span class="p">:</span> <span class="mf">2600.173</span><span class="p">,</span>
+
+    <span class="s1">&#39;dv&#39;</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># velocity offset from quasars redshift in km/s</span>
+    <span class="s1">&#39;start_rest_wave&#39;</span><span class="p">:</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># blue end of rest-frame quasar wavelength, None --&gt; default</span>
+    <span class="s1">&#39;end_rest_wave&#39;</span><span class="p">:</span><span class="kc">None</span> <span class="c1"># red end of rest-frame quasar wavelength, None --&gt; default</span>
+<span class="p">}</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Default Signal Parameters</span>
+<span class="c1"># ==============================</span>
+
+<span class="n">ker_width_pixels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]</span>  <span class="c1"># Gaussian kernel widths (in pixels) for convolution</span>
+<span class="n">pm_pixel</span> <span class="o">=</span> <span class="mi">200</span>                        <span class="c1"># Window size around feature for threshold calculation for convolved array</span>
+<span class="n">mult_resi</span> <span class="o">=</span> <span class="mi">1</span>                         <span class="c1"># Multiplication factor for residual spectrum</span>
+<span class="n">lam_sep</span> <span class="o">=</span> <span class="mi">50</span>                         <span class="c1"># Wavelength cut from spectrum edges (in Ang)</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Search Parameter Dictionary</span>
+<span class="c1"># ==============================</span>
+
+<span class="c1"># Define default parameters</span>
+<span class="c1"># Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest</span>
+<span class="n">default_search_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ker_width_pixels&#39;</span><span class="p">:</span> <span class="n">ker_width_pixels</span><span class="p">,</span>
+    <span class="s1">&#39;pm_pixel&#39;</span><span class="p">:</span> <span class="n">pm_pixel</span><span class="p">,</span>
+    <span class="s1">&#39;coeff_sigma&#39;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>
+    <span class="s1">&#39;mult_resi&#39;</span><span class="p">:</span> <span class="n">mult_resi</span><span class="p">,</span>
+    <span class="s1">&#39;d_pix&#39;</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span>
+    <span class="s1">&#39;sn_line1&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">&#39;sn_line2&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">&#39;use_covariance&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;logwave&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Assume DESI-style linear by default</span>
+    <span class="s1">&#39;lam_edge_sep&#39;</span><span class="p">:</span> <span class="n">lam_sep</span><span class="p">,</span>
+    <span class="s1">&#39;conf_level&#39;</span><span class="p">:</span><span class="mf">0.95</span><span class="p">,</span> <span class="c1"># 95 percent confidence level for absorber selection</span>
+    <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the final dictionary</span>
+<span class="n">search_parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">absorber</span><span class="p">:</span> <span class="n">default_search_params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Default Amplitudes for Gaussian doublet kernel</span>
+<span class="c1"># ==============================</span>
+
+<span class="n">amplitude_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;MgII&#39;</span><span class="p">:</span> <span class="mf">0.94</span>
+
+<span class="p">}</span>
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Oscillator Strengths (f-values)</span>
+<span class="c1"># ==============================</span>
+
+<span class="n">oscillator_parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># MgII doublet</span>
+    <span class="s1">&#39;MgII_f1&#39;</span><span class="p">:</span> <span class="mf">0.6123</span><span class="p">,</span>   <span class="c1"># 2796.35</span>
+    <span class="s1">&#39;MgII_f2&#39;</span><span class="p">:</span> <span class="mf">0.3054</span><span class="p">,</span>   <span class="c1"># 2803.52</span>
+<span class="p">}</span>
+
+
+<span class="c1"># ==============================</span>
+<span class="c1"># Notes:</span>
+<span class="c1"># ==============================</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">- SDSS spectra: `logwave=True` (log-uniform wavelength); resolution estimated automatically.</span>
+<span class="sd">- DESI spectra: `logwave=False` (linear wavelength grid); per-pixel resolution is computed.</span>
+<span class="sd">Adjust as needed based on spectrum type.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="searchwindows.html" class="btn btn-neutral float-left" title="Absorber Search Windows" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examplerun.html" class="btn btn-neutral float-right" title="Running examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2025-08-18.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

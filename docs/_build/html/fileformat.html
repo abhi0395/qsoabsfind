@@ -21,7 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Search Windows" href="searchwindows.html" />
+    <link rel="next" title="Absorber Search Windows" href="searchwindows.html" />
     <link rel="prev" title="Installation" href="installation.html" /> 
 </head>
 
@@ -49,11 +49,11 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">File formats</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#input-fits-file-structure">Input FITS File Structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#constant-file-optional">Constant File (Optional)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#output-fits-file-structure">Output FITS File Structure</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -88,34 +88,36 @@
 <h2>Input FITS File Structure<a class="headerlink" href="#input-fits-file-structure" title="Link to this heading"></a></h2>
 <p>The input <cite>fits file</cite> must have the following HDU extensions:</p>
 <ul class="simple">
-<li><p><strong>FLUX</strong>: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).</p></li>
-<li><p><strong>WAVELENGTH</strong>: Observed wavelength (in Angstroms).</p></li>
-<li><p><strong>ERROR</strong>: Error on residuals.</p></li>
-<li><p><strong>METADATA</strong>: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FLUX</span></code>: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WAVELENGTH</span></code>: Observed wavelength (in Angstroms).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ERROR</span></code>: Error on residuals.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">METADATA</span></code>: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).</p></li>
 </ul>
-<p>I have also provided two example QSO spectra FITS files. 1) <cite>data/sdss/qso_test_spectra.fits</cite>, which contains 100 continuum-normalized SDSS QSO spectra. 2) <cite>data/desi/qso_test_spectra.fits</cite>, which contains 100 continuum-normalized DESI DR1 QSO spectra. You can use these files to test an example run as described below.</p>
-</section>
-<section id="constant-file-optional">
-<h2>Constant File (Optional)<a class="headerlink" href="#constant-file-optional" title="Link to this heading"></a></h2>
-<p>Before using your own constants file, please set an environment variable <cite>QSO_CONSTANTS_FILE</cite> in your <cite>bashrc</cite> or <cite>zshrc</cite> file, and point it to the <cite>qsoabsfind.constants</cite> file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.</p>
-<p>The user-defined <strong>constants file</strong> must follow the same structure as the <a class="reference external" href="https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/constants.py">qsoabsfind.constants</a> file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the <cite>constant-file</cite> option.</p>
+<p>I have also provided two example QSO spectra FITS files. You can use these files to test an example run as described below.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code>, which contains 100 continuum-normalized SDSS QSO spectra.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data/desi/qso_test_spectra.fits</span></code>, which contains 100 continuum-normalized DESI DR1 QSO spectra.</p></li>
+</ul>
+</div></blockquote>
 </section>
 <section id="output-fits-file-structure">
 <h2>Output FITS File Structure<a class="headerlink" href="#output-fits-file-structure" title="Link to this heading"></a></h2>
 <p>The <strong>output</strong> <cite>fits file</cite> will have two (or three, optional) HDUs <strong>ABSORBER</strong> and <strong>METADATA</strong> or, (<strong>COLUMN_DENSITY</strong>, optional):</p>
 <p><strong>1) ABSORBER</strong> HDU will contain the following structured data:</p>
 <ul class="simple">
-<li><p><strong>INDEX_SPEC</strong>: (int), Index of quasar (can be used to read the RA, DEC, and Z of QSOs).</p></li>
-<li><p><strong>Z_ABS</strong>: (float), Redshift of absorber.</p></li>
-<li><p><strong>${METAL}_${LINE}_EW</strong>: (float), Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.</p></li>
-<li><p><strong>${METAL}_${LINE}_EW_ERROR</strong>: (float), Uncertainties in rest-frame EWs of absorber lines in Angstroms.</p></li>
-<li><p><strong>Z_ABS_ERR</strong>: (float), Measured error in the redshift of the absorber.</p></li>
-<li><p><strong>GAUSS_FIT</strong>: (float array), Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).</p></li>
-<li><p><strong>GAUSS_FIT_STD</strong>: (float array), Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.</p></li>
-<li><p><strong>SN_${METAL}_${LINE}</strong>: (float), Signal-to-noise ratio of the lines.</p></li>
-<li><p><strong>${METAL}_EW_TOTAL</strong>: (float), Total EW of the lines in Angstroms.</p></li>
-<li><p><strong>${METAL}_EW_TOTAL_ERROR</strong>: (float), Uncertainties in total EW of the lines in Angstroms.</p></li>
-<li><p><strong>${METAL}_${LINE}_VDISP</strong>: (float), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be <strong>zero</strong> for unresolved lines.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">INDEX_SPEC</span></code>: (<em>int</em>), Index of quasar (can be used to read the RA, DEC, and Z of QSOs).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Z_ABS</span></code>: (<em>float</em>), Redshift of absorber.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${METAL}_${LINE}_EW</span></code>: (<em>float</em>), Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${METAL}_${LINE}_EW_ERROR</span></code>: (<em>float</em>), Uncertainties in rest-frame EWs of absorber lines in Angstroms.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Z_ABS_ERR</span></code>: (<em>float</em>), Measured error in the redshift of the absorber.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GAUSS_FIT</span></code>: (<em>float array</em>), Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GAUSS_FIT_STD</span></code>: (<em>float array</em>), Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SN_${METAL}_${LINE}</span></code>: (<em>float</em>), Signal-to-noise ratio of the lines.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${METAL}_EW_TOTAL</span></code>: (<em>float</em>), Total EW of the lines in Angstroms.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${METAL}_EW_TOTAL_ERROR</span></code>: (<em>float</em>), Uncertainties in total EW of the lines in Angstroms.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${METAL}_${LINE}_VDISP</span></code>: (<em>float</em>), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be <strong>zero</strong> for unresolved lines.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DELTA_CHI2</span></code>: (<em>float</em>), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).</p></li>
 </ul>
 <p><strong>2) METADATA</strong> HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.</p>
 <p><strong>3) COLUMN_DENSITY</strong> HDU is optional:</p>
@@ -123,10 +125,10 @@
 This implementation follows the methodology described by <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract">Savage &amp; Sembach (1991)</a>.</p>
 <p>This optional HDU will contain:</p>
 <ul class="simple">
-<li><p><strong>LOG10N</strong>: (float), log of <strong>total column density</strong> (in cm&lt;sup&gt;-2&lt;/sup&gt;), calculated from apparent optical depth method.</p></li>
-<li><p><strong>SIG_LOG10N</strong>: (float), uncertainty on log of <strong>total column density</strong> (in cm&lt;sup&gt;-2&lt;/sup&gt;), calculated from apparent optical depth method.</p></li>
-<li><p><strong>SATURATION</strong>: (int), saturation flag, 1: saturated, 0: unsaturated</p></li>
-<li><p><strong>fN</strong>: (int), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LOG10N</span></code>: (<em>float</em>), log of <strong>total column density</strong> (in cm<sup>-2</sup>), calculated from apparent optical depth method.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SIG_LOG10N</span></code>: (<em>float</em>), uncertainty on log of <strong>total column density</strong> (in cm<sup>-2</sup>), calculated from apparent optical depth method.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SATURATION</span></code>: (<em>int</em>), saturation flag, 1: saturated, 0: unsaturated</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fN</span></code>: (<em>int</em>), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.</p></li>
 </ul>
 </section>
 </section>
@@ -136,14 +138,14 @@ This implementation follows the methodology described by <a class="reference ext
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="searchwindows.html" class="btn btn-neutral float-right" title="Search Windows" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="searchwindows.html" class="btn btn-neutral float-right" title="Absorber Search Windows" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

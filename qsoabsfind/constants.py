@@ -95,7 +95,7 @@ lam_sep = 50                         # Wavelength cut from spectrum edges (in An
 # ==============================
 
 # Define default parameters
-# Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest
+# Used in SDSS-like spectra (e.g., data/sdss/qso_test_spectra.py) for unittest
 default_search_params = {
     'ker_width_pixels': ker_width_pixels,
     'pm_pixel': pm_pixel,
@@ -105,7 +105,7 @@ default_search_params = {
     'sn_line1': 3,
     'sn_line2': 2,
     'use_covariance': False,
-    'logwave': True,  # Assume SDSS-style linear by default
+    'logwave': True,  # Assume SDSS-style log scale by default
     'lam_edge_sep': lam_sep,
     'conf_level':0.95, # 95 percent confidence level for absorber selection
     'verbose': True,

@@ -45,7 +45,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -189,9 +190,43 @@
     <span class="k">return</span> <span class="n">norm_constant</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">a1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">a2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mi">1</span></div>
 
 
+<div class="viewcode-block" id="compute_doublet_amplitudes">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.compute_doublet_amplitudes">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_doublet_amplitudes</span><span class="p">(</span><span class="n">A1_input</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes amplitudes for the first and second lines of a doublet</span>
+<span class="sd">    based on the user-defined A1_input and oscillator strengths f1 and f2.</span>
+
+<span class="sd">    Ensures that both amplitudes remain &lt;= 1.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A1_input (float): Desired amplitude of the stronger line (usually &lt;= 1).</span>
+<span class="sd">        f1 (float): Oscillator strength of the first line.</span>
+<span class="sd">        f2 (float): Oscillator strength of the second line.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (A1, A2): Tuple of amplitudes for line1 and line2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Normalize f1 and f2 such that max(A1, A2) = A1_input if possible</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">f2</span> <span class="o">/</span> <span class="n">f1</span>
+    <span class="n">A2</span> <span class="o">=</span> <span class="n">A1_input</span> <span class="o">*</span> <span class="n">ratio</span>
+
+    <span class="c1"># If A2 exceeds 1, we need to scale both amplitudes down</span>
+    <span class="k">if</span> <span class="n">A2</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">A2</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">A1_input</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="n">A2</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">A1_input</span>
+
+    <span class="k">return</span> <span class="n">A1</span><span class="p">,</span> <span class="n">A2</span></div>
+
+
+
 <div class="viewcode-block" id="convolution_fun">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.convolution_fun">[docs]</a>
-<span class="k">def</span> <span class="nf">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">wave_res</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">wave_res</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convolves the spectrum with a Gaussian kernel.</span>
 
@@ -202,7 +237,8 @@
 <span class="sd">        log (bool): if log bins should be used for wavelength</span>
 <span class="sd">        wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)</span>
 <span class="sd">        index (int): QSO index</span>
-<span class="sd">        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).</span>
+<span class="sd">        f1 (float): Oscillator strength of the first line.</span>
+<span class="sd">        f2 (float): Oscillator strength of the second line.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        numpy.ndarray: The convolved residual array.</span>
@@ -211,7 +247,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type. Available types are: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">amplitude_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="n">A_main</span> <span class="o">=</span> <span class="n">amplitude_dict</span><span class="p">[</span><span class="n">absorber</span><span class="p">]</span>
-    <span class="n">A_secondary</span> <span class="o">=</span> <span class="n">A_main</span> <span class="o">*</span> <span class="n">amp_ratio</span>
+    <span class="n">A_main</span><span class="p">,</span> <span class="n">A_secondary</span> <span class="o">=</span> <span class="n">compute_doublet_amplitudes</span><span class="p">(</span><span class="n">A_main</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
     <span class="n">ct</span> <span class="o">=</span> <span class="mi">10</span>
     <span class="c1"># extract lambdas for the doublet</span>
     <span class="n">lambda1</span><span class="p">,</span> <span class="n">lambda2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
@@ -344,6 +380,16 @@
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
+<div class="viewcode-block" id="numeric_key">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.numeric_key">[docs]</a>
+<span class="k">def</span> <span class="nf">numeric_key</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts first integer from filename for sorting; falls back to name if no number found.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">re</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\d+&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">())</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>  <span class="c1"># put no-number files at end</span></div>
+
+
+
 <div class="viewcode-block" id="combine_fits_files">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.combine_fits_files">[docs]</a>
 <span class="k">def</span> <span class="nf">combine_fits_files</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output_file</span><span class="p">):</span>
@@ -366,7 +412,7 @@
     <span class="n">primary_hdu</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">formats</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="c1"># Loop through each file in the directory</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">numeric_key</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">file_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">):</span>
             <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing file: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -473,9 +519,19 @@
     <span class="n">lam_obs1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="n">c1</span>
     <span class="n">lam_obs2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="n">c2</span>
 
+    <span class="c1"># Get per-line instrumental sigma_v (km/s)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resolution</span><span class="p">):</span>
+        <span class="n">res1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+        <span class="n">res2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Interpolate instrumental sigma_v at the exact observed wavelengths</span>
+        <span class="c1"># Assumes obs_wave is monotonic and same length as resolution.</span>
+        <span class="n">res1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs1</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
+        <span class="n">res2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs2</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
+
     <span class="c1"># Get per-line resolution (scalar or from array)</span>
-    <span class="n">res1</span> <span class="o">=</span> <span class="n">resolution</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span> <span class="k">else</span> <span class="n">resolution</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">obs_wave</span> <span class="o">-</span> <span class="n">lam_obs1</span><span class="p">))]</span>
-    <span class="n">res2</span> <span class="o">=</span> <span class="n">resolution</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span> <span class="k">else</span> <span class="n">resolution</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">obs_wave</span> <span class="o">-</span> <span class="n">lam_obs2</span><span class="p">))]</span>
+    <span class="c1">#res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]</span>
+    <span class="c1">#res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]</span>
 
     <span class="c1">#Gaussian quadrature correction</span>
     <span class="n">del_v1_sq</span> <span class="o">=</span> <span class="n">v1_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">res1</span><span class="o">**</span><span class="mi">2</span>
@@ -485,10 +541,10 @@
     <span class="n">is_resolved2</span> <span class="o">=</span> <span class="n">del_v2_sq</span> <span class="o">&gt;=</span> <span class="mi">0</span>
 
     <span class="c1"># Correct for instrumental resolution</span>
-    <span class="c1"># Set to 0 if the fitted  width is less than rest-frame instrumental width</span>
+    <span class="c1"># Set to NaN if the fitted  width is less than rest-frame instrumental width</span>
     <span class="c1"># One line may resolved and one may be not, so this condition is a little relaxed</span>
-    <span class="n">corr_del_v1_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v1_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved1</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
-    <span class="n">corr_del_v2_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v2_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved2</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">corr_del_v1_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v1_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">corr_del_v2_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v2_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved2</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
     <span class="k">return</span> <span class="n">corr_del_v1_sq</span><span class="p">,</span> <span class="n">corr_del_v2_sq</span></div>
 
@@ -682,7 +738,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

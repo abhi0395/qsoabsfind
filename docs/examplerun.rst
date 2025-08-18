@@ -35,10 +35,13 @@ Ready to run examples
 
 I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
-**1. SDSS spectra** (MgII search, without column densities):
------------------------------------------------
+1. Without Column Densities
+^^^^^^^^^^
 
-I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+**SDSS DR16 spectra** (MgII search, without column densities)
+~~~~~~~~
+
+I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. These folders also have their own constants files. You can use these files to test example runs as described below.
 
 .. code-block:: bash
 
@@ -49,8 +52,8 @@ I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
                --ncpus 4
 
-**2. DESI DR1 spectra** (MgII, without column densities):
------------------------------------------------
+**DESI DR1 spectra** (MgII, without column densities):
+~~~~~~~
 
 Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
 
@@ -63,8 +66,11 @@ Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_tes
                --headers SURVEY=DESI AUTHOR=YOUR_NAME \
                --ncpus 4
 
-**3. SDSS DR16 spectra** (MgII, with column densities):
------------------------------------------------
+2. With Column Densities
+^^^^^^^^^^
+
+**SDSS DR16 spectra** (MgII, with column densities):
+~~~~~~
 
 Optionally, users can instruct the module to calculate **total column densities** of metal absorbers using the
 **apparent optical depth (AOD) method** (see `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
@@ -84,16 +90,18 @@ Here, ``--dv 300`` means the integration will be performed over ±300 km/s from 
                --coldens
                --dv 300
 
-Description:
+Description
 ------------
 
 - ``--input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
 - ``--constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
 - ``--output``: Output filename to save absorber catalog
 - ``--absorber``: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
+- ``--coldens``: To enable AODM based column density estimation
+- ``--dv``: Velocity width (in *km/s*) for flux integration around each line center
 
 
-Useful notes:
+Useful notes
 -------------
 
 Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:

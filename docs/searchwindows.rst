@@ -12,7 +12,7 @@ Parameter Definitions
 
 - :math:`\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}`: Full observed-frame wavelength coverage of the spectrum.
 - :math:`z_{\mathrm{QSO}}`: Emission redshift of the background quasar.
-- :math:`\Delta z` is derived from the velocity offset parameter (`lines["dv"]`, from `constants.py`) to avoid regions close to emission lines.
+- :math:`\Delta z` is derived from the velocity offset parameter (``lines["dv"]``, from ``qsoabsfind.constants``) to avoid regions close to emission lines.
 - :math:`\Delta\lambda_{\mathrm{edge}}` is a offset from edges to avoid noisy regions during convolution or feature detection near the wavelength edges.
 
 

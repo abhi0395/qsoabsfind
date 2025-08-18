@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="https://github.com/abhi0395/qsoabsfind/blob/ovi_support/docs/images/logo.png" width="450" height="305"/>
+    <img src="https://raw.githubusercontent.com/abhi0395/qsoabsfind/HEAD/docs/images/logo.png" width="450" height="305"/>
 </div>
 
 <br>
@@ -10,13 +10,13 @@
 [![arXiv-2103.15842](http://img.shields.io/badge/arXiv-2103.15842-orange.svg?style=flat)](https://arxiv.org/abs/2103.15842)
 [![arXiv-2504.20299](http://img.shields.io/badge/arXiv-2504.20299-orange.svg?style=flat)](https://arxiv.org/abs/2504.20299)
 [![Tests](https://github.com/abhi0395/qsoabsfind/actions/workflows/tests.yml/badge.svg)](https://github.com/abhi0395/qsoabsfind/actions)
-[![codecov](https://codecov.io/gh/abhi0395/qsoabsfind/branch/ovi_support/graph/badge.svg)](https://codecov.io/gh/abhi0395/qsoabsfind)
+[![codecov](https://codecov.io/gh/abhi0395/qsoabsfind/branch/main/graph/badge.svg)](https://codecov.io/gh/abhi0395/qsoabsfind)
 [![Documentation Status](https://readthedocs.org/projects/qsoabsfind/badge/?version=latest)](https://qsoabsfind.readthedocs.io/en/latest/?badge=latest)
 [![license shields.io](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/abhi0395/qsoabsfind/blob/main/LICENSE)
 
 </div>
 
-## qsoabsfind: A Python module designed to detect absorbers with doublet properties in SDSS/DESI quasar
+## qsoabsfind: Quasar Absorber Finder
 
 `qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
 
@@ -37,8 +37,8 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 
 Key Features
 --------
-- **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter config file.
-- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection.
+- **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
+- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``qsoabsfind.constants``.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
@@ -99,7 +99,7 @@ Important Instructions
 - I have also provided two example QSO spectra files:
   -  `data/sdss/qso_test_spectra.fits` : 100 continuum-normalized spectra from [SDSS DR16](https://www.sdss4.org/dr17/algorithms/qso_catalog/)
   -  `data/desi/qso_test_spectra.fits` : 100 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
-- You can use these files to test an example run as described below.
+- These folders also have their own constants files. You can use these files to test example runs as described below.
 
 Running as bash script:
 ----------------
@@ -180,8 +180,8 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
-Thanks,    
-Abhijeet Anand    
+Thanks,
+Abhijeet Anand
 Lawrence Berkeley National Lab
 
 

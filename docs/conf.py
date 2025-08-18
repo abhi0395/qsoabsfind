@@ -7,6 +7,7 @@ project = 'qsoabsfind'
 author = 'Abhijeet Anand'
 copyright = f'2021-{datetime.now().year}, Abhijeet Anand'
 
+
 html_context = {
     'current_year': datetime.now().year,
     "display_github": True, # Add 'Edit on Github' link instead of 'View page source'

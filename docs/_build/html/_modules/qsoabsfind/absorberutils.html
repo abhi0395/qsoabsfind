@@ -45,7 +45,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -80,9 +81,12 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">chi2</span>
 <span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
-<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
 
 <span class="c1"># Constants</span>
 <span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
@@ -218,7 +222,7 @@
 <span class="sd">        log (bool): if wavelength bins are on log scale</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        tuple: Mean signal-to-noise ratios (SNR) around the specified wavelengths.</span>
+<span class="sd">        tuple: Integrated signal-to-noise ratios (SNR) around the specified wavelengths.</span>
 <span class="sd">               Returns (mean_sn1, mean_sn2).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">sig1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">sig2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -230,8 +234,8 @@
             <span class="n">delta1</span> <span class="o">=</span> <span class="n">dpix</span> <span class="o">*</span> <span class="p">(</span><span class="n">lam_rest</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">lam_rest</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">delta2</span> <span class="o">=</span> <span class="n">delta1</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">nsig</span> <span class="o">=</span> <span class="mi">4</span> <span class="c1"># for gaussian more than 99.7 percentile data is within 4sigma</span>
-        <span class="n">delta1</span><span class="p">,</span> <span class="n">delta2</span> <span class="o">=</span> <span class="n">nsig</span> <span class="o">*</span> <span class="n">sig2</span><span class="p">,</span> <span class="n">nsig</span> <span class="o">*</span> <span class="n">sig2</span>
+        <span class="n">nsig</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># for gaussian more than 99.7 percentile data is within 4sigma</span>
+        <span class="n">delta1</span><span class="p">,</span> <span class="n">delta2</span> <span class="o">=</span> <span class="n">nsig</span> <span class="o">*</span> <span class="n">sig1</span><span class="p">,</span> <span class="n">nsig</span> <span class="o">*</span> <span class="n">sig2</span>
 
     <span class="n">ind1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">lam_rest</span> <span class="o">&gt;</span> <span class="n">l1</span> <span class="o">-</span> <span class="n">delta1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_rest</span> <span class="o">&lt;</span> <span class="n">l1</span> <span class="o">+</span> <span class="n">delta1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">ind2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">lam_rest</span> <span class="o">&gt;</span> <span class="n">l2</span> <span class="o">-</span> <span class="n">delta2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_rest</span> <span class="o">&lt;</span> <span class="n">l2</span> <span class="o">+</span> <span class="n">delta2</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
@@ -242,16 +246,15 @@
     <span class="n">err1</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">ind1</span><span class="p">]</span>
     <span class="n">err2</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">ind2</span><span class="p">]</span>
 
-    <span class="n">median</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># Assuming median residual value is 1</span>
+    <span class="n">median</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># Assuming median residual value is 1, as it continuum-normalized</span>
 
-    <span class="n">diff1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">median</span> <span class="o">-</span> <span class="n">resi1</span><span class="p">)</span>
-    <span class="n">diff2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">median</span> <span class="o">-</span> <span class="n">resi2</span><span class="p">)</span>
+    <span class="n">diff1</span> <span class="o">=</span> <span class="n">median</span> <span class="o">-</span> <span class="n">resi1</span>
+    <span class="n">diff2</span> <span class="o">=</span> <span class="n">median</span> <span class="o">-</span> <span class="n">resi2</span>
 
     <span class="n">sum_diff1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">diff1</span><span class="p">)</span>
     <span class="n">sum_diff2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">diff2</span><span class="p">)</span>
     <span class="n">sum_err1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">err1</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
     <span class="n">sum_err2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">err2</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
-
 
     <span class="n">mean_sn1</span><span class="p">,</span> <span class="n">mean_sn2</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="c1"># in case failure</span>
 
@@ -314,7 +317,7 @@
 
 <div class="viewcode-block" id="group_and_select_weighted_redshift">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.group_and_select_weighted_redshift">[docs]</a>
-<span class="k">def</span> <span class="nf">group_and_select_weighted_redshift</span><span class="p">(</span><span class="n">redshifts</span><span class="p">,</span> <span class="n">fluxes</span><span class="p">,</span> <span class="n">delta_z</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">group_and_select_weighted_redshift</span><span class="p">(</span><span class="n">redshifts</span><span class="p">,</span> <span class="n">fluxes</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">lam_obs</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">delta_z</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Group contiguous redshifts and select the highest weighted</span>
 <span class="sd">    (corresponding to minimum flux) redshift from each group.</span>
@@ -329,8 +332,16 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Ensure inputs are numpy arrays for easy manipulation</span>
-    <span class="n">redshifts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">redshifts</span><span class="p">)</span>
+    <span class="n">all_redshifts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">redshifts</span><span class="p">)</span>
     <span class="n">fluxes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fluxes</span><span class="p">)</span>
+    <span class="n">redshifts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">all_redshifts</span><span class="p">:</span>
+        <span class="n">z1</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+        <span class="n">z2</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+        <span class="n">new_z</span> <span class="o">=</span> <span class="p">(</span><span class="n">line1</span> <span class="o">*</span> <span class="n">z1</span> <span class="o">+</span> <span class="n">line2</span> <span class="o">*</span> <span class="n">z2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">line1</span> <span class="o">+</span> <span class="n">line2</span><span class="p">)</span>
+        <span class="n">redshifts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_z</span><span class="p">)</span>
+
+    <span class="n">redshifts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">redshifts</span><span class="p">)</span>
 
     <span class="c1"># Check if redshifts array is empty</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">redshifts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -366,9 +377,61 @@
     <span class="k">return</span> <span class="n">best_redshifts</span></div>
 
 
+<div class="viewcode-block" id="find_z_from_minimum">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.find_z_from_minimum">[docs]</a>
+<span class="k">def</span> <span class="nf">find_z_from_minimum</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">line_rest</span><span class="p">,</span> <span class="n">z_guess</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate absorber redshift from the minimum flux near the expected line center.</span>
+
+<span class="sd">    Given an initial redshift guess, this function identifies a symmetric window</span>
+<span class="sd">    around the expected observed-frame line center and finds the pixel with the</span>
+<span class="sd">    minimum residual (flux) within that window. The wavelength of that minimum is</span>
+<span class="sd">    converted back to a refined redshift for the line.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        wavelength (numpy.ndarray): Observed-frame wavelength array, monotonically</span>
+<span class="sd">            increasing and aligned with `residual`.</span>
+<span class="sd">        residual (numpy.ndarray): Residual/flux array aligned with `wavelength`.</span>
+<span class="sd">            May contain NaNs; the minimum is computed with `np.nanargmin`.</span>
+<span class="sd">        line_rest (float): Rest-frame wavelength (in the same units as `wavelength`)</span>
+<span class="sd">            of the spectral line used for refinement (e.g., 1548.204 A for C IV).</span>
+<span class="sd">        z_guess (float): Initial absorber redshift guess.</span>
+<span class="sd">        window (int, optional): Half-window size in **pixels** for the local search</span>
+<span class="sd">            around the expected line center. Defaults to 9. The search range is</span>
+<span class="sd">            +/- `window` x (wavelength pixel spacing).</span>
+<span class="sd">        log (bool): if wavelenght ins log-scale (default False)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: Refined redshift estimate computed as `(λ_min / line_rest) - 1`, where</span>
+<span class="sd">        `λ_min` is the observed-frame wavelength at the minimum residual within the</span>
+<span class="sd">        search window. If no pixels fall within the window, returns `z_guess`.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - If the search window contains only NaNs, `np.nanargmin` will raise a</span>
+<span class="sd">          `ValueError`. Consider pre-filtering `residual` or guarding with</span>
+<span class="sd">          `np.isfinite` if this is a possibility in your data.</span>
+<span class="sd">        - The window is defined in **observed-frame** wavelength by converting the</span>
+<span class="sd">          pixel count to delta λ using the local pixel spacing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lam_expected</span> <span class="o">=</span> <span class="n">line_rest</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_guess</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">log</span><span class="p">:</span>
+        <span class="n">del_log_lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">wavelength</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">wavelength</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">lam_expected</span> <span class="o">*</span> <span class="p">(</span><span class="mi">10</span><span class="o">**</span><span class="p">(</span><span class="n">window</span> <span class="o">*</span> <span class="n">del_log_lam</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">delta_lam</span> <span class="o">=</span> <span class="p">(</span><span class="n">wavelength</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">wavelength</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">window</span> <span class="o">*</span> <span class="n">delta_lam</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">wavelength</span> <span class="o">&gt;</span> <span class="n">lam_expected</span> <span class="o">-</span> <span class="n">delta</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">wavelength</span> <span class="o">&lt;</span> <span class="n">lam_expected</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+        <span class="n">idx_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanargmin</span><span class="p">(</span><span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+        <span class="n">lam_min</span> <span class="o">=</span> <span class="n">wavelength</span><span class="p">[</span><span class="n">mask</span><span class="p">][</span><span class="n">idx_min</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">lam_min</span> <span class="o">/</span> <span class="n">line_rest</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">z_guess</span>  <span class="c1"># fallback</span></div>
+
+
 <div class="viewcode-block" id="median_selection_after_combining">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.median_selection_after_combining">[docs]</a>
-<span class="k">def</span> <span class="nf">median_selection_after_combining</span><span class="p">(</span><span class="n">combined_final_our_z</span><span class="p">,</span> <span class="n">lam_search</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">use_kernel</span><span class="p">,</span> <span class="n">delta_z</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">median_selection_after_combining</span><span class="p">(</span><span class="n">combined_final_our_z</span><span class="p">,</span> <span class="n">lam_search</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">use_kernel</span><span class="p">,</span> <span class="n">delta_z</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Perform grouping and weighted mean from the list of all potentially</span>
 <span class="sd">    identified absorbers after combining from all the runs with different</span>
@@ -381,12 +444,23 @@
 <span class="sd">        d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)</span>
 <span class="sd">        use_kernel (str, optional): Kernel type.</span>
 <span class="sd">        delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.</span>
+<span class="sd">        window (int): window size for redshift estimate (default 9)</span>
 <span class="sd">        gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: List after grouping contiguous pixels for each spectrum.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">thresh</span>  <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">use_kernel</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">thresh1</span>  <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">use_kernel</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="n">new_z</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">combined_final_our_z</span><span class="p">:</span>
+        <span class="n">z1</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">lam_search</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">thresh</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">z2</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">lam_search</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">thresh1</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">nz</span> <span class="o">=</span> <span class="p">(</span><span class="n">thresh</span> <span class="o">*</span> <span class="n">z1</span> <span class="o">+</span> <span class="n">thresh1</span> <span class="o">*</span> <span class="n">z2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">thresh</span> <span class="o">+</span> <span class="n">thresh1</span><span class="p">)</span>
+        <span class="n">new_z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nz</span><span class="p">)</span>
+
+    <span class="n">combined_final_our_z</span> <span class="o">=</span> <span class="n">new_z</span>
 
     <span class="n">z_ind</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Final list of median redshifts for each spectrum</span>
     <span class="n">ct</span> <span class="o">=</span> <span class="mi">2</span>
@@ -416,6 +490,62 @@
         <span class="k">return</span> <span class="n">z_ind</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">combined_final_our_z</span></div>
+
+
+<div class="viewcode-block" id="check_absorber_selection">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.check_absorber_selection">[docs]</a>
+<span class="k">def</span> <span class="nf">check_absorber_selection</span><span class="p">(</span><span class="n">qso_id</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">gaussian_parameters</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span>
+                             <span class="n">lower_del_lam</span><span class="p">,</span> <span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">upper_del_lam</span><span class="p">,</span>
+                             <span class="n">sn1</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn2</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span>
+                             <span class="n">vel1</span><span class="p">,</span> <span class="n">vel2</span><span class="p">,</span> <span class="n">min_dr</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">max_dr</span><span class="p">,</span>
+                             <span class="n">ew1_snr</span><span class="p">,</span> <span class="n">ew2_snr</span><span class="p">,</span> <span class="n">delta_chi2</span><span class="p">,</span> <span class="n">conf_level</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">120</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check absorber selection criteria, print details, and count satisfied conditions.&quot;&quot;&quot;</span>
+
+    <span class="n">critical_value</span> <span class="o">=</span> <span class="n">chi2</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">conf_level</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gaussian_parameters</span><span class="p">))</span>
+
+    <span class="n">conds</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">((</span><span class="n">gaussian_parameters</span> <span class="o">&gt;</span> <span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.001</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">gaussian_parameters</span><span class="si">}</span><span class="s2"> &gt; </span><span class="si">{</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">0.001</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;gaussian_parameters &gt; bound[0] + 0.001&quot;</span><span class="p">),</span>
+        <span class="p">((</span><span class="n">gaussian_parameters</span> <span class="o">&lt;</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.001</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">gaussian_parameters</span><span class="si">}</span><span class="s2"> &lt; </span><span class="si">{</span><span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">0.001</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;gaussian_parameters &lt; bound[0] - 0.001&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">lower_del_lam</span> <span class="o">&lt;=</span> <span class="n">c1</span> <span class="o">-</span> <span class="n">c0</span> <span class="o">&lt;=</span> <span class="n">upper_del_lam</span><span class="p">,</span>
+         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lower_del_lam</span><span class="si">}</span><span class="s2"> &lt;= </span><span class="si">{</span><span class="n">c1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">c0</span><span class="si">}</span><span class="s2"> &lt;= </span><span class="si">{</span><span class="n">upper_del_lam</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;lower_del_lam &lt;= c1 - c0 &lt;= upper_del_lam&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">sn1</span> <span class="o">&gt;=</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sn1</span><span class="si">}</span><span class="s2"> &gt;= </span><span class="si">{</span><span class="n">sn_line1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;sn1 &gt;= sn_line1&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">sn2</span> <span class="o">&gt;=</span> <span class="n">sn_line2</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sn2</span><span class="si">}</span><span class="s2"> &gt;= </span><span class="si">{</span><span class="n">sn_line2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;sn2 &gt;= sn_line2&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">vel1</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">vel1</span><span class="si">}</span><span class="s2"> &gt;= 0&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;vel1 &gt;=0&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">vel2</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">vel2</span><span class="si">}</span><span class="s2"> &gt;= 0&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;vel2 &gt;=0&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">min_dr</span> <span class="o">&lt;</span> <span class="n">dr</span> <span class="o">&lt;</span> <span class="n">max_dr</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">min_dr</span><span class="si">}</span><span class="s2"> &lt; </span><span class="si">{</span><span class="n">dr</span><span class="si">}</span><span class="s2"> &lt; </span><span class="si">{</span><span class="n">max_dr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;min_dr &lt; dr &lt; max_dr&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">ew1_snr</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ew1_snr</span><span class="si">}</span><span class="s2"> &gt; 1&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;ew1_snr &gt; 1&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">ew2_snr</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ew2_snr</span><span class="si">}</span><span class="s2"> &gt; 1&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;ew2_snr &gt; 1&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">vel1</span> <span class="o">-</span> <span class="n">vel2</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">vmax</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;|</span><span class="si">{</span><span class="n">vel1</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">vel2</span><span class="si">}</span><span class="s2">| &lt;= </span><span class="si">{</span><span class="n">vmax</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="sa">f</span><span class="s2">&quot;|vel1 - vel2| &lt; = </span><span class="si">{</span><span class="n">vmax</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">),</span>
+         <span class="p">(</span><span class="n">delta_chi2</span> <span class="o">&gt;</span> <span class="n">critical_value</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">delta_chi2</span><span class="si">}</span><span class="s2"> &gt; </span><span class="si">{</span><span class="n">critical_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+         <span class="sa">f</span><span class="s2">&quot;delta_chi2 &gt; </span><span class="si">{</span><span class="n">critical_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="n">true_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">conds</span><span class="p">)</span>
+    <span class="n">false_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">conds</span><span class="p">)</span> <span class="o">-</span> <span class="n">true_count</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">conds</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: QSO_INDEX = </span><span class="si">{</span><span class="n">qso_id</span><span class="si">}</span><span class="s2">, Condition checks for Z_ABS = </span><span class="si">{</span><span class="n">zabs</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">detail</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">conds</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: Summary: </span><span class="si">{</span><span class="n">true_count</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">conds</span><span class="p">)</span><span class="si">}</span><span class="s2"> conditions satisfied, </span><span class="si">{</span><span class="n">false_count</span><span class="si">}</span><span class="s2"> failed.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: Final result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=========&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="remove_Mg_falsely_come_from_Fe_absorber">
@@ -573,7 +703,7 @@
 
             <span class="c1"># Calculate differences between current absorber and others</span>
             <span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">abs_z</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">abs_z</span><span class="p">)</span>
-            <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">diff</span> <span class="o">&lt;=</span> <span class="n">thresh</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">diff</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">diff</span> <span class="o">&lt;=</span> <span class="n">thresh</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="n">ix</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="c1"># Consider the current absorber and its closely spaced ones</span>
@@ -622,14 +752,20 @@
 <span class="sd">            - z_corr (float): mean redshift estimated from the Gaussian fitting parameters.</span>
 <span class="sd">            - z_err (float): Estimated error in the corrected redshift.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">z1</span> <span class="o">=</span> <span class="p">(</span><span class="n">fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-    <span class="n">z2</span> <span class="o">=</span> <span class="p">(</span><span class="n">fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">z2</span> <span class="o">=</span> <span class="p">((</span><span class="n">line2</span> <span class="o">-</span> <span class="n">line1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z1</span><span class="p">)</span> <span class="o">+</span> <span class="n">fitted_obs_l1</span><span class="p">)</span> <span class="o">/</span> <span class="n">line2</span> <span class="o">-</span> <span class="mi">1</span>
 
     <span class="n">err1</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span>
     <span class="n">err2</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span>
 
-    <span class="n">z_corr</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">z1</span> <span class="o">+</span> <span class="n">z2</span><span class="p">)</span>  <span class="c1"># New redshifts computed using line centers of the first and second Gaussian</span>
-    <span class="n">z_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.25</span> <span class="o">*</span> <span class="p">(</span><span class="n">err1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">err2</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="c1"># New redshifts computed using line centers</span>
+    <span class="c1"># of the first and second Gaussian using a weighted mean</span>
+
+    <span class="n">w1</span> <span class="o">=</span> <span class="n">line1</span> <span class="o">/</span> <span class="p">(</span><span class="n">line1</span> <span class="o">+</span> <span class="n">line2</span><span class="p">)</span>
+    <span class="n">w2</span> <span class="o">=</span> <span class="n">line2</span> <span class="o">/</span> <span class="p">(</span><span class="n">line1</span> <span class="o">+</span> <span class="n">line2</span><span class="p">)</span>
+    <span class="n">z_corr</span> <span class="o">=</span> <span class="n">w1</span> <span class="o">*</span> <span class="n">z1</span> <span class="o">+</span> <span class="n">w2</span> <span class="o">*</span> <span class="n">z2</span>
+    <span class="n">z_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">w1</span> <span class="o">*</span> <span class="n">err1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">w2</span> <span class="o">*</span> <span class="n">err2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">z_corr</span><span class="p">,</span> <span class="n">z_err</span></div>
 
@@ -798,9 +934,9 @@
 <span class="sd">    Note:</span>
 <span class="sd">        - Assumes input spectra are already normalized (flux / continuum).</span>
 <span class="sd">        - Checks whether enough search window pixels are available after masking NaNs.</span>
+<span class="sd">        - Users can define &#39;snr_cut&#39; in kwargs to check if the median SNR &gt; kwargs[&#39;snr_cut&#39;] in the absorber search wavelength region.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">import</span> <span class="nn">time</span>
-    <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>  <span class="c1"># in case spectra.metadata is a Row</span>
@@ -842,8 +978,14 @@
 
     <span class="k">if</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">0</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">1</span></div>
+
+    <span class="k">if</span> <span class="s2">&quot;snr_cut&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">snr_median</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmedian</span><span class="p">(</span><span class="n">unmsk_residual</span> <span class="o">/</span> <span class="n">unmsk_error</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Checking SNR in the wavelength search region (median SNR = </span><span class="si">{</span><span class="n">snr_median</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">, threshold = </span><span class="si">{</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">snr_median</span> <span class="o">&lt;</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="k">return</span> <span class="mi">1</span></div>
 
 </pre></div>
 
@@ -855,7 +997,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

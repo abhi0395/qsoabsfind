@@ -45,7 +45,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -80,12 +81,14 @@
 <div class="genindex-jumpbox">
  <a href="#_"><strong>_</strong></a>
  | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#Q"><strong>Q</strong></a>
@@ -116,6 +119,14 @@
   </ul></td>
 </tr></table>
 
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="qsoabsfind.html#qsoabsfind.ew.bootstrap_fitting_and_ew">bootstrap_fitting_and_ew() (in module qsoabsfind.ew)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -123,10 +134,14 @@
 </li>
       <li><a href="qsoabsfind.html#qsoabsfind.ew.calculate_ew_errors">calculate_ew_errors() (in module qsoabsfind.ew)</a>
 </li>
+      <li><a href="qsoabsfind.html#qsoabsfind.absorberutils.check_absorber_selection">check_absorber_selection() (in module qsoabsfind.absorberutils)</a>
+</li>
       <li><a href="qsoabsfind.html#qsoabsfind.utils.combine_fits_files">combine_fits_files() (in module qsoabsfind.utils)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="qsoabsfind.html#qsoabsfind.utils.compute_doublet_amplitudes">compute_doublet_amplitudes() (in module qsoabsfind.utils)</a>
+</li>
       <li><a href="qsoabsfind.html#qsoabsfind.columndensity.compute_single_column_density">compute_single_column_density() (in module qsoabsfind.columndensity)</a>
 </li>
       <li><a href="qsoabsfind.html#qsoabsfind.absorberutils.contiguous_pixel_remover">contiguous_pixel_remover() (in module qsoabsfind.absorberutils)</a>
@@ -171,6 +186,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="qsoabsfind.html#qsoabsfind.absorberutils.find_z_from_minimum">find_z_from_minimum() (in module qsoabsfind.absorberutils)</a>
+</li>
       <li><a href="qsoabsfind.html#qsoabsfind.ew.full_covariance_ew_errors">full_covariance_ew_errors() (in module qsoabsfind.ew)</a>
 </li>
   </ul></td>
@@ -230,6 +247,14 @@
         <li><a href="qsoabsfind.html#module-qsoabsfind.utils">qsoabsfind.utils</a>
 </li>
       </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="qsoabsfind.html#qsoabsfind.utils.numeric_key">numeric_key() (in module qsoabsfind.utils)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -325,6 +350,8 @@
       </ul></li>
       <li><a href="qsoabsfind.html#qsoabsfind.spec.QSOSpecRead">QSOSpecRead (class in qsoabsfind.spec)</a>
 </li>
+      <li><a href="qsoabsfind.html#qsoabsfind.ew.quick_significance_test">quick_significance_test() (in module qsoabsfind.ew)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -414,7 +441,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

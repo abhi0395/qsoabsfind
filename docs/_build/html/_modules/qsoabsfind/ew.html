@@ -45,7 +45,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -80,15 +81,18 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">njit</span>
 <span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">double_gaussian</span>
 <span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">redshift_estimate</span>
+<span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">find_z_from_minimum</span>
 <span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 
 <span class="c1"># Constants</span>
 <span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
 <span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
 <span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
+<span class="n">oscillator_params</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">oscillator_parameters</span>
 
 <div class="viewcode-block" id="return_line_centers">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.return_line_centers">[docs]</a>
@@ -112,7 +116,7 @@
 <span class="c1"># Example usage within double_curve_fit</span>
 <div class="viewcode-block" id="double_curve_fit">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.double_curve_fit">[docs]</a>
-<span class="k">def</span> <span class="nf">double_curve_fit</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">fun_to_run</span><span class="p">,</span> <span class="n">lam_fit_range</span><span class="p">,</span> <span class="n">nmf_resi_fit</span><span class="p">,</span> <span class="n">error_fit</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">double_curve_fit</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">fun_to_run</span><span class="p">,</span> <span class="n">lam_fit_range</span><span class="p">,</span> <span class="n">nmf_resi_fit</span><span class="p">,</span> <span class="n">error_fit</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fits a double Gaussian function to the provided data.</span>
 
@@ -124,7 +128,7 @@
 <span class="sd">        error_fit (numpy.ndarray): Error array for the fitting.</span>
 <span class="sd">        bounds (tuple): Bounds for the fitting parameters.</span>
 <span class="sd">        init_cond (list or numpy.ndarray): Initial conditions for the fitting parameters.</span>
-<span class="sd">        iter_n (int): Maximum number of iterations for the fitting algorithm.</span>
+<span class="sd">        maxefv (int): Maximum number of iterations for the fitting algorithm.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        tuple: Contains the following elements:</span>
@@ -147,7 +151,8 @@
         <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span>
             <span class="n">fun_to_run</span><span class="p">,</span> <span class="n">lam_fit_range</span><span class="p">,</span> <span class="n">nmf_resi_fit</span><span class="p">,</span>
             <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">error_fit</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span>
-            <span class="n">maxfev</span><span class="o">=</span><span class="n">iter_n</span><span class="p">,</span> <span class="n">absolute_sigma</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">maxfev</span><span class="o">=</span><span class="n">maxefv</span><span class="p">,</span> <span class="n">absolute_sigma</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">ftol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">xtol</span><span class="o">=</span><span class="mf">1e-4</span>
         <span class="p">)</span>
         <span class="n">EW_first</span> <span class="o">=</span> <span class="n">popt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">popt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">EW_second</span> <span class="o">=</span> <span class="n">popt</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">popt</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
@@ -167,9 +172,9 @@
     <span class="k">return</span> <span class="n">save_param_array</span><span class="p">,</span> <span class="n">save_param_error</span><span class="p">,</span> <span class="n">EW_first</span><span class="p">,</span> <span class="n">EW_second</span><span class="p">,</span> <span class="n">EW_total</span><span class="p">,</span> <span class="n">save_param_cov</span></div>
 
 
-
 <div class="viewcode-block" id="calculate_ew_errors">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.calculate_ew_errors">[docs]</a>
+<span class="nd">@njit</span>
 <span class="k">def</span> <span class="nf">calculate_ew_errors</span><span class="p">(</span><span class="n">popt</span><span class="p">,</span> <span class="n">perr</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate the errors in the equivalent widths (EW) using the errors in</span>
@@ -246,9 +251,103 @@
     <span class="k">return</span> <span class="n">EW1_error</span><span class="p">,</span> <span class="n">EW2_error</span><span class="p">,</span> <span class="n">EW_total_error</span></div>
 
 
+<div class="viewcode-block" id="bootstrap_fitting_and_ew">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.bootstrap_fitting_and_ew">[docs]</a>
+<span class="k">def</span> <span class="nf">bootstrap_fitting_and_ew</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">nboot</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ix0</span><span class="p">,</span> <span class="n">ix1</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">num_iter</span><span class="p">):</span>
+
+    <span class="n">fit_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nboot</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">ew1_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nboot</span><span class="p">)</span>
+    <span class="n">ew2_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nboot</span><span class="p">)</span>
+    <span class="n">ew_total_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nboot</span><span class="p">)</span>
+
+    <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span> <span class="c1"># rest-frame conversion of wavelength</span>
+    <span class="n">lam_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">absorber_rest_lam</span> <span class="o">&gt;=</span> <span class="n">ix0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">absorber_rest_lam</span> <span class="o">&lt;=</span> <span class="n">ix1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">absorber_rest_lam</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+    <span class="n">nmf_resi</span> <span class="o">=</span> <span class="n">flux</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+    <span class="n">error_flux</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+
+    <span class="n">amp_first_nmf</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">))</span>
+    <span class="n">amp_second_nmf</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">amp_ratio</span> <span class="o">*</span> <span class="n">amp_first_nmf</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nboot</span><span class="p">):</span>
+        <span class="c1"># #best-fit corresponding to this best redshift</span>
+        <span class="n">sigma1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">sigma2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">5</span><span class="p">],</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">5</span><span class="p">])</span>
+        <span class="n">init_cond</span> <span class="o">=</span> <span class="p">[</span><span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">amp_second_nmf</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">]</span>
+        <span class="n">fit_params</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">_</span><span class="p">,</span> <span class="n">ew1_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ew2_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ew_total_array</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+            <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span> <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="o">=</span> <span class="n">num_iter</span><span class="p">)</span>
+
+    <span class="n">fit_params_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">fit_params</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">fit_param_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">fit_params</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">ew1_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ew1_array</span><span class="p">)</span>
+    <span class="n">ew2_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ew2_array</span><span class="p">)</span>
+    <span class="n">ew_total_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ew_total_array</span><span class="p">)</span>
+    <span class="n">ew1_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">ew1_array</span><span class="p">)</span>
+    <span class="n">ew2_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">ew2_array</span><span class="p">)</span>
+    <span class="n">ew_total_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">ew_total_array</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fit_params_mean</span><span class="p">,</span> <span class="n">fit_param_std</span><span class="p">,</span> <span class="n">ew1_mean</span><span class="p">,</span> <span class="n">ew2_mean</span><span class="p">,</span> <span class="n">ew_total_mean</span><span class="p">,</span> <span class="n">ew1_std</span><span class="p">,</span> <span class="n">ew2_std</span><span class="p">,</span> <span class="n">ew_total_std</span></div>
+
+
+<div class="viewcode-block" id="quick_significance_test">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.quick_significance_test">[docs]</a>
+<span class="nd">@njit</span>
+<span class="k">def</span> <span class="nf">quick_significance_test</span><span class="p">(</span><span class="n">flux_norm</span><span class="p">,</span> <span class="n">fitted_model</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span>
+                                  <span class="n">fitted_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wavelength_rest</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                  <span class="n">n_pixels</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Significance test with simple absorption check at line centers.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        flux_norm: Normalized flux array</span>
+<span class="sd">        fitted_model: Fitted double Gaussian model</span>
+<span class="sd">        error: Error array</span>
+<span class="sd">        fitted_params: Fitted parameters [amp1, center1, sigma1, amp2, center2, sigma2]</span>
+<span class="sd">        wavelength_rest: Wavelength array (same frame as fitted_params)</span>
+<span class="sd">        n_pixels: Number of pixels around each line center to check</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        delta_chi2: Delta chi-square value, or 0 if absorption criteria not met</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check for empty arrays</span>
+    <span class="k">if</span> <span class="n">flux_norm</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">error</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Check absorption at line centers</span>
+    <span class="k">if</span> <span class="n">fitted_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">wavelength_rest</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">wavelength_rest</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Get fitted line centers</span>
+        <span class="n">line_center1</span> <span class="o">=</span> <span class="n">fitted_params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">line_center2</span> <span class="o">=</span> <span class="n">fitted_params</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+
+        <span class="c1"># Check both line centers</span>
+        <span class="k">for</span> <span class="n">line_center</span> <span class="ow">in</span> <span class="p">[</span><span class="n">line_center1</span><span class="p">,</span> <span class="n">line_center2</span><span class="p">]:</span>
+            <span class="c1"># Find nearest wavelength pixel</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">wavelength_rest</span> <span class="o">-</span> <span class="n">line_center</span><span class="p">))</span>
+
+            <span class="c1"># Get flux values around this pixel</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">n_pixels</span><span class="p">)</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flux_norm</span><span class="p">),</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">n_pixels</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">pixels_around_line</span> <span class="o">=</span> <span class="n">flux_norm</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+            <span class="c1"># Check if all pixels &lt; 1</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">pixels_around_line</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">):</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Calculate delta chi2</span>
+    <span class="n">continuum_level</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">flux_norm</span><span class="p">)</span>
+    <span class="n">chi2_flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(((</span><span class="n">flux_norm</span> <span class="o">-</span> <span class="n">continuum_level</span><span class="p">)</span> <span class="o">/</span> <span class="n">error</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">chi2_with_lines</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(((</span><span class="n">flux_norm</span> <span class="o">-</span> <span class="n">fitted_model</span><span class="p">)</span> <span class="o">/</span> <span class="n">error</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">delta_chi2</span> <span class="o">=</span> <span class="n">chi2_flat</span> <span class="o">-</span> <span class="n">chi2_with_lines</span>
+
+    <span class="k">return</span> <span class="n">delta_chi2</span></div>
+
+
 <div class="viewcode-block" id="measure_absorber_properties_double_gaussian">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.measure_absorber_properties_double_gaussian">[docs]</a>
-<span class="k">def</span> <span class="nf">measure_absorber_properties_double_gaussian</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">use_kernel</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">measure_absorber_properties_double_gaussian</span><span class="p">(</span>
+    <span class="n">index</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">use_kernel</span><span class="p">,</span> <span class="n">d_pix</span><span class="p">,</span>
+    <span class="n">num_iter</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">use_covariance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nboot</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Measures the properties of each potential absorber by fitting a double</span>
 <span class="sd">    Gaussian to the absorption feature and measuring the equivalent width (EW)</span>
@@ -261,13 +360,16 @@
 <span class="sd">        error (numpy.ndarray): Error array corresponding to the flux.</span>
 <span class="sd">        absorber_redshift (list): List of potential absorbers identified previously.</span>
 <span class="sd">        bound (tuple): Bounds for the fitting parameters.</span>
-<span class="sd">        use_kernel (str, optional): Kernel type (&#39;MgII, FeII, CIV, NV, OVI, SiIV, AlIII).</span>
-<span class="sd">        d_pix (float, optional): wavelength pixel for tolerance</span>
+<span class="sd">        use_kernel (str): Kernel type (MgII, FeII, CIV, NV, OVI, SiIV, AlIII).</span>
+<span class="sd">        d_pix (float): wavelength pixel for tolerance</span>
+<span class="sd">        window (int): window size for redshift estimate (default 9)</span>
 <span class="sd">        use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)</span>
+<span class="sd">        nboot (int): if provided, will perform bootstrapping fitting (default None)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        tuple: Contains the following elements:</span>
 <span class="sd">            - z_abs_array (numpy.ndarray): Array of absorber redshifts.</span>
+<span class="sd">            - z_abs_err (numpy.ndarray): Array of redshift errors.</span>
 <span class="sd">            - fitting_param_for_spectrum (numpy.ndarray): Array of fitting parameters for double Gaussian.</span>
 <span class="sd">            - fitting_param_std_for_spectrum (numpy.ndarray): Array of errors for fitting parameters.</span>
 <span class="sd">            - EW_first_line (numpy.ndarray): Mean equivalent width of the first line.</span>
@@ -276,16 +378,17 @@
 <span class="sd">            - EW_first_line_error (numpy.ndarray): Error in the equivalent width of the first line.</span>
 <span class="sd">            - EW_second_line_error (numpy.ndarray): Error in the equivalent width of the second line.</span>
 <span class="sd">            - EW_total_error (numpy.ndarray): Total error in the equivalent width of both lines.</span>
+<span class="sd">            - delta_chi2 (numpy.ndarray): Delta chi-squared values for significance testing.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
+    <span class="c1"># Initialize arrays</span>
     <span class="n">z_abs_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">absorber_redshift</span><span class="p">)</span>
-
     <span class="n">size_array</span> <span class="o">=</span> <span class="n">z_abs_array</span><span class="o">.</span><span class="n">size</span>
 
-    <span class="n">nparm</span> <span class="o">=</span> <span class="mi">6</span> <span class="c1"># 6 parameter double Gaussian</span>
+    <span class="c1"># Initialize all output arrays</span>
+    <span class="n">nparm</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># 6 parameter double Gaussian</span>
     <span class="n">fitting_param_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span>
     <span class="n">fitting_param_std_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span>
-    <span class="n">fitting_param_pcov_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span> <span class="c1">#covariance matrix from curve_fit</span>
+    <span class="n">fitting_param_pcov_for_spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size_array</span><span class="p">,</span> <span class="n">nparm</span><span class="p">,</span> <span class="n">nparm</span><span class="p">))</span>
     <span class="n">EW_first_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
     <span class="n">EW_second_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
     <span class="n">EW_first_line_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
@@ -293,14 +396,19 @@
     <span class="n">EW_total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
     <span class="n">EW_total_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
     <span class="n">z_abs_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+    <span class="n">delta_chi2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">size_array</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
 
+    <span class="c1"># Get line properties for this kernel</span>
     <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span> <span class="o">=</span> <span class="n">return_line_centers</span><span class="p">(</span><span class="n">use_kernel</span><span class="p">)</span>
+    <span class="n">amp_ratio</span> <span class="o">=</span> <span class="n">oscillator_params</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">use_kernel</span><span class="si">}</span><span class="s1">_f2&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">oscillator_params</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">use_kernel</span><span class="si">}</span><span class="s1">_f1&#39;</span><span class="p">]</span>
 
-    <span class="c1">#defining wwavelength range for Gaussian fitting</span>
-    <span class="n">sigma</span> <span class="o">=</span> <span class="n">d_pix</span><span class="o">*</span><span class="mi">15</span> <span class="c1"># assuming maximum line width of d_pix * 15, can be larger/smaller, but this is a reasonable assumption.</span>
-    <span class="n">ix0</span> <span class="o">=</span> <span class="n">line_centre1</span> <span class="o">-</span>  <span class="n">sigma</span>
-    <span class="n">ix1</span> <span class="o">=</span> <span class="n">line_centre2</span> <span class="o">+</span>  <span class="n">sigma</span>
+    <span class="c1"># Define wavelength range for Gaussian fitting</span>
+    <span class="c1"># Assuming maximum line width of d_pix * 15</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">d_pix</span> <span class="o">*</span> <span class="mi">15</span>
+    <span class="n">ix0</span> <span class="o">=</span> <span class="n">line_centre1</span> <span class="o">-</span> <span class="n">sigma</span>
+    <span class="n">ix1</span> <span class="o">=</span> <span class="n">line_centre2</span> <span class="o">+</span> <span class="n">sigma</span>
 
+    <span class="c1"># Return empty arrays if no absorbers</span>
     <span class="k">if</span> <span class="n">size_array</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">z_abs_array</span><span class="p">,</span> <span class="n">fitting_param_for_spectrum</span><span class="p">,</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">,</span>
@@ -308,66 +416,155 @@
             <span class="n">EW_first_line_error</span><span class="p">,</span> <span class="n">EW_second_line_error</span><span class="p">,</span> <span class="n">EW_total_error</span>
         <span class="p">)</span>
 
+    <span class="c1"># Process each absorber</span>
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size_array</span><span class="p">):</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="o">**</span><span class="mi">32</span><span class="p">)</span> <span class="c1"># for reproducibility</span>
-        <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># rest-frame conversion of wavelength</span>
+        <span class="c1"># Set random seed for reproducibility</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="o">**</span><span class="mi">32</span><span class="p">)</span>
+
+        <span class="c1"># ========== FIRST REDSHIFT REFINEMENT ==========</span>
+        <span class="n">z1</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">z2</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">,</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+        <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">line_centre1</span> <span class="o">*</span> <span class="n">z1</span> <span class="o">+</span> <span class="n">line_centre2</span> <span class="o">*</span> <span class="n">z2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">line_centre1</span> <span class="o">+</span> <span class="n">line_centre2</span><span class="p">)</span>
+
+        <span class="c1"># Extract spectrum in rest frame</span>
+        <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
         <span class="n">lam_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">absorber_rest_lam</span> <span class="o">&gt;=</span> <span class="n">ix0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">absorber_rest_lam</span> <span class="o">&lt;=</span> <span class="n">ix1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">absorber_rest_lam</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
         <span class="n">nmf_resi</span> <span class="o">=</span> <span class="n">flux</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
         <span class="n">error_flux</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
+
         <span class="n">uniform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span>
+
+        <span class="c1"># Check if we have valid data</span>
         <span class="k">if</span> <span class="n">nmf_resi</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">)):</span>
-            <span class="c1">#random initial condition</span>
-            <span class="n">amp_first_nmf</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">)</span>
+            <span class="c1"># ========== INITIAL FIT IN REST FRAME ==========</span>
+            <span class="c1"># Set initial conditions</span>
+            <span class="n">amp_first_nmf</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">))</span>
+            <span class="n">amp_second_nmf</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">amp_ratio</span> <span class="o">*</span> <span class="n">amp_first_nmf</span><span class="p">)</span>
             <span class="n">line_first</span> <span class="o">=</span> <span class="n">line_centre1</span>
             <span class="n">sigma1</span> <span class="o">=</span> <span class="n">uniform</span><span class="p">(</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
             <span class="n">sigma2</span> <span class="o">=</span> <span class="n">uniform</span><span class="p">(</span><span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">5</span><span class="p">],</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">5</span><span class="p">])</span>
             <span class="n">line_second</span> <span class="o">=</span> <span class="n">line_centre2</span>
-            <span class="n">init_cond</span> <span class="o">=</span> <span class="p">[</span><span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line_first</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="mf">0.54</span> <span class="o">*</span> <span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line_second</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">]</span>
-            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span><span class="n">_</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
-                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span> <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+            <span class="n">init_cond</span> <span class="o">=</span> <span class="p">[</span><span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">line_first</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">amp_second_nmf</span><span class="p">,</span> <span class="n">line_second</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">]</span>
 
-            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># in observed frame</span>
-            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="c1"># First fit in rest frame</span>
+            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+            <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span>
+                <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span>
+                <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="o">=</span><span class="n">num_iter</span>
+            <span class="p">)</span>
 
-            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">redshift_estimate</span><span class="p">(</span><span class="n">fitted_l1</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">std_fitted_l1</span><span class="p">,</span> <span class="n">std_fitted_l2</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">)</span>
+            <span class="c1"># ========== FIT IN OBSERVED FRAME FOR REDSHIFT ==========</span>
+            <span class="c1"># Convert to observed frame</span>
+            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
 
-            <span class="c1">#best-fit corresponding to this best redshift</span>
-            <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># rest-frame conversion of wavelength</span>
+            <span class="n">obs_sig1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">obs_sig2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">obs_init_cond</span> <span class="o">=</span> <span class="p">[</span><span class="n">amp_first_nmf</span><span class="p">,</span> <span class="n">fitted_l1</span><span class="p">,</span> <span class="n">obs_sig1</span><span class="p">,</span> <span class="n">amp_second_nmf</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">obs_sig2</span><span class="p">]</span>
+
+            <span class="c1"># Fit in observed frame</span>
+            <span class="n">obs_fitting_param_for_spectrum</span><span class="p">,</span> <span class="n">obs_fitting_param_std_for_spectrum</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">absorber_redshift</span><span class="p">[</span><span class="n">k</span><span class="p">]),</span> <span class="n">nmf_resi</span><span class="p">,</span>
+                <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">init_cond</span><span class="o">=</span><span class="n">obs_init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="o">=</span><span class="n">num_iter</span>
+            <span class="p">)</span>
+
+            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">obs_fitting_param_for_spectrum</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">obs_fitting_param_for_spectrum</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">obs_fitting_param_std_for_spectrum</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">obs_fitting_param_std_for_spectrum</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+
+            <span class="c1"># Update redshift estimate</span>
+            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">redshift_estimate</span><span class="p">(</span>
+                <span class="n">fitted_l1</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">std_fitted_l1</span><span class="p">,</span> <span class="n">std_fitted_l2</span><span class="p">,</span>
+                <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span>
+            <span class="p">)</span>
+
+            <span class="c1"># ========== SECOND REDSHIFT REFINEMENT ==========</span>
+            <span class="n">z1</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+            <span class="n">z2</span> <span class="o">=</span> <span class="n">find_z_from_minimum</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">,</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">)</span>
+            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">z1</span> <span class="o">+</span> <span class="n">z2</span><span class="p">)</span>
+
+            <span class="c1"># ========== SECOND FIT WITH REFINED REDSHIFT ==========</span>
+            <span class="c1"># Re-extract spectrum with new redshift</span>
+            <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
             <span class="n">lam_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">absorber_rest_lam</span> <span class="o">&gt;=</span> <span class="n">ix0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">absorber_rest_lam</span> <span class="o">&lt;=</span> <span class="n">ix1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">absorber_rest_lam</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
             <span class="n">nmf_resi</span> <span class="o">=</span> <span class="n">flux</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
             <span class="n">error_flux</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
 
-            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
-                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span> <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+            <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+            <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span>
+                <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span>
+                <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="o">=</span><span class="n">num_iter</span>
+            <span class="p">)</span>
 
-            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># in observed frame</span>
-            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="c1"># Update redshift estimate again</span>
+            <span class="n">fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l1</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">std_fitted_l2</span> <span class="o">=</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
 
-            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">redshift_estimate</span><span class="p">(</span><span class="n">fitted_l1</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">std_fitted_l1</span><span class="p">,</span> <span class="n">std_fitted_l2</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">)</span>
+            <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">redshift_estimate</span><span class="p">(</span>
+                <span class="n">fitted_l1</span><span class="p">,</span> <span class="n">fitted_l2</span><span class="p">,</span> <span class="n">std_fitted_l1</span><span class="p">,</span> <span class="n">std_fitted_l2</span><span class="p">,</span>
+                <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span>
+            <span class="p">)</span>
 
-            <span class="c1">#best-fit corresponding to this best redshift</span>
-            <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="c1"># rest-frame conversion of wavelength</span>
+            <span class="c1"># ========== FINAL FIT WITH BEST REDSHIFT ==========</span>
+            <span class="c1"># Final extraction with best redshift</span>
+            <span class="n">absorber_rest_lam</span> <span class="o">=</span> <span class="n">wavelength</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
             <span class="n">lam_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">absorber_rest_lam</span> <span class="o">&gt;=</span> <span class="n">ix0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">absorber_rest_lam</span> <span class="o">&lt;=</span> <span class="n">ix1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">absorber_rest_lam</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
             <span class="n">nmf_resi</span> <span class="o">=</span> <span class="n">flux</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
             <span class="n">error_flux</span> <span class="o">=</span> <span class="n">error</span><span class="p">[</span><span class="n">lam_ind</span><span class="p">]</span>
 
-            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
-                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span> <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span> <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">iter_n</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+            <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+            <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+            <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">double_curve_fit</span><span class="p">(</span>
+                <span class="n">index</span><span class="p">,</span> <span class="n">double_gaussian</span><span class="p">,</span> <span class="n">lam_fit</span><span class="p">,</span> <span class="n">nmf_resi</span><span class="p">,</span>
+                <span class="n">error_fit</span><span class="o">=</span><span class="n">error_flux</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bound</span><span class="p">,</span>
+                <span class="n">init_cond</span><span class="o">=</span><span class="n">init_cond</span><span class="p">,</span> <span class="n">maxefv</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">num_iter</span>
+            <span class="p">)</span>
 
-            <span class="c1">## errors on EW</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">use_covariance</span><span class="p">:</span>
-                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">calculate_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="c1"># ========== CALCULATE SIGNIFICANCE ==========</span>
+            <span class="n">fitted_model</span> <span class="o">=</span> <span class="n">double_gaussian</span><span class="p">(</span><span class="n">lam_fit</span><span class="p">,</span> <span class="o">*</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+            <span class="n">delta_chi2</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">quick_significance_test</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">,</span> <span class="n">fitted_model</span><span class="p">,</span> <span class="n">error_flux</span><span class="p">,</span>
+                                  <span class="n">fitted_params</span><span class="o">=</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">wavelength_rest</span><span class="o">=</span><span class="n">lam_fit</span><span class="p">,</span>
+                                  <span class="n">n_pixels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="c1"># ========== BOOTSTRAPPING OR ERROR CALCULATION ==========</span>
+            <span class="k">if</span> <span class="n">nboot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">nboot</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">nmf_resi</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: bootstrapping...&#39;</span><span class="p">)</span>
+                <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+                <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> \
+                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">bootstrap_fitting_and_ew</span><span class="p">(</span>
+                    <span class="n">index</span><span class="p">,</span> <span class="n">nboot</span><span class="p">,</span> <span class="n">z_abs_array</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span>
+                    <span class="n">ix0</span><span class="p">,</span> <span class="n">ix1</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="p">,</span> <span class="n">line_centre1</span><span class="p">,</span> <span class="n">line_centre2</span><span class="p">,</span> <span class="n">num_iter</span>
+                <span class="p">)</span>
+                <span class="n">fitted_model</span> <span class="o">=</span> <span class="n">double_gaussian</span><span class="p">(</span><span class="n">lam_fit</span><span class="p">,</span> <span class="o">*</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="n">delta_chi2</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">quick_significance_test</span><span class="p">(</span><span class="n">nmf_resi</span><span class="p">,</span> <span class="n">fitted_model</span><span class="p">,</span> <span class="n">error_flux</span><span class="p">,</span>
+                                  <span class="n">fitted_params</span><span class="o">=</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">wavelength_rest</span><span class="o">=</span><span class="n">lam_fit</span><span class="p">,</span>
+                                  <span class="n">n_pixels</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_covariance_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="c1"># Calculate EW errors</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">use_covariance</span><span class="p">:</span>
+                    <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">calculate_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">EW_first_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">full_covariance_ew_errors</span><span class="p">(</span><span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">fitting_param_pcov_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
 
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">])):</span>
+            <span class="c1"># ========== CHECK FOR NaN VALUES ==========</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> \
+               <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span> <span class="ow">or</span> \
+               <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">])):</span>
+                <span class="c1"># Reset all values if NaN</span>
                 <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
                 <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
                 <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -377,7 +574,9 @@
                 <span class="n">EW_second_line_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="n">EW_total_error</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">delta_chi2</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># No valid data - set everything to zero</span>
             <span class="n">EW_first_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">EW_second_line</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">EW_total</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -387,11 +586,13 @@
             <span class="n">fitting_param_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
             <span class="n">fitting_param_std_for_spectrum</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nparm</span><span class="p">)</span>
             <span class="n">z_abs_err</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">delta_chi2</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="k">return</span> <span class="p">(</span>
         <span class="n">z_abs_array</span><span class="p">,</span> <span class="n">z_abs_err</span><span class="p">,</span> <span class="n">fitting_param_for_spectrum</span><span class="p">,</span> <span class="n">fitting_param_std_for_spectrum</span><span class="p">,</span>
         <span class="n">EW_first_line</span><span class="p">,</span> <span class="n">EW_second_line</span><span class="p">,</span> <span class="n">EW_total</span><span class="p">,</span>
-        <span class="n">EW_first_line_error</span><span class="p">,</span> <span class="n">EW_second_line_error</span><span class="p">,</span> <span class="n">EW_total_error</span>
+        <span class="n">EW_first_line_error</span><span class="p">,</span> <span class="n">EW_second_line_error</span><span class="p">,</span> <span class="n">EW_total_error</span><span class="p">,</span>
+        <span class="n">delta_chi2</span>
     <span class="p">)</span></div>
 
 </pre></div>
@@ -404,7 +605,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

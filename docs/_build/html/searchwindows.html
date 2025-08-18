@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search Windows &mdash; qsoabsfind  documentation</title>
+  <title>Absorber Search Windows &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -22,7 +22,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Running examples" href="examplerun.html" />
+    <link rel="next" title="Parameter File" href="paramfile.html" />
     <link rel="prev" title="File formats" href="fileformat.html" /> 
 </head>
 
@@ -49,7 +49,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Search Windows</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Absorber Search Windows</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#parameter-definitions">Parameter Definitions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#search-window-definitions">Search Window Definitions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#user-defined-wavelength-boundaries-in-quasar-rest-frame">User-defined wavelength boundaries (in quasar rest-frame):</a></li>
@@ -65,6 +65,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="paramfile.html">Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
@@ -83,7 +84,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Search Windows</li>
+      <li class="breadcrumb-item active">Absorber Search Windows</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/abhi0395/qsoabsfind/blob/main/docs/searchwindows.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -93,9 +94,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="search-windows">
-<h1>Search Windows<a class="headerlink" href="#search-windows" title="Link to this heading"></a></h1>
-<p>For each absorber, we define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:</p>
+  <section id="absorber-search-windows">
+<h1>Absorber Search Windows<a class="headerlink" href="#absorber-search-windows" title="Link to this heading"></a></h1>
+<p>For each absorber, user can define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:</p>
 <ul class="simple">
 <li><p>We avoid regions near the quasar’s own emission lines where intrinsic absorption may contaminate our detection.</p></li>
 <li><p>We stay within the observed wavelength coverage.</p></li>
@@ -106,7 +107,7 @@
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\(\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}\)</span>: Full observed-frame wavelength coverage of the spectrum.</p></li>
 <li><p><span class="math notranslate nohighlight">\(z_{\mathrm{QSO}}\)</span>: Emission redshift of the background quasar.</p></li>
-<li><p><span class="math notranslate nohighlight">\(\Delta z\)</span> is derived from the velocity offset parameter (<cite>lines[“dv”]</cite>, from <cite>constants.py</cite>) to avoid regions close to emission lines.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta z\)</span> is derived from the velocity offset parameter (<code class="docutils literal notranslate"><span class="pre">lines[&quot;dv&quot;]</span></code>, from <code class="docutils literal notranslate"><span class="pre">qsoabsfind.constants</span></code>) to avoid regions close to emission lines.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\Delta\lambda_{\mathrm{edge}}\)</span> is a offset from edges to avoid noisy regions during convolution or feature detection near the wavelength edges.</p></li>
 </ul>
 </section>
@@ -228,14 +229,14 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="fileformat.html" class="btn btn-neutral float-left" title="File formats" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="examplerun.html" class="btn btn-neutral float-right" title="Running examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="paramfile.html" class="btn btn-neutral float-right" title="Parameter File" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-07-21.
+      <span class="lastupdated">Last updated on 2025-08-18.
       </span></p>
   </div>
 

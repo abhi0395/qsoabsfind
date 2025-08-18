@@ -35,4 +35,4 @@ Description
 Setting Environment Variable
 ------------------------
 
-Before using the module, please set an environment variable `QSO_CONSTANTS_FILE` in your `bashrc` or `zshrc` file, and point it to the `qsoabsfind.constants` file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.
+Before using the module, please set an environment variable ``QSO_CONSTANTS_FILE`` in your ```bashrc``` or ``zshrc`` file, and point it to the ``qsoabsfind.constants`` file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.
