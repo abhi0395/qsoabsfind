@@ -113,7 +113,7 @@ class TestQSOAbsFind(unittest.TestCase):
             f1, f2 = 0.6123, 0.3054
             self.abs_cat["Z_ABS"] = [sdss_results['z_abs'][0]]
             lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
-            Ncol = total_column_density(F_lambda, error, wavelength, self.abs_cat, f1, f2, lambda1, lambda2,continuum_error_frac=self.sdss_constants.continuum_error_frac, velocity_range=300)
+            Ncol = total_column_density(F_lambda, error, wavelength, self.abs_cat, f1, f2, lambda1, lambda2,continuum_error_frac=self.sdss_constants.continuum_error_frac, velocity_range=300, logwave=self.sdss_constants.search_parameters[absorber]["logwave"])
             self.assertEqual(len(Ncol.dtype.names), 4)
         else:
             self.skipTest("Skipping column density test: no SDSS absorbers detected")
