@@ -230,7 +230,7 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 
 Thanks,  
-Abhijeet Anand 
+Abhijeet Anand  
 Lawrence Berkeley National Lab
 
 
