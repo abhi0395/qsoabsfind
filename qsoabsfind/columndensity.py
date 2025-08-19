@@ -70,7 +70,7 @@ def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac):
 
 # Function to convert wavelength to velocity
 
-def velocity_from_wavelength(lambda_array, lambda_0, z):
+def velocity_from_wavelength(lambda_array, lambda_0, z, logwave=False):
 
     """Function to convert wavelength into velocity pixels
 
@@ -78,21 +78,27 @@ def velocity_from_wavelength(lambda_array, lambda_0, z):
         lambda_array (array): observed wavelength (Angstrom)
         lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
         z (float): redshift of absorber
+        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
         velocities (observed and in rest-frame, array in km/s)
 
     """
 
-    d_lambda = np.mean(lambda_array[1:] - lambda_array[:-1])
+    if not logwave:
+        d_lambda = np.mean(lambda_array[1:] - lambda_array[:-1])
+        d_lambda = np.ones(lambda_array.size) * d_lambda
+    else:
+        d_lambda = np.mean(np.log10(lambda_array[1:]) - np.log10(lambda_array[:-1]))
+        d_lambda = lambda_array * (10**d_lambda - 1)
+
     lambda_obs  = lambda_0 * (1 + z)
-    d_lambda = np.ones(lambda_array.size) * d_lambda
     dv = (lambda_array - lambda_obs) / lambda_obs * speed_of_light
     return speed_of_light * d_lambda / (lambda_obs), dv # Velocity in km/s
 
 # Function to calculate total column density integrated over velocity range
 
-def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum_error_frac, velocity_range):
+def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum_error_frac, velocity_range, logwave):
 
     """Function to calculate apparent column density for one line using Savage & Sembach 1991 method
 
@@ -105,6 +111,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
         lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
         continuum_error_frac (float): systematics on continuum normalized flux
         velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
+        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
         results (dict): dictionary containing column density and error
@@ -113,7 +120,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
 
     # Step 1: Convert wavelength to velocity
 
-    v_array, dv_absorber = velocity_from_wavelength(wavelength, lambda_0, z)
+    v_array, dv_absorber = velocity_from_wavelength(wavelength, lambda_0, z, logwave)
     velocity_filter = (dv_absorber >= -velocity_range) & (dv_absorber <= velocity_range)
     F_lam = F_lambda[velocity_filter]
     err_F_lam = error[velocity_filter]
@@ -142,7 +149,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
     return results
 
 
-def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, continuum_error_frac, velocity_range):
+def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, continuum_error_frac, velocity_range, logwave):
 
     """Function to calculate total apparent column density (inverse-variance weighted) for a doublet using Savage & Sembach 1991 method
 
@@ -157,6 +164,7 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
         lambda2 (tuple): key and rest-frame wavelength of second line (Angstrom)
         continuum_error_frac (float): systematics on continuum normalized flux
         velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
+        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
         results (dict): dictionary containing apparent column density and error
@@ -176,8 +184,8 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2)
     sflag = 0 if dr > 2 - dr_error else 1
 
-    results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range)
-    results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2, continuum_error_frac=continuum_error_frac, velocity_range=velocity_range)
+    results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range, logwave=logwave)
+    results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range,logwave=logwave)
 
     N1, N2 = results1["N"], results2["N"]
     sig_N1, sig_N2 = results1["N_err"], results2["N_err"]
@@ -232,11 +240,11 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
 def compute_single_column_density(args):
     """Function to compute column density of one absorbers
     """
-    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv = args
-    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac=continuum_error_frac, velocity_range=dv)
+    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv, logwave= args
+    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac=continuum_error_frac, velocity_range=dv, logwave=logwave)
 
 
-def return_total_column_density_table(spectra_fits, absorber, output, continuum_error_frac=0.05, dv=300, nproc=None):
+def return_total_column_density_table(spectra_fits, absorber, output, continuum_error_frac=0.05, dv=300, logwave=False, nproc=None):
 
     """ Function to calculate total column density of metal doublets using
     apparent optical depth method
@@ -247,6 +255,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
         output (str): output absorber catalog filename
         continuum_error_frac (float): systematics on continuum normalized flux (default: 0.05)
         dv (float): maximum velocity range to be considered for optical depth calculation (default 300 km/s)
+        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
         nproc (int): number of cpus for multiprocessing
 
     Returns:
@@ -269,7 +278,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
     nabs = len(tt)
 
     args_list = [
-        (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, continuum_error_frac, dv)
+        (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, continuum_error_frac, dv, logwave)
         for i in range(nabs)
     ]
 

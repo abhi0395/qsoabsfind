@@ -217,7 +217,8 @@ def main():
         print(f'INFO: No {args.absorber} absorbers found, no file saved..')
 
     if args.coldens:
-        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, constants.continuum_error_frac, args.dv, n_jobs)
+        logwave = constants.search_parameters[args.absorber]["logwave"]
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, constants.continuum_error_frac, args.dv, logwave, n_jobs)
         append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing
