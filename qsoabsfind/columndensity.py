@@ -169,7 +169,6 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     """
 
     z = abs_cat["Z_ABS"]
-    qso_id = abs_cat["INDEX_SPEC"]
     l1, l2 = lambda1[1], lambda2[1]
     ew1, ew2 = abs_cat[f"{lambda1[0].upper()}_EW"], abs_cat[f"{lambda2[0].upper()}_EW"]
     err_ew1, err_ew2 = abs_cat[f"{lambda1[0].upper()}_EW_ERROR"], abs_cat[f"{lambda2[0].upper()}_EW_ERROR"]
