@@ -268,7 +268,9 @@ def modify_units(col_name, col):
     if 'EW' in col_name.upper():
         return 'Angstrom'
     elif 'VDISP' in col_name.upper():
-        return 'km/s'
+        return 'km s-1'
+    elif '10N' in col_name.upper():
+        return 'cm-2'
     else:
         return str(col.unit) if col.unit is not None else None
 
@@ -316,7 +318,7 @@ def combine_fits_files(directory, output_file):
                 for hdu in hdul:
                     if isinstance(hdu, fits.BinTableHDU):
                         hdu_name = hdu.name
-                        table = Table(hdu.data)
+                        table = Table.read(file_path, hdu=hdu_name)
 
                         # Remove the INDEX_SPEC column if it exists
                         if 'INDEX_SPEC' in table.colnames:
@@ -352,6 +354,31 @@ def combine_fits_files(directory, output_file):
     # Write the combined data to the output FITS file
     hdul_out.writeto(output_file, overwrite=True)
     print(f"Combined FITS file saved to {output_file}")
+
+def match_order(arr1, arr2):
+    """Matching order based on match key fot given two arrays
+
+    Args:
+        arr1 (array): First array (will be assumed to be the reference array)
+        arr2 (array): Second array (target array for which the order to be matched)
+
+    Returns:
+        matching indices such that arr2[indices]=arr1
+
+    Note:
+        Raises Assertion error if sizes do not match
+    """
+
+    assert arr1.size==arr2.size
+
+    indices = []
+    for el in arr2:
+        ii = np.where(arr1 == el)[0]
+        indices.append(ii)
+    indices = np.array(indices).flatten()
+    updated_arr2 = arr2[indices]
+    np.testing.assert_array_equal(arr1, updated_arr2)
+    return indices
 
 
 def validate_sizes(conv_arr, unmsk_residual, spec_index):
@@ -409,10 +436,6 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
         # Assumes obs_wave is monotonic and same length as resolution.
         res1 = float(np.interp(lam_obs1, obs_wave, resolution))
         res2 = float(np.interp(lam_obs2, obs_wave, resolution))
-
-    # Get per-line resolution (scalar or from array)
-    #res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]
-    #res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]
 
     #Gaussian quadrature correction
     del_v1_sq = v1_sig**2 - res1**2

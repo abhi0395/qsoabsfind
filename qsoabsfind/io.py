@@ -79,8 +79,8 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         fits.Column(name='Z_ABS_ERR', format='D', array=np.array(results['z_abs_err'])),
         fits.Column(name=sn_1, format='D', array=np.array(results['sn_1'])),
         fits.Column(name=sn_2, format='D', array=np.array(results['sn_2'])),
-        fits.Column(name=VDISP1, format='D', unit='km/s', array=np.array(results['vel_disp1'])),
-        fits.Column(name=VDISP2, format='D', unit='km/s', array=np.array(results['vel_disp2'])),
+        fits.Column(name=VDISP1, format='D', unit='km s-1', array=np.array(results['vel_disp1'])),
+        fits.Column(name=VDISP2, format='D', unit='km s-1', array=np.array(results['vel_disp2'])),
         fits.Column(name='DELTA_CHI2', format='D', array=np.array(results['delta_chi2'])),
     ], name='ABSORBER')
 

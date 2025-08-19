@@ -160,12 +160,61 @@ Example catalog runs
 
 SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
-Citation
---------
+Citation & Acknowledgements
+---------------------------
 
 If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
 
-If you use this **codebase**, please also cite the associated [Zenodo record](https://zenodo.org/records/15685771). Additionally, consider starring the repository if you find it useful or use it in your work.
+Additionally, please also cite the associated [Zenodo record](https://zenodo.org/records/15685771). Additionally, consider starring the repository if you find it useful or use it in your work.
+
+You can also copy the BibTeX entry directly from below.
+
+      @ARTICLE{AnandSDSS2021,
+      author = {{Anand}, Abhijeet and {Nelson}, Dylan and {Kauffmann}, Guinevere},
+      title = "{Characterizing the abundance, properties, and kinematics of the cool circumgalactic medium of galaxies in absorption with SDSS DR16}",
+      journal = {\mnras},
+      keywords = {galaxies: evolution, galaxies: formation, large-scale structure of Universe, Astrophysics - Astrophysics of Galaxies},
+      year = 2021,
+      month = jun,
+      volume = {504},
+      number = {1},
+      pages = {65-88},
+      doi = {10.1093/mnras/stab871},
+      archivePrefix = {arXiv},
+      eprint = {2103.15842},
+      primaryClass = {astro-ph.GA},
+      adsurl = {https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+    }
+
+    @ARTICLE{AnandDESI2025,
+      author = {{Anand}, Abhijeet and {Aguilar}, J. and {Ahlen}, S. and {Bianchi}, D. and {Brodzeller}, A. and {Brooks}, D. and {Canning}, R. and {Claybaugh}, T. and {Cuceu}, A. and {de la Macorra}, A. and {Doel}, P. and {Ferraro}, S. and {Font-Ribera}, A. and {Forero-Romero}, J.~E. and {Gazta{\~n}aga}, E. and {Gontcho}, S. Gontcho A and {Gutierrez}, G. and {Guy}, J. and {Herrera-Alcantar}, H.~K. and {Ishak}, M. and {Juneau}, S. and {Kehoe}, R. and {Kremin}, A. and {Landriau}, M. and {Le Guillou}, L. and {Levi}, M.~E. and {Manera}, M. and {Meisner}, A. and {Miquel}, R. and {Moustakas}, J. and {Mu{\~n}oz-Guti{\'e}rrez}, A. and {Napolitano}, L. and {P{\'e}rez-R{\`a}fols}, I. and {Rossi}, G. and {Sanchez}, E. and {Schlegel}, D. and {Schubnell}, M. and {Sprayberry}, D. and {Tarl{\'e}}, G. and {Temple}, M.~J. and {Weaver}, B.~A. and {Zhou}, R.},
+      title = "{The Cosmic Evolution of CIV Absorbers at $1.4<z<4.5$: Insights from $100,000$ Systems in DESI Quasars}",
+      journal = {arXiv e-prints},
+      keywords = {Cosmology and Nongalactic Astrophysics},
+      year = 2025,
+      month = apr,
+      eid = {arXiv:2504.20299},
+      pages = {arXiv:2504.20299},
+      doi = {10.48550/arXiv.2504.20299},
+      archivePrefix = {arXiv},
+      eprint = {2504.20299},
+      primaryClass = {astro-ph.CO},
+      adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+    }
+
+    @software{Anandqsoabsfind2025,
+      author       = {Anand, Abhijeet},
+      title        = {qsoabsfind: A Python Package for Detecting
+                      Absorption Line Doublets in SDSS and DESI Quasar
+                      Spectra},
+      month        = jun,
+      year         = 2025,
+      publisher    = {Zenodo},
+      doi          = {10.5281/zenodo.15685771},
+      url          = {https://doi.org/10.5281/zenodo.15685771},
+    }
 
 
 Contribution
@@ -183,6 +232,7 @@ Copyright (c) 2021-2025 Abhijeet Anand.
 Thanks,
 Abhijeet Anand
 Lawrence Berkeley National Lab
+
 
 
 

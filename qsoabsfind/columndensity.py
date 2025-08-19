@@ -11,6 +11,7 @@ import numpy as np
 from astropy.table import Table, vstack
 from .absorberutils import calculate_doublet_ratio
 from .config import load_constants
+from .utils import match_order
 
 
 # We adopt the inverse-variance weighted column density for doublets with DR > 2 − DR_error. For systems with DR ≤ 2 − DR_error, we apply the Savage & Sembach (1991) correction to the weaker line when both transitions are measured. Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.
@@ -74,12 +75,12 @@ def velocity_from_wavelength(lambda_array, lambda_0, z):
     """Function to convert wavelength into velocity pixels
 
     Args:
-        lambda_array (array): observed wavelength
-        lambda_0 (float): rest-frame wavelength of given absorber
+        lambda_array (array): observed wavelength (Angstrom)
+        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
         z (float): redshift of absorber
 
     Returns:
-        velocities (observed and in rest-frame, array)
+        velocities (observed and in rest-frame, array in km/s)
 
     """
 
@@ -98,12 +99,12 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
     Args:
         F_lambda (array): continuum normalized flux
         error (array): continuum normalized errors
-        wavelength (array): observed wavelength
+        wavelength (array): observed wavelength (Angstrom)
         z (float): redshift of absorber
         f (float): oscillator strength of line transition
-        lambda_0 (float): rest-frame wavelength of given absorber
+        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
         continuum_error_frac (float): systematics on continuum normalized flux
-        velocity_range (float): +/- velocity_range will be used for column density integration
+        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
 
     Returns:
         results (dict): dictionary containing column density and error
@@ -148,14 +149,14 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     Args:
         F_lambda (array): continuum normalized flux
         error (array): continuum normalized errors
-        wavelength (array): observed wavelength
+        wavelength (array): observed wavelength (Angstrom)
         abs_cat (table): absorber table for the individual absorber (must contain Z_ABS, {absorber}_line12_EW, and {absorber}_line12_EW_ERROR, e.g. CIV_1548_EW)
         f1 (float): oscillator strength of first line
         f2 (float): oscillator strength of second line
-        lambda1 (tuple): key and rest-frame wavelength of first line
-        lambda2 (tuple): key and rest-frame wavelength of second line
+        lambda1 (tuple): key and rest-frame wavelength of first line (Angstrom)
+        lambda2 (tuple): key and rest-frame wavelength of second line (Angstrom)
         continuum_error_frac (float): systematics on continuum normalized flux
-        velocity_range (float): +/- velocity_range will be used for column density integration
+        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
 
     Returns:
         results (dict): dictionary containing apparent column density and error
@@ -168,6 +169,7 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     """
 
     z = abs_cat["Z_ABS"]
+    qso_id = abs_cat["INDEX_SPEC"]
     l1, l2 = lambda1[1], lambda2[1]
     ew1, ew2 = abs_cat[f"{lambda1[0].upper()}_EW"], abs_cat[f"{lambda2[0].upper()}_EW"]
     err_ew1, err_ew2 = abs_cat[f"{lambda1[0].upper()}_EW_ERROR"], abs_cat[f"{lambda2[0].upper()}_EW_ERROR"]
@@ -279,9 +281,10 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
 
     # Combine into single table
     N_table = vstack(results)
+
     for col in N_table.colnames:
         if "10N" in col:
-            N_table[col].unit = "cm^-2"
+            N_table[col].unit = "cm-2" # cm^-2
             N_table[col] = N_table[col].astype('float64')
         else:
             N_table[col] = N_table[col].astype('int32')
