@@ -38,13 +38,14 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 Key Features
 --------
 - **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
-- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``qsoabsfind.constants``.
+- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``data/${survey}`` folder.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
 - **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)).
-- **Parallel processing**: Supports efficient computation across large datasets using Python's `multiprocessing` module.
+- **Parallel processing**: Supports fast and efficient computation across large datasets using Python's `multiprocessing` module.
+- **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
 
 
@@ -53,11 +54,9 @@ Documentation
 
 The full documentation is available at [https://qsoabsfind.readthedocs.io](https://qsoabsfind.readthedocs.io).
 
-Installation
-------------
+## Installation
 
-Prerequisites for installation
--------------
+### Prerequisites
 
 - Python 3.6 or higher
 - `numpy`
@@ -67,17 +66,52 @@ Prerequisites for installation
 - `matplotlib`
 - `pytest` (for running tests)
 
-Clone the Repository
---------------------
+### 1. Clone the Repository
+```bash
 
-First, clone the repository to your local machine:
-
-```sh
 git clone https://github.com/abhi0395/qsoabsfind.git
 cd qsoabsfind
-pip install .
-python -m unittest discover -s tests
+```
 
+### 2. Set Up Environment
+
+#### Option 1: Using Conda (Recommended, python>=3.9)
+
+```bash
+conda create -n qsoabsfind python=3.9
+conda activate qsoabsfind
+
+# Install dependencies
+conda install numpy scipy astropy numba matplotlib
+conda install -c conda-forge pytest
+```
+
+#### Option 2: Using pip with virtual environment
+
+```bash
+python -m venv qsoabsfind-env
+source qsoabsfind-env/bin/activate  
+
+# Install dependencies
+pip install numpy scipy astropy numba matplotlib pytest
+
+### Install Package
+
+pip install .
+
+# For developers (editable mode installation):
+pip install -e .
+```
+
+### 3. Run Unit tests
+
+```bash
+python -m unittest discover -s tests
+```
+
+### 4. Quick installation test
+```bash
+python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
 ```
 
 Description
@@ -86,11 +120,6 @@ Description
 ```sh
 qsoabsfind --help
 ```
-
-Setting Environment Variable
-------------------------
-
-Before using the module, please set an environment variable `QSO_CONSTANTS_FILE` in your `bashrc` or `zshrc` file, and point it to the `qsoabsfind.constants` file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.
 
 Important Instructions
 -------------

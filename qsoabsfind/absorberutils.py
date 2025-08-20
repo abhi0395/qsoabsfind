@@ -11,10 +11,7 @@ from .config import load_constants
 from .utils import elapsed
 
 # Constants
-constants = load_constants()
-lines = constants.lines
-speed_of_light = constants.speed_of_light
-doublet_keys = constants.doublet_keys
+from .constants import lines, speed_of_light, doublet_keys
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
@@ -653,7 +650,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
 
     return z_corr, z_err
 
-def return_search_window_wavelength_range(absorber):
+def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None):
 
     """
     Return default red and blue end rest-frame quasar emission wavelength range
@@ -661,13 +658,17 @@ def return_search_window_wavelength_range(absorber):
 
     Args:
         absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
+        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
+        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
+
     Returns:
         (blue_end, red_end)
     """
-    if lines["start_rest_wave"] is not None and lines["end_rest_wave"] is not None:
+
+    if start_rest_wave is not None and end_rest_wave is not None:
         print('INFO: using user-defined wavelength search window')
-        lam_blue = lines["start_rest_wave"]
-        lam_red = lines["end_rest_wave"]
+        lam_blue = start_rest_wave
+        lam_red = end_rest_wave
     else:
         print('INFO: using default wavelength search window')
         if absorber in ['MgII', 'FeII']:
@@ -701,8 +702,7 @@ def return_search_window_wavelength_range(absorber):
 
     return lam_blue, lam_red
 
-
-def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0):
+def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0):
     """
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
@@ -711,6 +711,9 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
         zqso (float): Quasar emission redshift
         min_wave (float): minimum Observed wavelength
         max_wave (float): maximum Observed wavelength
+        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
+        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
+        dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): Padding in angstroms to avoid edge artifacts
 
     Returns:
@@ -718,9 +721,9 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
     """
 
     # Convert velocity offset to redshift offset
-    dz = (abs(lines['dv']) / speed_of_light) * (1 + zqso)
+    dz = (abs(dv) / speed_of_light) * (1 + zqso)
 
-    lam_blue, lam_red = return_search_window_wavelength_range(absorber)
+    lam_blue, lam_red = return_search_window_wavelength_range(absorber, start_rest_wave, end_rest_wave)
 
     print(f'INFO: wavelength search window in quasar-rest frame: {lam_blue, lam_red} Angstroms')
 
@@ -732,7 +735,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=0)
 
     return lam_start, lam_end
 
-def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, lam_edge_sep=0, verbose=False):
+def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, verbose=False):
     """
     Wrapper function to return the most basic wavelength window for absorber
     search.
@@ -743,8 +746,11 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
         zqso (float): The redshift of the QSO.
         absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII)
-        min_wave (float): minimum wavelength edge (in Ang)
-        max_wave (float): maximum wavelength edge (in Ang)
+        min_wave (float): minimum observed wavelength edge (in Ang)
+        max_wave (float): maximum observed wavelength edge (in Ang)
+        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
+        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
+        dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
         verbose (bool, optional): If True will print time info. Default is False.
 
@@ -753,7 +759,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     """
     start = elapsed(None, "")
 
-    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, lines, lam_edge_sep=lam_edge_sep)
+    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep)
 
     imp_ind = np.where((wavelength >= lam_start) & (wavelength <= lam_end))[0]
     lam_search = wavelength[imp_ind]
@@ -839,7 +845,9 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     # Identify the wavelength region for searching the specified absorber
     lam_search, unmsk_residual, unmsk_error = absorber_search_window(
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave,
-        lam_edge_sep=kwargs["lam_edge_sep"], verbose=kwargs["verbose"]
+        lam_edge_sep=kwargs["lam_edge_sep"],
+        start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
+        dv=kwargs["dv"], verbose=kwargs["verbose"]
     )
 
     # Verify that the arrays are of equal size

@@ -81,6 +81,10 @@
 <span class="sd">using Apparent Optical Depth Method (AODM) of Savage &amp; Sembach 1991</span>
 
 <span class="sd">Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.</span>
+
+<span class="sd">We adopt the inverse-variance weighted column density for doublets with DR &gt; 2 − DR_error. For systems with DR &lt;= 2 − DR_error.</span>
+<span class="sd">We also apply the Savage &amp; Sembach (1991) correction to the weaker line when both transitions are measured.</span>
+<span class="sd">Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">time</span>
@@ -88,25 +92,15 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">vstack</span>
 <span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">calculate_doublet_ratio</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">match_order</span>
-
-
-<span class="c1"># We adopt the inverse-variance weighted column density for doublets with DR &gt; 2 − DR_error. For systems with DR ≤ 2 − DR_error, we apply the Savage &amp; Sembach (1991) correction to the weaker line when both transitions are measured. Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.</span>
-
 
 <span class="c1"># Constants</span>
-<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
-<span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
-<span class="n">oscillator_strengths</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">oscillator_parameters</span>
-<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
-<span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">oscillator_parameters</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">doublet_keys</span>
 
 <div class="viewcode-block" id="ss1991_correction">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.ss1991_correction">[docs]</a>
 <span class="k">def</span> <span class="nf">ss1991_correction</span><span class="p">(</span><span class="n">delta_logN</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Interpolate Savage &amp; Sembach (1991) Table 4 to get Δlog N correction.</span>
+<span class="sd">    Interpolate Savage &amp; Sembach (1991) Table 4 to get Delta_log N correction.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        delta_logN (float): difference between logN of first and second lines</span>
@@ -168,9 +162,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        velocities (observed and in rest-frame, array in km/s)</span>
-
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="k">if</span> <span class="ow">not</span> <span class="n">logwave</span><span class="p">:</span>
         <span class="n">d_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lambda_array</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">lambda_array</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">d_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">lambda_array</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="o">*</span> <span class="n">d_lambda</span>
@@ -369,7 +361,7 @@
     <span class="n">error_F_lambda</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span>
     <span class="n">wavelength</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
 
-    <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">oscillator_strengths</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f1&#39;</span><span class="p">],</span> <span class="n">oscillator_strengths</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f2&#39;</span><span class="p">]</span>
+    <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">oscillator_parameters</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f1&#39;</span><span class="p">],</span> <span class="n">oscillator_parameters</span><span class="p">[</span><span class="n">absorber</span> <span class="o">+</span> <span class="s1">&#39;_f2&#39;</span><span class="p">]</span>
     <span class="n">l1_key</span><span class="p">,</span> <span class="n">l2_key</span> <span class="o">=</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="p">(</span><span class="n">l1_key</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1_key</span><span class="p">]),</span> <span class="p">(</span><span class="n">l2_key</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2_key</span><span class="p">])</span>
 
@@ -410,7 +402,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-19.
+      <span class="lastupdated">Last updated on 2025-08-20.
       </span></p>
   </div>
 

@@ -88,15 +88,9 @@
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Row</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">importlib.metadata</span> <span class="kn">import</span> <span class="n">version</span><span class="p">,</span> <span class="n">PackageNotFoundError</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
-
 
 <span class="c1"># Constants</span>
-<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
-<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
-<span class="n">amplitude_dict</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">amplitude_dict</span>
-<span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
-<span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">oscillator_parameters</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">doublet_keys</span><span class="p">,</span> <span class="n">amplitude_dict</span>
 
 <div class="viewcode-block" id="get_package_versions">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.get_package_versions">[docs]</a>
@@ -116,6 +110,44 @@
             <span class="n">versions</span><span class="p">[</span><span class="n">pkg</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;not installed&#39;</span>
     <span class="k">return</span> <span class="n">versions</span></div>
 
+
+
+<div class="viewcode-block" id="update_header">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.update_header">[docs]</a>
+<span class="k">def</span> <span class="nf">update_header</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">user_constants</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add search parameters and package versions to headers</span>
+<span class="sd">    Args:</span>
+<span class="sd">        args (parser argument)</span>
+<span class="sd">        user_constants (constants attributes)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Fits headers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Prepare headers</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span>
+        <span class="n">headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+
+    <span class="n">headers</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+        <span class="s1">&#39;ABSORBER&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Absorber name&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;KERWIDTH&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;ker_width_pixels&quot;</span><span class="p">]),</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Kernel width in pixels (ker_width_pixels)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;COEFFSIG&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;coeff_sigma&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;sigma threshold (coeff_sigma)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;MULTRE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;mult_resi&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Multiplicative factor for residuals (mult_resi)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;D_PIX&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;d_pix&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;tolerance for line separation (in Ang) (d_pix)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;PM_PIXEL&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;pm_pixel&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;N_Pixel for noise estimation (pm_pixel)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;sn_line1&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for first line (sn_line1)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;sn_line2&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for second line (sn_line2)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;EWCOVAR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;use_covariance&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use covariance for EW error (use_covariance)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;LOGWAVE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;logwave&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use log wavelength scaling (logwave)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;LAM_ESEP&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;lambda edges to avoid edges (lam_edge_sep)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;BLUE_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_blue&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;blue end of quasar-rest frame (Ang) for search&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;RED_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_red&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;red end of quasar-rest frame (Ang) for search&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;CONTERR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;continuum_error_frac&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;fractional error in continuum normalization&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;CONFLEV&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;conf_level&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;minimum confidence level for selection&#39;</span><span class="p">},</span>
+    <span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">headers</span></div>
 
 
 <div class="viewcode-block" id="parse_qso_sequence">
@@ -764,7 +796,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-19.
+      <span class="lastupdated">Last updated on 2025-08-20.
       </span></p>
   </div>
 

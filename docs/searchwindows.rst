@@ -12,7 +12,7 @@ Parameter Definitions
 
 - :math:`\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}`: Full observed-frame wavelength coverage of the spectrum.
 - :math:`z_{\mathrm{QSO}}`: Emission redshift of the background quasar.
-- :math:`\Delta z` is derived from the velocity offset parameter (``lines["dv"]``, from ``qsoabsfind.constants``) to avoid regions close to emission lines.
+- :math:`\Delta z` is derived from the velocity offset parameter (``search_parameters["dv"]``, from user's constant file) to avoid regions close to emission lines.
 - :math:`\Delta\lambda_{\mathrm{edge}}` is a offset from edges to avoid noisy regions during convolution or feature detection near the wavelength edges.
 
 
@@ -21,7 +21,7 @@ Search Window Definitions
 
 For each absorber, the search window in observed-frame wavelength is defined using quasar intrinsic emission-line and a velocity-based offset. The purpose is to restrict the search to physically motivated regions around the quasar where the absorber is likely to appear, while avoiding contamination from unrelated features.
 
-The offset is determined via a velocity range (e.g., ±5000 km/s), converted to redshift as:
+The offset is determined via a velocity range (e.g., +/-5000 km/s), converted to redshift as:
 
 The general form for the observed-frame wavelength of a line is:
 
@@ -43,8 +43,8 @@ User-defined wavelength boundaries (in quasar rest-frame):
 The code allows users to provide the wavelength boundaries (in the quasar rest-frame) to define the absorber search window. Details are provided below.
 
 - **Emission lines**:
-    - Blue side: ``constants.lines["start_rest_wave"]``
-    - Red side: ``constants.lines["end_rest_wave"]``
+    - Blue side: ``search_parameters["start_rest_wave"]``
+    - Red side: ``search_parameters["end_rest_wave"]``
 
 - **Search window**:
 

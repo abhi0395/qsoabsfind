@@ -107,14 +107,14 @@
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\(\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}\)</span>: Full observed-frame wavelength coverage of the spectrum.</p></li>
 <li><p><span class="math notranslate nohighlight">\(z_{\mathrm{QSO}}\)</span>: Emission redshift of the background quasar.</p></li>
-<li><p><span class="math notranslate nohighlight">\(\Delta z\)</span> is derived from the velocity offset parameter (<code class="docutils literal notranslate"><span class="pre">lines[&quot;dv&quot;]</span></code>, from <code class="docutils literal notranslate"><span class="pre">qsoabsfind.constants</span></code>) to avoid regions close to emission lines.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta z\)</span> is derived from the velocity offset parameter (<code class="docutils literal notranslate"><span class="pre">search_parameters[&quot;dv&quot;]</span></code>, from user’s constant file) to avoid regions close to emission lines.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\Delta\lambda_{\mathrm{edge}}\)</span> is a offset from edges to avoid noisy regions during convolution or feature detection near the wavelength edges.</p></li>
 </ul>
 </section>
 <section id="search-window-definitions">
 <h2>Search Window Definitions<a class="headerlink" href="#search-window-definitions" title="Link to this heading"></a></h2>
 <p>For each absorber, the search window in observed-frame wavelength is defined using quasar intrinsic emission-line and a velocity-based offset. The purpose is to restrict the search to physically motivated regions around the quasar where the absorber is likely to appear, while avoiding contamination from unrelated features.</p>
-<p>The offset is determined via a velocity range (e.g., ±5000 km/s), converted to redshift as:</p>
+<p>The offset is determined via a velocity range (e.g., +/-5000 km/s), converted to redshift as:</p>
 <p>The general form for the observed-frame wavelength of a line is:</p>
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{obs}} = \lambda_{\mathrm{rest}} \times (1 + z)\]</div>
@@ -128,8 +128,8 @@
 <ul class="simple">
 <li><dl class="simple">
 <dt><strong>Emission lines</strong>:</dt><dd><ul>
-<li><p>Blue side: <code class="docutils literal notranslate"><span class="pre">constants.lines[&quot;start_rest_wave&quot;]</span></code></p></li>
-<li><p>Red side: <code class="docutils literal notranslate"><span class="pre">constants.lines[&quot;end_rest_wave&quot;]</span></code></p></li>
+<li><p>Blue side: <code class="docutils literal notranslate"><span class="pre">search_parameters[&quot;start_rest_wave&quot;]</span></code></p></li>
+<li><p>Red side: <code class="docutils literal notranslate"><span class="pre">search_parameters[&quot;end_rest_wave&quot;]</span></code></p></li>
 </ul>
 </dd>
 </dl>
@@ -236,7 +236,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-19.
+      <span class="lastupdated">Last updated on 2025-08-20.
       </span></p>
   </div>
 

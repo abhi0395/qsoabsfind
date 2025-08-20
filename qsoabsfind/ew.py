@@ -8,13 +8,9 @@ from scipy.optimize import curve_fit
 from .utils import double_gaussian
 from .absorberutils import redshift_estimate
 from .absorberutils import find_z_from_minimum
-from .config import load_constants
 
 # Constants
-constants = load_constants()
-lines = constants.lines
-doublet_keys = constants.doublet_keys
-oscillator_params = constants.oscillator_parameters
+from .constants import lines, oscillator_parameters, doublet_keys
 
 def return_line_centers(use_kernel):
     """
@@ -302,7 +298,7 @@ def measure_absorber_properties_double_gaussian(
 
     # Get line properties for this kernel
     line_centre1, line_centre2 = return_line_centers(use_kernel)
-    amp_ratio = oscillator_params[f'{use_kernel}_f2'] / oscillator_params[f'{use_kernel}_f1']
+    amp_ratio = oscillator_parameters[f'{use_kernel}_f2'] / oscillator_parameters[f'{use_kernel}_f1']
 
     # Define wavelength range for Gaussian fitting
     # Assuming maximum line width of d_pix * 15

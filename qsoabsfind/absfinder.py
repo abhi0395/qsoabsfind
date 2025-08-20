@@ -23,15 +23,10 @@ from .absorberutils import (
 from .ew import (
     measure_absorber_properties_double_gaussian
 )
-from .config import load_constants
 from .spec import QSOSpecRead
 
 # Constants
-constants = load_constants()
-lines = constants.lines
-oscillator_parameters = constants.oscillator_parameters
-speed_of_light = constants.speed_of_light
-doublet_keys  = constants.doublet_keys
+from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
 
 def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
     """
@@ -92,12 +87,16 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     # Identify the wavelength region for searching the specified absorber
     lam_search, unmsk_residual, unmsk_error = absorber_search_window(
-        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, lam_edge_sep= kwargs["lam_edge_sep"], verbose=kwargs['verbose'])
+        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
+        dv=kwargs["dv"], lam_edge_sep= kwargs["lam_edge_sep"], verbose=kwargs['verbose'])
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
+    for key in ["lam_edge_sep", "start_rest_wave", "end_rest_wave", "dv", "continuum_error_frac", "lam_red", "lam_blue"]:
+        if key in kwargs:
+            kwargs.pop(key) # just remove this keyword as its not used the following function.
+
     if kwargs["verbose"]:
         print(f'INFO: search absorber = {absorber}')
         print(f'INFO: Z_QSO = {z_qso[0]}')

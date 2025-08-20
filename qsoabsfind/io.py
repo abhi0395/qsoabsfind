@@ -5,10 +5,9 @@ import os
 from astropy.io import fits
 import numpy as np
 from astropy.table import Table
-from .config import load_constants
 
-constants = load_constants()
-doublet_keys = constants.doublet_keys
+#Constants
+from .constants import doublet_keys
 
 def read_fits_file(fits_file, index=None):
     """

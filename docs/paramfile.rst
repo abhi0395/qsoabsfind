@@ -1,12 +1,11 @@
 Parameter File
 =======
 
-Constant File (Optional)
+Constant File (Mandatory)
 ------------------------
 
-Before using your own constants file, please set an environment variable ``QSO_CONSTANTS_FILE`` in your ``bashrc`` or ``zshrc`` file, and point it to the ``qsoabsfind.constants`` file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.
+The user-defined **constants file** must follow the same structure as the `qsoabsfind.constants <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/data/desi/desi_constants.py>`_ file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the `constant-file` option.
 
-The user-defined **constants file** must follow the same structure as the `qsoabsfind.constants <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/constants.py>`_ file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the `constant-file` option.
 
 A minimal example for the ``constants.py``
 ------------------------------------------
@@ -14,145 +13,58 @@ A minimal example for the ``constants.py``
 .. code-block:: python
 
     """
-    constants.py
+    data/desi/desi_constants.py
 
-    This module defines constants, line wavelengths, search parameters, and oscillator strengths
-    used in QSO absorption line analysis.
+    This module defines search parameters. It includes general and survey-specific configurations
+    for DESI quasar spectra.
+
+    Used in:
+    - data/desi/qso_test_spectra.py
+    - To generate: data/desi/MgII_cat.fits and data/desi/CIV_cat.fits
 
     Usage:
-        from constants import speed_of_light, lines, search_parameters, doublet_keys ...
+        from qsoabsfind.config import load_constants
+        search_parameters = load_constants(file_path)
     """
-
-    # ==============================
-    # Physical Constants
-    # ==============================
-
-    speed_of_light = 3e5  # Speed of light in km/s
-
-    continuum_systematic_error = 0.05
-    # Fixed fractional error due to continuum normalization (5%)
-    # Used in estimating the uncertainty on column density
-    # arising from continuum placement uncertainties.
-    # Currently set empirically — a more optimal estimate can be obtained
-    # by stacking continuum-normalized residual spectra in the observed frame
-    # and measuring the standard deviation from unity.
-
-    # Search absorber
-    doublet_keys = {
-            'MgII': ('MgII_2796', 'MgII_2803')
-        }
-
-    # ==============================
-    # Absorption Line Wavelengths (in Ang)
-    # ==============================
-
-    lines = {
-        # Lyman series
-        'Lya': 1215.67,
-        'Lyb_1026': 1025.72,
-
-        # CIV doublet
-        'CIV_1548': 1548.20,
-        'CIV_1550': 1550.77,
-        'CIV_1549': 1549.48,  # CIV emission from quasar
-
-        # MgII doublet
-        'MgII_2796': 2796.35,
-        'MgII_2803': 2803.52,
-        'MgII_2799': 2799.117,  # MgII emission from quasar
-
-        # OVI doublet
-        'OVI_1032': 1031.926,
-        'OVI_1038': 1037.617,
-        'OVI_1033': 1033.82,  # OVI emission from Quasar
-
-        # NV doublet
-        'NV_1238': 1238.821,
-        'NV_1242': 1242.804,
-        'NV_1240': 1240.81,  # NV emission from Quasar
-
-        # SiIV doublet
-        'SiIV_1394': 1393.755,
-        'SiIV_1403': 1402.770,
-        'SiIV_1399': 1399.8,  # SiIV emission from Quasar
-
-        # AlIII doublet
-        'AlIII_1855': 1854.716,
-        'AlIII_1863': 1862.790,
-        'AlIII_1857': 1857.4,  # AlIII emission from Quasar
-
-        # FeII lines (two strongest)
-        'FeII_2586': 2586.650,
-        'FeII_2600': 2600.173,
-
-        'dv': 5000,  # velocity offset from quasars redshift in km/s
-        'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
-        'end_rest_wave':None # red end of rest-frame quasar wavelength, None --> default
-    }
-
-    # ==============================
-    # Default Signal Parameters
-    # ==============================
-
-    ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels) for convolution
-    pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
-    mult_resi = 1                         # Multiplication factor for residual spectrum
-    lam_sep = 50                         # Wavelength cut from spectrum edges (in Ang)
 
     # ==============================
     # Search Parameter Dictionary
     # ==============================
 
-    # Define default parameters
-    # Used in DESI-like spectra (e.g., data/desi/qso_test_spectra.py) for unittest
-    default_search_params = {
-        'ker_width_pixels': ker_width_pixels,
-        'pm_pixel': pm_pixel,
-        'coeff_sigma': 2.5,
-        'mult_resi': mult_resi,
-        'd_pix': 0.6,
-        'sn_line1': 3,
-        'sn_line2': 2,
-        'use_covariance': False,
-        'logwave': False,  # Assume DESI-style linear by default
-        'lam_edge_sep': lam_sep,
-        'conf_level':0.95, # 95 percent confidence level for absorber selection
-        'verbose': True,
-    }
-
-    # Create the final dictionary
     search_parameters = {
-        absorber: default_search_params.copy()
-        for absorber in doublet_keys.keys()
+        'ker_width_pixels':[3, 4, 5, 6, 7, 8], # Gaussian kernel widths (in pixels) for convolution
+        'pm_pixel': 200, # Window size around feature for threshold calculation for convolved array
+        'coeff_sigma': 2, # for convolution the SNR cut
+        'mult_resi': 1, # Multiplication factor for residual spectrum (to shift the normalization up or down)
+        'd_pix': 0.6, # tolerance (in Angs) for line difference from true values
+        'sn_line1': 3, # SNR cut for first line
+        'sn_line2': 2, # SNR cut for second line
+        'use_covariance': False, # to use covariance matrix in EW error calculation
+        'logwave': False,  # Assume DESI-style log scale by default
+        'lam_edge_sep': 50, # Wavelength cut from spectrum edges (in Ang)
+        'conf_level':0.95, # 95 percent confidence level for absorber selection
+        'verbose': True, # for printing statements for debugging
+        'dv': 5000,  # velocity offset from quasars redshift in km/s
+        'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
+        'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default
+        'nboot':None, # if provided the number, will perform bootstrapping for EW error calculation
+        'continuum_error_frac':0.05 # Fixed fractional error due to continuum normalization (5%) used AODM column density measurements
     }
-
-    # ==============================
-    # Default Amplitudes for Gaussian doublet kernel
-    # ==============================
-
-    amplitude_dict = {
-        'MgII': 0.94
-
-    }
-
-    # ==============================
-    # Oscillator Strengths (f-values)
-    # ==============================
-
-    oscillator_parameters = {
-        # MgII doublet
-        'MgII_f1': 0.6123,   # 2796.35
-        'MgII_f2': 0.3054,   # 2803.52
-    }
-
 
     # ==============================
     # Notes:
     # ==============================
 
     """
-    - SDSS spectra: `logwave=True` (log-uniform wavelength); resolution estimated automatically.
     - DESI spectra: `logwave=False` (linear wavelength grid); per-pixel resolution is computed.
+    - MgII/CIV default parameters are optimized for DESI spectra
     Adjust as needed based on spectrum type.
+
+    Fixed fractional error due to continuum normalization (5%)
+    Used in estimating the uncertainty on column density
+    arising from continuum placement uncertainties.
+    Currently set empirically — a more optimal estimate can be obtained
+    by stacking continuum-normalized residual spectra in the observed frame
+    and measuring the standard deviation from unity.
     """
 

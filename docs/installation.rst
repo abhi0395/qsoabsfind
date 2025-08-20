@@ -5,12 +5,12 @@ Prerequisites
 -------------
 
 - Python 3.6 or higher
-- `numpy`
-- `scipy`
-- `astropy`
-- `numba`
-- `matplotlib`
-- `pytest` (for running tests)
+- ``numpy``
+- ``scipy``
+- ``astropy``
+- ``numba``
+- ``matplotlib``
+- ``pytest`` (for running tests)
 
 Clone the Repository
 --------------------
@@ -21,18 +21,75 @@ First, clone the repository to your local machine:
 
     git clone https://github.com/abhi0395/qsoabsfind.git
     cd qsoabsfind
+
+Set Up Environment
+------------------
+
+**Option 1: Using Conda (Recommended, python>=3.9)**
+
+Create and activate a conda environment:
+
+.. code-block:: bash
+
+    # Create environment with Python 3.9
+    conda create -n qsoabsfind python=3.9
+    conda activate qsoabsfind
+
+    # Install dependencies
+    conda install numpy scipy astropy numba matplotlib
+    conda install -c conda-forge pytest
+
+**Option 2: Using pip with virtual environment**
+
+.. code-block:: bash
+
+    # Create virtual environment
+    python -m venv qsoabsfind-env
+    source qsoabsfind-env/bin/activate  # Linux/Mac
+
+    # Install dependencies
+    pip install numpy scipy astropy numba matplotlib pytest
+
+Install Package
+---------------
+
+Install qsoabsfind:
+
+.. code-block:: bash
+
     pip install .
+
+For developers (editable mode installation):
+
+.. code-block:: bash
+
+    pip install -e .
+
+Run Unit tests
+---------
+
+Verify the installation by running tests:
+
+.. code-block:: bash
+
     python -m unittest discover -s tests
 
+
+Quick installation test
+----------
+
+Test the installation:
+
+.. code-block:: python
+
+    python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
+
+
 Description
----------
+-----------
+
+To see available options and usage:
 
 .. code-block:: bash
 
     qsoabsfind --help
-
-
-Setting Environment Variable
-------------------------
-
-Before using the module, please set an environment variable ``QSO_CONSTANTS_FILE`` in your ```bashrc``` or ``zshrc`` file, and point it to the ``qsoabsfind.constants`` file. Since the code dynamically loads constants from a new file, it is important to define this environment variable.

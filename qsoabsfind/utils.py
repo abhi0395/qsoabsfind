@@ -10,15 +10,9 @@ from astropy.io import fits
 from astropy.table import Table, Row
 import re
 from importlib.metadata import version, PackageNotFoundError
-from .config import load_constants
-
 
 # Constants
-constants = load_constants()
-lines = constants.lines
-amplitude_dict = constants.amplitude_dict
-speed_of_light = constants.speed_of_light
-doublet_keys = constants.doublet_keys
+from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys, amplitude_dict
 
 def get_package_versions():
     """
@@ -36,6 +30,41 @@ def get_package_versions():
             versions[pkg] = 'not installed'
     return versions
 
+
+def update_header(args, user_constants):
+
+    """Add search parameters and package versions to headers
+    Args:
+        args (parser argument)
+        user_constants (constants attributes)
+    Returns:
+        Fits headers
+    """
+    # Prepare headers
+    headers = {}
+    for header in args.headers:
+        key, value = header.split('=')
+        headers[key] = {"value": value, "comment": ""}
+
+    headers.update({
+        'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
+        'KERWIDTH': {"value": str(user_constants.search_parameters["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
+        'COEFFSIG': {"value": user_constants.search_parameters["coeff_sigma"], "comment": 'sigma threshold (coeff_sigma)'},
+        'MULTRE': {"value": user_constants.search_parameters["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
+        'D_PIX': {"value": user_constants.search_parameters["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
+        'PM_PIXEL': {"value": user_constants.search_parameters["pm_pixel"], "comment": 'N_Pixel for noise estimation (pm_pixel)'},
+        'SN_LINE1': {"value": user_constants.search_parameters["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
+        'SN_LINE2': {"value": user_constants.search_parameters["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
+        'EWCOVAR': {"value": user_constants.search_parameters["use_covariance"], "comment": 'Use covariance for EW error (use_covariance)'},
+        'LOGWAVE': {"value": user_constants.search_parameters["logwave"], "comment": 'Use log wavelength scaling (logwave)'},
+        'LAM_ESEP': {"value": user_constants.search_parameters["lam_edge_sep"], "comment": 'lambda edges to avoid edges (lam_edge_sep)'},
+        'BLUE_LAM': {"value": user_constants.search_parameters["lam_blue"], "comment": 'blue end of quasar-rest frame (Ang) for search'},
+        'RED_LAM': {"value": user_constants.search_parameters["lam_red"], "comment": 'red end of quasar-rest frame (Ang) for search'},
+        'CONTERR': {"value": user_constants.search_parameters["continuum_error_frac"], "comment": 'fractional error in continuum normalization'},
+        'CONFLEV': {"value": user_constants.search_parameters["conf_level"], "comment": 'minimum confidence level for selection'},
+    })
+
+    return headers
 
 def parse_qso_sequence(qso_sequence):
     """

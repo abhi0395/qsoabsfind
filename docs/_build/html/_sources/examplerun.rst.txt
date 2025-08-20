@@ -13,7 +13,7 @@ Before running, please read :doc:`File formats <fileformat>`.
                --absorber $your_absorber \
                --output $output \
                --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
-               --ncpus 10
+               --ncpus 4
 
 **2. Your input spectra** (absorber search with column densities):
 -----------------------------------------------
@@ -25,7 +25,7 @@ Before running, please read :doc:`File formats <fileformat>`.
                --absorber $your_absorber \
                --output $output \
                --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
-               --ncpus 10
+               --ncpus 4
                --coldens
                --dv 300
 

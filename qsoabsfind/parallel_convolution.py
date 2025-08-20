@@ -13,7 +13,8 @@ from .columndensity import return_total_column_density_table
 from .io import append_table_to_fits
 from .io import save_results_to_fits
 from .absorberutils import return_search_window_wavelength_range
-from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence
+from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence, update_header
+from .constants import doublet_keys
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
     """
@@ -23,7 +24,7 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_indices (list or numpy.array): Indices of quasars in the data matrix.
         absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
-        kwargs (dict): search parameters as described in qsoabsfind.constants()
+        kwargs (dict): search parameters as described in data/desi/desi_constants.py
 
     Returns:
         tuples containing detected absorber details
@@ -114,53 +115,26 @@ def main():
     print("==========\n")
     args = parser.parse_args()
 
-    # Set the environment variable for the constants file
-    if args.constant_file:
+    # Read search parameters from user-provided file
+    if args.constant_file and os.path.abspath(args.constant_file):
         const_path = os.path.abspath(args.constant_file)
-        if not os.path.exists(const_path):
-            raise FileNotFoundError(f"ERROR: Provided constants file does not exist: {const_path}")
         print(f"INFO: Using user-provided constants from: {const_path}")
-        print("INFO: Overwriting QSO_CONSTANTS_FILE environment variable with this path")
-        os.environ['QSO_CONSTANTS_FILE'] = const_path
     else:
-        if 'QSO_CONSTANTS_FILE' in os.environ:
-            print(f"INFO: Using QSO_CONSTANTS_FILE from environment: {os.environ['QSO_CONSTANTS_FILE']}")
-        else:
-            print("INFO: No constant file provided; using default constants in the codebase.")
+        raise FileNotFoundError(f"ERROR: Provided constants file does not exist: {const_path}")
 
     # Load constants
     from .config import load_constants
-    constants = load_constants()
+    user_constants = load_constants(const_path)
 
-    if args.absorber not in constants.doublet_keys:
-        raise ValueError(f"ERROR: Unsupported absorber, it must be from {constants.doublet_keys.keys()}")
+    if args.absorber not in doublet_keys:
+        raise ValueError(f"ERROR: Unsupported absorber, it must be from {doublet_keys.keys()}")
 
-    # Prepare headers
-    headers = {}
-    for header in args.headers:
-        key, value = header.split('=')
-        headers[key] = {"value": value, "comment": ""}
+    lam_blue, lam_red = return_search_window_wavelength_range(args.absorber, user_constants.search_parameters["start_rest_wave"], user_constants.search_parameters["end_rest_wave"])
 
-    lam_blue, lam_red = return_search_window_wavelength_range(args.absorber)
+    user_constants.search_parameters["lam_blue"] = lam_blue
+    user_constants.search_parameters["lam_red"] = lam_red
 
-    # Add search parameters and package versions to headers
-    headers.update({
-        'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
-        'KERWIDTH': {"value": str(constants.search_parameters[args.absorber]["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
-        'COEFFSIG': {"value": constants.search_parameters[args.absorber]["coeff_sigma"], "comment": 'sigma threshold (coeff_sigma)'},
-        'MULTRE': {"value": constants.search_parameters[args.absorber]["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
-        'D_PIX': {"value": constants.search_parameters[args.absorber]["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
-        'PM_PIXEL': {"value": constants.search_parameters[args.absorber]["pm_pixel"], "comment": 'N_Pixel for noise estimation (pm_pixel)'},
-        'SN_LINE1': {"value": constants.search_parameters[args.absorber]["sn_line1"], "comment": 'S/N threshold for first line (sn_line1)'},
-        'SN_LINE2': {"value": constants.search_parameters[args.absorber]["sn_line2"], "comment": 'S/N threshold for second line (sn_line2)'},
-        'EWCOVAR': {"value": constants.search_parameters[args.absorber]["use_covariance"], "comment": 'Use covariance for EW error (use_covariance)'},
-        'LOGWAVE': {"value": constants.search_parameters[args.absorber]["logwave"], "comment": 'Use log wavelength scaling (logwave)'},
-        'LAM_ESEP': {"value": constants.search_parameters[args.absorber]["lam_edge_sep"], "comment": 'lambda edges to avoid noisy regions (lam_edge_sep)'},
-        'BLUE_LAM': {"value": lam_blue, "comment": 'blue end of quasar-rest frame (Ang) wavelength for absorber search'},
-        'RED_LAM': {"value": lam_red, "comment": 'red end of quasar-rest frame (Ang) wavelength for absorber search'},
-        'CONTERR': {"value": constants.continuum_error_frac, "comment": 'systematic error in continuum normalization'},
-        'CONFLEV': {"value": constants.search_parameters[args.absorber]["conf_level"], "comment": 'minimum confidence level for selection'},
-    })
+    headers = update_header(args, user_constants)
 
     if args.coldens:
         print('INFO: Will also calculate column densities using apparent optical depth method (AODM)')
@@ -195,17 +169,18 @@ def main():
     n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 1)) ## getting some CPUs for safe I/O processing
     print(f'INFO: number of CPUs used = {n_jobs}')
 
-    if "nboot" not in constants.search_parameters[args.absorber]:
-        constants.search_parameters[args.absorber]["nboot"] = None
+    if "nboot" not in user_constants.search_parameters:
+        user_constants.search_parameters["nboot"] = None
     else:
-        nboot = constants.search_parameters[args.absorber]["nboot"]
-        if nboot is not None and nboot>0:
-            print(f'INFO: Gaussian fitting Parameter estimation will be done with {nboot} bootstrapping estimation')
+        nboot = user_constants.search_parameters["nboot"]
+
+    if nboot is not None and nboot>0:
+        print(f'INFO: Gaussian fitting Parameter estimation will be done with {nboot} bootstrapping estimation')
 
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        n_jobs=n_jobs, **constants.search_parameters[args.absorber]
+        n_jobs=n_jobs, **user_constants.search_parameters
     )
 
     # only save absorber file if there at least one absorber is detected
@@ -217,8 +192,8 @@ def main():
         print(f'INFO: No {args.absorber} absorbers found, no file saved..')
 
     if args.coldens:
-        logwave = constants.search_parameters[args.absorber]["logwave"]
-        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, constants.continuum_error_frac, args.dv, logwave, n_jobs)
+        logwave = user_constants.search_parameters["logwave"]
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.dv, logwave, n_jobs)
         append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing

@@ -3,6 +3,10 @@ This script contains functions to calculate column densities for absorbers
 using Apparent Optical Depth Method (AODM) of Savage & Sembach 1991
 
 Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.
+
+We adopt the inverse-variance weighted column density for doublets with DR > 2 − DR_error. For systems with DR <= 2 − DR_error.
+We also apply the Savage & Sembach (1991) correction to the weaker line when both transitions are measured.
+Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.
 """
 
 import time
@@ -10,23 +14,13 @@ from multiprocessing import Pool
 import numpy as np
 from astropy.table import Table, vstack
 from .absorberutils import calculate_doublet_ratio
-from .config import load_constants
-from .utils import match_order
-
-
-# We adopt the inverse-variance weighted column density for doublets with DR > 2 − DR_error. For systems with DR ≤ 2 − DR_error, we apply the Savage & Sembach (1991) correction to the weaker line when both transitions are measured. Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.
-
 
 # Constants
-constants = load_constants()
-speed_of_light = constants.speed_of_light
-oscillator_strengths = constants.oscillator_parameters
-lines = constants.lines
-doublet_keys = constants.doublet_keys
+from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
 
 def ss1991_correction(delta_logN):
     """
-    Interpolate Savage & Sembach (1991) Table 4 to get Δlog N correction.
+    Interpolate Savage & Sembach (1991) Table 4 to get Delta_log N correction.
 
     Args:
         delta_logN (float): difference between logN of first and second lines
@@ -82,9 +76,7 @@ def velocity_from_wavelength(lambda_array, lambda_0, z, logwave=False):
 
     Returns:
         velocities (observed and in rest-frame, array in km/s)
-
     """
-
     if not logwave:
         d_lambda = np.mean(lambda_array[1:] - lambda_array[:-1])
         d_lambda = np.ones(lambda_array.size) * d_lambda
@@ -271,7 +263,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
     error_F_lambda = spectra.error
     wavelength = spectra.wavelength
 
-    f1, f2 = oscillator_strengths[absorber + '_f1'], oscillator_strengths[absorber + '_f2']
+    f1, f2 = oscillator_parameters[absorber + '_f1'], oscillator_parameters[absorber + '_f2']
     l1_key, l2_key = doublet_keys[absorber][0], doublet_keys[absorber][1]
     l1, l2 = (l1_key, lines[l1_key]), (l2_key, lines[l2_key])
 

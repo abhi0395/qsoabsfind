@@ -46,7 +46,7 @@ class TestQSOAbsFind(unittest.TestCase):
     def test_available_wavelength_pixels(self):
         spec_index = np.random.randint(100)
         spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = spec_index)
-        kwargs = {'verbose':False, "lam_edge_sep":25}
+        kwargs = {'verbose':False, "lam_edge_sep":25, 'start_rest_wave':None, 'end_rest_wave':None, 'dv':5000}
         is_available = return_if_absorber_can_be_detected_in_a_spectrum(spec, "MgII", **kwargs)
         self.assertIn(is_available, [0,1])
 
@@ -56,14 +56,14 @@ class TestQSOAbsFind(unittest.TestCase):
         absorber="MgII"
         # Call the function
         sdss_result = read_single_spectrum_and_find_absorber(
-            self.sdss_fits_file, spec_index, absorber, **self.sdss_constants.search_parameters[absorber])
+            self.sdss_fits_file, spec_index, absorber, **self.sdss_constants.search_parameters)
 
         desi_absorber="CIV"
         desi_result = read_single_spectrum_and_find_absorber(
-            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters[desi_absorber])
+            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters)
 
         desi_result = read_single_spectrum_and_find_absorber(
-            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters[desi_absorber])
+            self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters)
 
         # Validate the output
         self.assertIsInstance(sdss_result, tuple)
@@ -79,11 +79,11 @@ class TestQSOAbsFind(unittest.TestCase):
         n_jobs = 6
         # Call the function
         sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters[absorber])
+            self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters)
 
         desi_absorber='CIV'
         desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
-            self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **self.desi_constants.search_parameters[desi_absorber])
+            self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **self.desi_constants.search_parameters)
 
         # Validate the output
         self.assertIsInstance(sdss_results, dict)
@@ -113,7 +113,7 @@ class TestQSOAbsFind(unittest.TestCase):
             f1, f2 = 0.6123, 0.3054
             self.abs_cat["Z_ABS"] = [sdss_results['z_abs'][0]]
             lambda1, lambda2 = ("MGII_2796", 2796.35), ("MGII_2803", 2803.52)
-            Ncol = total_column_density(F_lambda, error, wavelength, self.abs_cat, f1, f2, lambda1, lambda2,continuum_error_frac=self.sdss_constants.continuum_error_frac, velocity_range=300, logwave=self.sdss_constants.search_parameters[absorber]["logwave"])
+            Ncol = total_column_density(F_lambda, error, wavelength, self.abs_cat, f1, f2, lambda1, lambda2,continuum_error_frac=self.sdss_constants.search_parameters["continuum_error_frac"], velocity_range=300, logwave=self.sdss_constants.search_parameters["logwave"])
             self.assertEqual(len(Ncol.dtype.names), 4)
         else:
             self.skipTest("Skipping column density test: no SDSS absorbers detected")

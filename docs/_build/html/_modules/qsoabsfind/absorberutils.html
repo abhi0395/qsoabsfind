@@ -89,10 +89,7 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 
 <span class="c1"># Constants</span>
-<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
-<span class="n">lines</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span>
-<span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
-<span class="n">doublet_keys</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">doublet_keys</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">doublet_keys</span>
 
 <div class="viewcode-block" id="find_valid_indices">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.find_valid_indices">[docs]</a>
@@ -772,7 +769,7 @@
 
 <div class="viewcode-block" id="return_search_window_wavelength_range">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.return_search_window_wavelength_range">[docs]</a>
-<span class="k">def</span> <span class="nf">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return default red and blue end rest-frame quasar emission wavelength range</span>
@@ -780,13 +777,17 @@
 
 <span class="sd">    Args:</span>
 <span class="sd">        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)</span>
+<span class="sd">        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)</span>
+<span class="sd">        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)</span>
+
 <span class="sd">    Returns:</span>
 <span class="sd">        (blue_end, red_end)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+    <span class="k">if</span> <span class="n">start_rest_wave</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">end_rest_wave</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using user-defined wavelength search window&#39;</span><span class="p">)</span>
-        <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">]</span>
-        <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">]</span>
+        <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">start_rest_wave</span>
+        <span class="n">lam_red</span> <span class="o">=</span> <span class="n">end_rest_wave</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using default wavelength search window&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="s1">&#39;FeII&#39;</span><span class="p">]:</span>
@@ -821,10 +822,9 @@
     <span class="k">return</span> <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span></div>
 
 
-
 <div class="viewcode-block" id="get_search_limits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.get_search_limits">[docs]</a>
-<span class="k">def</span> <span class="nf">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.</span>
 
@@ -833,6 +833,9 @@
 <span class="sd">        zqso (float): Quasar emission redshift</span>
 <span class="sd">        min_wave (float): minimum Observed wavelength</span>
 <span class="sd">        max_wave (float): maximum Observed wavelength</span>
+<span class="sd">        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)</span>
+<span class="sd">        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)</span>
+<span class="sd">        dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)</span>
 <span class="sd">        lam_edge_sep (float): Padding in angstroms to avoid edge artifacts</span>
 
 <span class="sd">    Returns:</span>
@@ -840,9 +843,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Convert velocity offset to redshift offset</span>
-    <span class="n">dz</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="s1">&#39;dv&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">speed_of_light</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">)</span>
+    <span class="n">dz</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">dv</span><span class="p">)</span> <span class="o">/</span> <span class="n">speed_of_light</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">)</span>
 
-    <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">)</span>
+    <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: wavelength search window in quasar-rest frame: </span><span class="si">{</span><span class="n">lam_blue</span><span class="p">,</span><span class="w"> </span><span class="n">lam_red</span><span class="si">}</span><span class="s1"> Angstroms&#39;</span><span class="p">)</span>
 
@@ -857,7 +860,7 @@
 
 <div class="viewcode-block" id="absorber_search_window">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.absorber_search_window">[docs]</a>
-<span class="k">def</span> <span class="nf">absorber_search_window</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">err_residual</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">absorber_search_window</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">err_residual</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wrapper function to return the most basic wavelength window for absorber</span>
 <span class="sd">    search.</span>
@@ -868,8 +871,11 @@
 <span class="sd">        err_residual (numpy.ndarray): The error residual array of the QSO spectrum.</span>
 <span class="sd">        zqso (float): The redshift of the QSO.</span>
 <span class="sd">        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII)</span>
-<span class="sd">        min_wave (float): minimum wavelength edge (in Ang)</span>
-<span class="sd">        max_wave (float): maximum wavelength edge (in Ang)</span>
+<span class="sd">        min_wave (float): minimum observed wavelength edge (in Ang)</span>
+<span class="sd">        max_wave (float): maximum observed wavelength edge (in Ang)</span>
+<span class="sd">        start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)</span>
+<span class="sd">        end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)</span>
+<span class="sd">        dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)</span>
 <span class="sd">        lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum</span>
 <span class="sd">        verbose (bool, optional): If True will print time info. Default is False.</span>
 
@@ -878,7 +884,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">elapsed</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
-    <span class="n">lam_start</span><span class="p">,</span> <span class="n">lam_end</span> <span class="o">=</span> <span class="n">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">lam_edge_sep</span><span class="p">)</span>
+    <span class="n">lam_start</span><span class="p">,</span> <span class="n">lam_end</span> <span class="o">=</span> <span class="n">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="n">end_rest_wave</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">lam_edge_sep</span><span class="p">)</span>
 
     <span class="n">imp_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">wavelength</span> <span class="o">&gt;=</span> <span class="n">lam_start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">wavelength</span> <span class="o">&lt;=</span> <span class="n">lam_end</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">lam_search</span> <span class="o">=</span> <span class="n">wavelength</span><span class="p">[</span><span class="n">imp_ind</span><span class="p">]</span>
@@ -967,7 +973,9 @@
     <span class="c1"># Identify the wavelength region for searching the specified absorber</span>
     <span class="n">lam_search</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">unmsk_error</span> <span class="o">=</span> <span class="n">absorber_search_window</span><span class="p">(</span>
         <span class="n">lam_obs</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">z_qso</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span>
-        <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;verbose&quot;</span><span class="p">]</span>
+        <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span>
+        <span class="n">start_rest_wave</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">],</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">],</span>
+        <span class="n">dv</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;dv&quot;</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;verbose&quot;</span><span class="p">]</span>
     <span class="p">)</span>
 
     <span class="c1"># Verify that the arrays are of equal size</span>
@@ -997,7 +1005,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-19.
+      <span class="lastupdated">Last updated on 2025-08-20.
       </span></p>
   </div>
 

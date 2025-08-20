@@ -51,13 +51,14 @@ Supported Metal Doublet Systems
 Key Features
 --------
 - **Automated Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the `Search Window Documentation <https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html>`_. Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
-- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``qsoabsfind.constants``.
+- **Flexible Search Parameters:** Supports user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``Parameters File``.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
 - **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
+- **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
 
 

@@ -25,17 +25,15 @@ The input `fits file` must have the following HDU extensions:
 - **ERROR**: Error on residuals.
 - **METADATA**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
-Constant File (Optional)
-------------------------
+I have also provided two example QSO spectra FITS files. You can use these files to test an example run as described below.
 
-Before using your custom constant file, please set an environment variable ``QSO_CONSTANTS_FILE`` in your ``bashrc`` or ``zshrc`` file and point it to the `qsoabsfind.constants` file. As the code loads the constants from a new file dynamically, it is crucial to define this environment variable.
+    - ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra.
+    - ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized DESI DR1 QSO spectra.
 
-The user-defined **constant-file** must follow the same structure as the ``qsoabsfind.constants`` file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without the `constant-file` option.
-
-**Note**
+**Example Catalog**
 ---------
 
-Output catalogs for MgII and CIV absorber (without column densities) searches in both SDSS and DESI test spectra are already saved in the ``data/sdss/`` and ``data/desi/`` directories, respectively.
+Example output catalogs for MgII and CIV absorber (without column densities) searches in both SDSS and DESI test spectra are already saved in the ``data/sdss/`` and ``data/desi/`` directories, respectively.
 
 
 Output FITS File Structure
@@ -56,6 +54,7 @@ The **output** `fits file` will have two (or three, optional) HDUs **ABSORBER** 
 - **${METAL}_EW_TOTAL**: (float), Total EW of the lines in Angstroms.
 - **${METAL}_EW_TOTAL_ERROR**: (float), Uncertainties in total EW of the lines in Angstroms.
 - **${METAL}_${LINE}_VDISP**: (float), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
+- **DELTA_CHI2**: (*float*), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).
 
 **2) METADATA** HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.
 

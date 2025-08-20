@@ -12,17 +12,12 @@ Usage:
 # Physical Constants
 # ==============================
 
-speed_of_light = 3e5  # Speed of light in km/s
+speed_of_light = 299792.458   # Speed of light in km/s
 
-continuum_systematic_error = 0.05
-# Fixed fractional error due to continuum normalization (5%)
-# Used in estimating the uncertainty on column density
-# arising from continuum placement uncertainties.
-# Currently set empirically — a more optimal estimate can be obtained
-# by stacking continuum-normalized residual spectra in the observed frame
-# and measuring the standard deviation from unity.
+# ===================
+# Supported absorbers
+# ===================
 
-# supported absorbers
 doublet_keys = {
         'MgII': ('MgII_2796', 'MgII_2803'),
         'CIV':  ('CIV_1548', 'CIV_1550'),
@@ -75,46 +70,6 @@ lines = {
     # FeII lines (two strongest)
     'FeII_2586': 2586.650,
     'FeII_2600': 2600.173,
-
-    'dv': 5000,  # velocity offset from quasars redshift in km/s
-    'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
-    'end_rest_wave':None # red end of rest-frame quasar wavelength, None --> default
-}
-
-# ==============================
-# Default Signal Parameters
-# ==============================
-
-ker_width_pixels = [3, 4, 5, 6, 7, 8]  # Gaussian kernel widths (in pixels) for convolution
-pm_pixel = 200                        # Window size around feature for threshold calculation for convolved array
-mult_resi = 1                         # Multiplication factor for residual spectrum
-lam_sep = 50                         # Wavelength cut from spectrum edges (in Ang)
-
-# ==============================
-# Search Parameter Dictionary
-# ==============================
-
-# Define default parameters
-# Used in SDSS-like spectra (e.g., data/sdss/qso_test_spectra.py) for unittest
-default_search_params = {
-    'ker_width_pixels': ker_width_pixels,
-    'pm_pixel': pm_pixel,
-    'coeff_sigma': 2.5,
-    'mult_resi': mult_resi,
-    'd_pix': 0.6,
-    'sn_line1': 3,
-    'sn_line2': 2,
-    'use_covariance': False,
-    'logwave': True,  # Assume SDSS-style log scale by default
-    'lam_edge_sep': lam_sep,
-    'conf_level':0.95, # 95 percent confidence level for absorber selection
-    'verbose': True,
-}
-
-# Create the final dictionary
-search_parameters = {
-    absorber: default_search_params.copy()
-    for absorber in doublet_keys.keys()
 }
 
 # ==============================
