@@ -89,6 +89,7 @@
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">vstack</span>
 <span class="kn">from</span> <span class="nn">.absorberutils</span> <span class="kn">import</span> <span class="n">calculate_doublet_ratio</span>
 <span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">match_order</span>
 
 
 <span class="c1"># We adopt the inverse-variance weighted column density for doublets with DR &gt; 2 − DR_error. For systems with DR ≤ 2 − DR_error, we apply the Savage &amp; Sembach (1991) correction to the weaker line when both transitions are measured. Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.</span>
@@ -160,12 +161,12 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to convert wavelength into velocity pixels</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        lambda_array (array): observed wavelength</span>
-<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber</span>
+<span class="sd">        lambda_array (array): observed wavelength (Angstrom)</span>
+<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)</span>
 <span class="sd">        z (float): redshift of absorber</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        velocities (observed and in rest-frame, array)</span>
+<span class="sd">        velocities (observed and in rest-frame, array in km/s)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -187,12 +188,12 @@
 <span class="sd">    Args:</span>
 <span class="sd">        F_lambda (array): continuum normalized flux</span>
 <span class="sd">        error (array): continuum normalized errors</span>
-<span class="sd">        wavelength (array): observed wavelength</span>
+<span class="sd">        wavelength (array): observed wavelength (Angstrom)</span>
 <span class="sd">        z (float): redshift of absorber</span>
 <span class="sd">        f (float): oscillator strength of line transition</span>
-<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber</span>
+<span class="sd">        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)</span>
 <span class="sd">        continuum_error_frac (float): systematics on continuum normalized flux</span>
-<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
+<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        results (dict): dictionary containing column density and error</span>
@@ -240,14 +241,14 @@
 <span class="sd">    Args:</span>
 <span class="sd">        F_lambda (array): continuum normalized flux</span>
 <span class="sd">        error (array): continuum normalized errors</span>
-<span class="sd">        wavelength (array): observed wavelength</span>
+<span class="sd">        wavelength (array): observed wavelength (Angstrom)</span>
 <span class="sd">        abs_cat (table): absorber table for the individual absorber (must contain Z_ABS, {absorber}_line12_EW, and {absorber}_line12_EW_ERROR, e.g. CIV_1548_EW)</span>
 <span class="sd">        f1 (float): oscillator strength of first line</span>
 <span class="sd">        f2 (float): oscillator strength of second line</span>
-<span class="sd">        lambda1 (tuple): key and rest-frame wavelength of first line</span>
-<span class="sd">        lambda2 (tuple): key and rest-frame wavelength of second line</span>
+<span class="sd">        lambda1 (tuple): key and rest-frame wavelength of first line (Angstrom)</span>
+<span class="sd">        lambda2 (tuple): key and rest-frame wavelength of second line (Angstrom)</span>
 <span class="sd">        continuum_error_frac (float): systematics on continuum normalized flux</span>
-<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration</span>
+<span class="sd">        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        results (dict): dictionary containing apparent column density and error</span>
@@ -377,9 +378,10 @@
 
     <span class="c1"># Combine into single table</span>
     <span class="n">N_table</span> <span class="o">=</span> <span class="n">vstack</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">N_table</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
         <span class="k">if</span> <span class="s2">&quot;10N&quot;</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
-            <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;cm^-2&quot;</span>
+            <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;cm-2&quot;</span> <span class="c1"># cm^-2</span>
             <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float64&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">N_table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
@@ -399,7 +401,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-18.
+      <span class="lastupdated">Last updated on 2025-08-19.
       </span></p>
   </div>
 

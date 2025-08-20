@@ -375,7 +375,9 @@
     <span class="k">if</span> <span class="s1">&#39;EW&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
         <span class="k">return</span> <span class="s1">&#39;Angstrom&#39;</span>
     <span class="k">elif</span> <span class="s1">&#39;VDISP&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
-        <span class="k">return</span> <span class="s1">&#39;km/s&#39;</span>
+        <span class="k">return</span> <span class="s1">&#39;km s-1&#39;</span>
+    <span class="k">elif</span> <span class="s1">&#39;10N&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s1">&#39;cm-2&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span></div>
 
@@ -429,7 +431,7 @@
                 <span class="k">for</span> <span class="n">hdu</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">:</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">):</span>
                         <span class="n">hdu_name</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span>
-                        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">hdu</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+                        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
 
                         <span class="c1"># Remove the INDEX_SPEC column if it exists</span>
                         <span class="k">if</span> <span class="s1">&#39;INDEX_SPEC&#39;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
@@ -465,6 +467,34 @@
     <span class="c1"># Write the combined data to the output FITS file</span>
     <span class="n">hdul_out</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Combined FITS file saved to </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="match_order">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.match_order">[docs]</a>
+<span class="k">def</span> <span class="nf">match_order</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span> <span class="n">arr2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Matching order based on match key fot given two arrays</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        arr1 (array): First array (will be assumed to be the reference array)</span>
+<span class="sd">        arr2 (array): Second array (target array for which the order to be matched)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matching indices such that arr2[indices]=arr1</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Raises Assertion error if sizes do not match</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="n">arr1</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="n">arr2</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">arr2</span><span class="p">:</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">arr1</span> <span class="o">==</span> <span class="n">el</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ii</span><span class="p">)</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">updated_arr2</span> <span class="o">=</span> <span class="n">arr2</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span> <span class="n">updated_arr2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">indices</span></div>
 
 
 
@@ -528,10 +558,6 @@
         <span class="c1"># Assumes obs_wave is monotonic and same length as resolution.</span>
         <span class="n">res1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs1</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
         <span class="n">res2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs2</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
-
-    <span class="c1"># Get per-line resolution (scalar or from array)</span>
-    <span class="c1">#res1 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs1))]</span>
-    <span class="c1">#res2 = resolution if np.isscalar(resolution) else resolution[np.argmin(np.abs(obs_wave - lam_obs2))]</span>
 
     <span class="c1">#Gaussian quadrature correction</span>
     <span class="n">del_v1_sq</span> <span class="o">=</span> <span class="n">v1_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">res1</span><span class="o">**</span><span class="mi">2</span>
@@ -738,7 +764,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-18.
+      <span class="lastupdated">Last updated on 2025-08-19.
       </span></p>
   </div>
 

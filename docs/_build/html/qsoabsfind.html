@@ -114,6 +114,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.elapsed"><code class="docutils literal notranslate"><span class="pre">elapsed()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.gauss_two_lines_kernel"><code class="docutils literal notranslate"><span class="pre">gauss_two_lines_kernel()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.get_package_versions"><code class="docutils literal notranslate"><span class="pre">get_package_versions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.match_order"><code class="docutils literal notranslate"><span class="pre">match_order()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.modify_units"><code class="docutils literal notranslate"><span class="pre">modify_units()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.numeric_key"><code class="docutils literal notranslate"><span class="pre">numeric_key()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#qsoabsfind.utils.parse_qso_sequence"><code class="docutils literal notranslate"><span class="pre">parse_qso_sequence()</span></code></a></li>
@@ -1212,6 +1213,27 @@ given spectrum.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="qsoabsfind.utils.match_order">
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.utils.</span></span><span class="sig-name descname"><span class="pre">match_order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arr2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/utils.html#match_order"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.utils.match_order" title="Link to this definition"></a></dt>
+<dd><p>Matching order based on match key fot given two arrays</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arr1</strong> (<em>array</em>) – First array (will be assumed to be the reference array)</p></li>
+<li><p><strong>arr2</strong> (<em>array</em>) – Second array (target array for which the order to be matched)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>matching indices such that arr2[indices]=arr1</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Raises Assertion error if sizes do not match</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.utils.modify_units">
 <span class="sig-prename descclassname"><span class="pre">qsoabsfind.utils.</span></span><span class="sig-name descname"><span class="pre">modify_units</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/utils.html#modify_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.utils.modify_units" title="Link to this definition"></a></dt>
 <dd><p>Modify the unit of a column based on the column name.</p>
@@ -1448,12 +1470,12 @@ apparent optical depth method</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>F_lambda</strong> (<em>array</em>) – continuum normalized flux</p></li>
 <li><p><strong>error</strong> (<em>array</em>) – continuum normalized errors</p></li>
-<li><p><strong>wavelength</strong> (<em>array</em>) – observed wavelength</p></li>
+<li><p><strong>wavelength</strong> (<em>array</em>) – observed wavelength (Angstrom)</p></li>
 <li><p><strong>z</strong> (<em>float</em>) – redshift of absorber</p></li>
 <li><p><strong>f</strong> (<em>float</em>) – oscillator strength of line transition</p></li>
-<li><p><strong>lambda_0</strong> (<em>float</em>) – rest-frame wavelength of given absorber</p></li>
+<li><p><strong>lambda_0</strong> (<em>float</em>) – rest-frame wavelength of given absorber (Angstrom)</p></li>
 <li><p><strong>continuum_error_frac</strong> (<em>float</em>) – systematics on continuum normalized flux</p></li>
-<li><p><strong>velocity_range</strong> (<em>float</em>) – +/- velocity_range will be used for column density integration</p></li>
+<li><p><strong>velocity_range</strong> (<em>float</em>) – +/- velocity_range will be used for column density integration (km/s)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1488,14 +1510,14 @@ apparent optical depth method</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>F_lambda</strong> (<em>array</em>) – continuum normalized flux</p></li>
 <li><p><strong>error</strong> (<em>array</em>) – continuum normalized errors</p></li>
-<li><p><strong>wavelength</strong> (<em>array</em>) – observed wavelength</p></li>
+<li><p><strong>wavelength</strong> (<em>array</em>) – observed wavelength (Angstrom)</p></li>
 <li><p><strong>abs_cat</strong> (<em>table</em>) – absorber table for the individual absorber (must contain Z_ABS, {absorber}_line12_EW, and {absorber}_line12_EW_ERROR, e.g. CIV_1548_EW)</p></li>
 <li><p><strong>f1</strong> (<em>float</em>) – oscillator strength of first line</p></li>
 <li><p><strong>f2</strong> (<em>float</em>) – oscillator strength of second line</p></li>
-<li><p><strong>lambda1</strong> (<em>tuple</em>) – key and rest-frame wavelength of first line</p></li>
-<li><p><strong>lambda2</strong> (<em>tuple</em>) – key and rest-frame wavelength of second line</p></li>
+<li><p><strong>lambda1</strong> (<em>tuple</em>) – key and rest-frame wavelength of first line (Angstrom)</p></li>
+<li><p><strong>lambda2</strong> (<em>tuple</em>) – key and rest-frame wavelength of second line (Angstrom)</p></li>
 <li><p><strong>continuum_error_frac</strong> (<em>float</em>) – systematics on continuum normalized flux</p></li>
-<li><p><strong>velocity_range</strong> (<em>float</em>) – +/- velocity_range will be used for column density integration</p></li>
+<li><p><strong>velocity_range</strong> (<em>float</em>) – +/- velocity_range will be used for column density integration (km/s)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1520,13 +1542,13 @@ and flag showing if its saturated</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lambda_array</strong> (<em>array</em>) – observed wavelength</p></li>
-<li><p><strong>lambda_0</strong> (<em>float</em>) – rest-frame wavelength of given absorber</p></li>
+<li><p><strong>lambda_array</strong> (<em>array</em>) – observed wavelength (Angstrom)</p></li>
+<li><p><strong>lambda_0</strong> (<em>float</em>) – rest-frame wavelength of given absorber (Angstrom)</p></li>
 <li><p><strong>z</strong> (<em>float</em>) – redshift of absorber</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>velocities (observed and in rest-frame, array)</p>
+<dd class="field-even"><p>velocities (observed and in rest-frame, array in km/s)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1549,7 +1571,7 @@ and flag showing if its saturated</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-18.
+      <span class="lastupdated">Last updated on 2025-08-19.
       </span></p>
   </div>
 
