@@ -69,7 +69,7 @@ Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_tes
 2. With Column Densities
 ^^^^^^^^^^
 
-**SDSS DR16 spectra** (MgIIs):
+**SDSS DR16 spectra** (MgII search):
 ~~~~~~
 
 Optionally, users can instruct the module to calculate **total column densities** of metal absorbers using the
