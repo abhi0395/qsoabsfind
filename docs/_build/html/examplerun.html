@@ -55,12 +55,12 @@
 <li class="toctree-l2"><a class="reference internal" href="#your-input-spectra-absorber-search-with-column-densities"><strong>2. Your input spectra</strong> (absorber search with column densities):</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ready-to-run-examples">Ready to run examples</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#without-column-densities">1. Without Column Densities</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#sdss-dr16-spectra-mgii-search-without-column-densities"><strong>SDSS DR16 spectra</strong> (MgII search, without column densities)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#desi-dr1-spectra-mgii-without-column-densities"><strong>DESI DR1 spectra</strong> (MgII, without column densities):</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sdss-dr16-spectra-mgii-search"><strong>SDSS DR16 spectra</strong> (MgII search)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#desi-dr1-spectra-civ-search"><strong>DESI DR1 spectra</strong> (CIV search):</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#with-column-densities">2. With Column Densities</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#sdss-dr16-spectra-mgii-with-column-densities"><strong>SDSS DR16 spectra</strong> (MgII, with column densities):</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sdss-dr16-spectra-mgiis"><strong>SDSS DR16 spectra</strong> (MgIIs):</a></li>
 </ul>
 </li>
 </ul>
@@ -128,8 +128,8 @@
 <p>I have provided an example QSO spectra file, <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code>, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
 <section id="without-column-densities">
 <h3>1. Without Column Densities<a class="headerlink" href="#without-column-densities" title="Link to this heading"></a></h3>
-<section id="sdss-dr16-spectra-mgii-search-without-column-densities">
-<h4><strong>SDSS DR16 spectra</strong> (MgII search, without column densities)<a class="headerlink" href="#sdss-dr16-spectra-mgii-search-without-column-densities" title="Link to this heading"></a></h4>
+<section id="sdss-dr16-spectra-mgii-search">
+<h4><strong>SDSS DR16 spectra</strong> (MgII search)<a class="headerlink" href="#sdss-dr16-spectra-mgii-search" title="Link to this heading"></a></h4>
 <p>I have provided an example QSO spectra file, <code class="docutils literal notranslate"><span class="pre">data/sdss/qso_test_spectra.fits</span></code>, which contains 100 continuum-normalized SDSS QSO spectra. These folders also have their own constants files. You can use these files to test example runs as described below.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span>data/sdss/qso_test_spectra.fits<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--constant-file<span class="w"> </span>data/sdss/sdss_constants.py<span class="w"> </span><span class="se">\</span>
@@ -140,13 +140,13 @@
 </pre></div>
 </div>
 </section>
-<section id="desi-dr1-spectra-mgii-without-column-densities">
-<h4><strong>DESI DR1 spectra</strong> (MgII, without column densities):<a class="headerlink" href="#desi-dr1-spectra-mgii-without-column-densities" title="Link to this heading"></a></h4>
+<section id="desi-dr1-spectra-civ-search">
+<h4><strong>DESI DR1 spectra</strong> (CIV search):<a class="headerlink" href="#desi-dr1-spectra-civ-search" title="Link to this heading"></a></h4>
 <p>Similarly, I have also provided an example QSO spectra file, <code class="docutils literal notranslate"><span class="pre">data/desi/qso_test_spectra.fits</span></code>, which contains 100 continuum-normalized <a class="reference external" href="https://data.desi.lbl.gov/doc/releases/dr1/">DESI DR1</a> QSO spectra. You can run absorber search on them as well.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span>data/desi/qso_test_spectra.fits<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--constant-file<span class="w"> </span>data/desi/desi_constants.py<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--absorber<span class="w"> </span>MgII<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--output<span class="w"> </span>test_MgII.fits<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--absorber<span class="w"> </span>CIV<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--output<span class="w"> </span>test_CIV.fits<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--headers<span class="w"> </span><span class="nv">SURVEY</span><span class="o">=</span>DESI<span class="w"> </span><span class="nv">AUTHOR</span><span class="o">=</span>YOUR_NAME<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--ncpus<span class="w"> </span><span class="m">4</span>
 </pre></div>
@@ -155,8 +155,8 @@
 </section>
 <section id="with-column-densities">
 <h3>2. With Column Densities<a class="headerlink" href="#with-column-densities" title="Link to this heading"></a></h3>
-<section id="sdss-dr16-spectra-mgii-with-column-densities">
-<h4><strong>SDSS DR16 spectra</strong> (MgII, with column densities):<a class="headerlink" href="#sdss-dr16-spectra-mgii-with-column-densities" title="Link to this heading"></a></h4>
+<section id="sdss-dr16-spectra-mgiis">
+<h4><strong>SDSS DR16 spectra</strong> (MgIIs):<a class="headerlink" href="#sdss-dr16-spectra-mgiis" title="Link to this heading"></a></h4>
 <p>Optionally, users can instruct the module to calculate <strong>total column densities</strong> of metal absorbers using the
 <strong>apparent optical depth (AOD) method</strong> (see <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract">Savage &amp; Sembach 1991</a>).</p>
 <p>To enable this feature, use the <code class="docutils literal notranslate"><span class="pre">--coldens</span></code> flag. You can also specify the velocity range using <code class="docutils literal notranslate"><span class="pre">--dv</span></code>, which defines the maximum velocity (in km/s) on each side of the line center for integrating the optical depth.</p>

@@ -38,7 +38,7 @@ I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``
 1. Without Column Densities
 ^^^^^^^^^^
 
-**SDSS DR16 spectra** (MgII search, without column densities)
+**SDSS DR16 spectra** (MgII search)
 ~~~~~~~~
 
 I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. These folders also have their own constants files. You can use these files to test example runs as described below.
@@ -52,7 +52,7 @@ I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
                --ncpus 4
 
-**DESI DR1 spectra** (MgII, without column densities):
+**DESI DR1 spectra** (CIV search):
 ~~~~~~~
 
 Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
@@ -61,15 +61,15 @@ Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_tes
 
     qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
                --constant-file data/desi/desi_constants.py \
-               --absorber MgII \
-               --output test_MgII.fits \
+               --absorber CIV \
+               --output test_CIV.fits \
                --headers SURVEY=DESI AUTHOR=YOUR_NAME \
                --ncpus 4
 
 2. With Column Densities
 ^^^^^^^^^^
 
-**SDSS DR16 spectra** (MgII, with column densities):
+**SDSS DR16 spectra** (MgIIs):
 ~~~~~~
 
 Optionally, users can instruct the module to calculate **total column densities** of metal absorbers using the
