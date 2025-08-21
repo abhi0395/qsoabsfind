@@ -1,5 +1,6 @@
 """
-This script contains a function to fit a given absorption profile with a double gaussian and measure equivalent widths.
+This script contains a function to fit a given absorption profile
+with a double gaussian and measure equivalent widths.
 """
 
 import numpy as np
@@ -158,6 +159,38 @@ def full_covariance_ew_errors(popt, pcov):
     return EW1_error, EW2_error, EW_total_error
 
 def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1, bound, amp_ratio, line1, line2, num_iter):
+
+    """Perform bootstrap resampling to estimate uncertainties in fitting parameters and equivalent widths.
+
+    Conducts bootstrap analysis on spectral data to derive robust estimates of double Gaussian
+    fitting parameters and equivalent widths with associated uncertainties for a doublet system.
+
+    Args:
+        index (int): Index or identifier for the current fitting process.
+        nboot (int): Number of bootstrap iterations to perform.
+        z (float): Redshift of the absorption system.
+        wavelength (array-like): Observed Wavelength array of the spectrum.
+        flux (array-like): Flux array of the spectrum.
+        error (array-like): Flux uncertainty array.
+        ix0 (int): Starting index of the spectral region to fit.
+        ix1 (int): Ending index of the spectral region to fit.
+        bound (tuple or list): Bounds for the fitting parameters.
+        amp_ratio (float): Expected amplitude ratio between the two lines in the doublet.
+        line1 (float): Rest wavelength of the first line in the doublet.
+        line2 (float): Rest wavelength of the second line in the doublet.
+        num_iter (int): Maximum number of iterations for each fitting attempt.
+
+    Returns:
+        tuple: A tuple containing:
+            - fit_params_mean (array): Mean values of fitted parameters across bootstrap samples.
+            - fit_param_std (array): Standard deviations of fitted parameters.
+            - ew1_mean (float): Mean equivalent width of line 1.
+            - ew2_mean (float): Mean equivalent width of line 2.
+            - ew_total_mean (float): Mean total equivalent width of the doublet.
+            - ew1_std (float): Standard deviation of line 1 equivalent width.
+            - ew2_std (float): Standard deviation of line 2 equivalent width.
+            - ew_total_std (float): Standard deviation of total equivalent width.
+    """
 
     fit_params = np.zeros((nboot, 6))
     ew1_array = np.zeros(nboot)

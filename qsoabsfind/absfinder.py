@@ -1,5 +1,6 @@
 """
-This script contains a function to run convolution based absorber finder on a single spectrum.
+This script contains a function to run the main convolution
+based absorber algorithm on a single spectrum.
 """
 from functools import reduce
 from operator import add

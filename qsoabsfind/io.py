@@ -1,5 +1,5 @@
 """
-This script contains functions to read and write files.
+This script contains functions to read, append and write fits files.
 """
 import os
 from astropy.io import fits

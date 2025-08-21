@@ -1,5 +1,6 @@
 """
-This script contains a function to find metal absorbers in QSO spectra.
+This script contains a utility functions that are repeatedly
+called during the absorber search in QSO spectra.
 """
 
 import numpy as np
@@ -392,7 +393,54 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
                              ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120):
-    """Check absorber selection criteria, print details, and count satisfied conditions."""
+    """Check absorber selection criteria, print details, and count satisfied conditions.
+
+    Evaluates whether a candidate absorber passes various selection criteria based on
+    spectral line properties, signal-to-noise ratios, velocity constraints, and
+    statistical significance.
+
+    Args:
+        qso_id (str): Unique identifier for the quasar/QSO.
+        zabs (float): Absorption redshift of the candidate system.
+        gaussian_parameters (array-like): Fitted parameters for the double Gaussian model,
+            typically [amp1, center1, width1, amp2, center2, width2].
+        bound (bool): Bounds for Gaussian fit parameters.
+        lower_del_lam (float): Lower wavelength offset/deviation.
+        c0 (float): Central wavelength or reference wavelength for line 1.
+        c1 (float): Central wavelength or reference wavelength for line 2.
+        upper_del_lam (float): Upper wavelength offset/deviation.
+        sn1 (float): Signal-to-noise ratio near line 1.
+        sn_line1 (float): Signal-to-noise ratio thresholde at line 1 center.
+        sn2 (float): Signal-to-noise ratio for continuum near line 2.
+        sn_line2 (float): Signal-to-noise ratio thresholde at line 2 center.
+        vel1 (float): Velocity width of line 1 component in km/s.
+        vel2 (float): Velocity width of line 2 component in km/s.
+        min_dr (float): Minimum doublet ratio threshold.
+        dr (float): Measured doublet ratio (e.g., CIV 1548/1550 ratio).
+        max_dr (float): Maximum doublet ratio threshold.
+        ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.
+        ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.
+        delta_chi2 (float): Chi-squared difference between flat and fitted models.
+        conf_level (float, optional): Confidence level for statistical significance.
+            Defaults to 0.95 (95% confidence).
+        vmax (float, optional): Maximum allowed velocity difference between components
+            in km/s. Defaults to 120.
+
+    Returns:
+        bool: True if the absorber passes the selection criteria, False otherwise.
+
+    Notes:
+        The function evaluates multiple selection criteria including:
+        - Wavelength bounds for both lines
+        - S/N thresholds for continuum and line centers
+        - Velocity constraints between components
+        - Doublet ratio physical limits
+        - Equivalent width significance
+        - Statistical significance via delta chi-squared test
+
+        Prints detailed information about each criterion and whether it passes.
+
+    """
 
     critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
 

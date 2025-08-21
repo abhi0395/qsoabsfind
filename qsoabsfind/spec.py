@@ -1,5 +1,5 @@
 """
-This script contains a class and functions to read a given spectra fits file.
+This script contains a class and functions to read/write spectra fits files.
 """
 import time
 import os

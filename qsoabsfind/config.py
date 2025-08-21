@@ -1,3 +1,6 @@
+"""
+This function loads parameters from the user-provided parameter file.
+"""
 import os
 import importlib.util
 

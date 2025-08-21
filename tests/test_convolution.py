@@ -1,3 +1,7 @@
+"""
+Tests for main convolution method
+"""
+
 import unittest
 import os
 import numpy as np

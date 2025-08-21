@@ -1,5 +1,6 @@
 """
-This script contains a function that runs the absorber finder in parallel for many spectra.
+This script contains a function that runs the absorber
+finder in parallel for many spectra.
 """
 import argparse
 import time
@@ -128,6 +129,13 @@ def main():
 
     if args.absorber not in doublet_keys:
         raise ValueError(f"ERROR: Unsupported absorber, it must be from {doublet_keys.keys()}")
+
+    print('==== USER PROVIDED ARGUMENTS========')
+    for key, value in vars(args).items():
+        print(f"INFO: {key}: {value}")
+    for key, value in user_constants.search_parameters.items():
+        print(f"INFO: {key}: {value}")
+    print('=====================================')
 
     lam_blue, lam_red = return_search_window_wavelength_range(args.absorber, user_constants.search_parameters["start_rest_wave"], user_constants.search_parameters["end_rest_wave"])
 

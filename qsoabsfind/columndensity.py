@@ -26,7 +26,7 @@ def ss1991_correction(delta_logN):
         delta_logN (float): difference between logN of first and second lines
 
     Returns:
-        correction based on Savage & Sembach 1991 paper (array)
+        array: correction based on Savage & Sembach 1991 paper
     """
     delta_vals = np.array([
         0.000, 0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090,
@@ -53,7 +53,7 @@ def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac):
         continuum_error_frac (float): assumed systematics on continuum normalized flux (default 5%)
 
     Returns:
-        apparent optical depth array and corresponding error arrays
+        tuple: apparent optical depth array and corresponding error arrays
     """
     F_lambda = np.clip(F_lambda, 0.005, 1)  # Avoid log(0) issues
     tau = -np.log(F_lambda)
@@ -75,7 +75,7 @@ def velocity_from_wavelength(lambda_array, lambda_0, z, logwave=False):
         logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
-        velocities (observed and in rest-frame, array in km/s)
+        tuple: velocities (observed and in rest-frame, array in km/s)
     """
     if not logwave:
         d_lambda = np.mean(lambda_array[1:] - lambda_array[:-1])
@@ -106,7 +106,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
         logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
-        results (dict): dictionary containing column density and error
+        dict: dictionary containing column density and error
 
     """
 
@@ -159,7 +159,7 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
         logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
 
     Returns:
-        results (dict): dictionary containing apparent column density and error
+        dict: dictionary containing apparent column density and error
         and flag showing if its saturated
 
     Note:
@@ -230,10 +230,34 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     return results
 
 def compute_single_column_density(args):
-    """Function to compute column density of one absorbers
+    """Compute column density for a single absorber.
+
+    Wrapper function for parallel processing that unpacks arguments and computes
+    the total column density for a single absorption system using the doublet method.
+
+    Args:
+        args (tuple): Packed arguments containing:
+            - flux (array-like): Normalized flux spectrum.
+            - error (array-like): Normalized Flux uncertainty array.
+            - wavelength (array-like): Observed wavelength array.
+            - tt_row (object): Table row or object containing absorber properties.
+            - f1 (float): Oscillator strength of line 1.
+            - f2 (float): Oscillator strength of line 2.
+            - l1 (float): Rest wavelength of line 1.
+            - l2 (float): Rest wavelength of line 2.
+            - continuum_error_frac (float): Fractional continuum placement uncertainty.
+            - dv (float): Velocity range for integration in km/s.
+            - logwave (bool): Whether wavelength array is in log spacing.
+
+    Returns:
+        dict: Dictionary containing column density measurements and uncertainties,
+            typically including keys like 'log10N', 'sig_log10N', 'saturation', 'fn'
+            flags are diagnostic information from the calculation.
     """
-    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv, logwave= args
-    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac=continuum_error_frac, velocity_range=dv, logwave=logwave)
+    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv, logwave = args
+    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2,
+                                continuum_error_frac=continuum_error_frac,
+                                velocity_range=dv, logwave=logwave)
 
 
 def return_total_column_density_table(spectra_fits, absorber, output, continuum_error_frac=0.05, dv=300, logwave=False, nproc=None):

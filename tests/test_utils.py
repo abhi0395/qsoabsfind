@@ -1,3 +1,7 @@
+"""
+Tests for utils.py
+"""
+
 import unittest
 import numpy as np
 from qsoabsfind.utils import (convolution_fun,

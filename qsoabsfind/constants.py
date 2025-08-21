@@ -5,7 +5,7 @@ This module defines constants, line wavelengths, search parameters, and oscillat
 used in QSO absorption line analysis.
 
 Usage:
-    from constants import speed_of_light, lines, search_parameters, doublet_keys ...
+    from constants import speed_of_light, lines, doublet_keys ...
 """
 
 # ==============================

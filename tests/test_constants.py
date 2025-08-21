@@ -1,3 +1,6 @@
+"""
+Tests for constants
+"""
 import unittest
 from qsoabsfind.constants import lines, oscillator_parameters, doublet_keys, amplitude_dict
 

@@ -32,13 +32,21 @@ def get_package_versions():
 
 
 def update_header(args, user_constants):
+    """Add search parameters and package versions to headers.
 
-    """Add search parameters and package versions to headers
+    Updates FITS header with search parameters from command-line arguments and
+    user-defined constants, along with relevant package version information for
+    reproducibility.
+
     Args:
-        args (parser argument)
-        user_constants (constants attributes)
+        args (argparse.Namespace): Parsed command-line arguments containing search
+            parameters and configuration options.
+        user_constants (object): Object containing user-defined constants and
+            configuration attributes used in the search/analysis.
+
     Returns:
-        Fits headers
+        astropy.io.fits.Header: Updated FITS header containing search parameters,
+            constants, and package version information.
     """
     # Prepare headers
     headers = {}
@@ -304,7 +312,28 @@ def modify_units(col_name, col):
         return str(col.unit) if col.unit is not None else None
 
 def numeric_key(filename):
-    """Extracts first integer from filename for sorting; falls back to name if no number found."""
+    """Extract first integer from filename for sorting.
+
+    Extracts the first sequence of digits found in a filename to use as a numeric
+    sorting key. Files without numbers are placed at the end of the sort order.
+
+    Args:
+        filename (str): Filename or path from which to extract the numeric key.
+
+    Returns:
+        int or float: First integer found in the filename, or float('inf') if no
+            number is present (ensuring numberless files sort last).
+
+    Examples:
+        >>> numeric_key("file_123_data.txt")
+        123
+        >>> numeric_key("report_42.pdf")
+        42
+        >>> numeric_key("no_numbers_here.txt")
+        inf
+        >>> sorted(["file3.txt", "file20.txt", "file1.txt"], key=numeric_key)
+        ['file1.txt', 'file3.txt', 'file20.txt']
+    """
     import re
     match = re.search(r'\d+', filename)
     return int(match.group()) if match else float('inf')  # put no-number files at end
