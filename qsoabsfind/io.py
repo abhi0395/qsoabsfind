@@ -119,3 +119,33 @@ def append_table_to_fits(filename, table, hdu_name):
     else:
         raise ValueError(f"ERROR: {filename} does not exist")
 
+
+def read_any_fits_file(filename, hdu_name):
+    """Read any fits file given filename and hdu_name.
+
+    Args:
+        filename (str): fits filepath
+        hdu_name (str or int): HDU extension name or number
+    Returns:
+        astropy data: Table for BinTableHDU, data array for Image/Primary HDU
+    """
+    from astropy.io import fits
+    from astropy.table import Table
+
+    with fits.open(filename) as hdul:
+        # Get the specific HDU
+        hdu = hdul[hdu_name]
+        hdr = hdul[0].header # Primary Headers
+
+        # Check HDU type and read accordingly
+        if isinstance(hdu, fits.BinTableHDU):
+            return hdr, Table.read(filename, hdu=hdu_name)
+        elif isinstance(hdu, fits.PrimaryHDU):
+            return hdr, hdu.data
+        elif isinstance(hdu, fits.ImageHDU):
+            return hdr, hdu.data
+        else:
+            print(f"Reading {type(hdu).__name__} '{hdu_name}' as data array")
+            return hdr, hdu.data
+
+

@@ -3,8 +3,8 @@ This script contains a class and functions to read/write spectra fits files.
 """
 import time
 import os
-from .io import read_fits_file
-from .utils import elapsed
+from .io import read_fits_file, read_any_fits_file
+from .utils import elapsed, get_all_extnames
 
 class QSOSpecRead:
     """
@@ -63,3 +63,64 @@ class QSOSpecRead:
         else:
             return self.metadata
 
+class AbsorberData():
+    """
+    A class to read and handle Absorber table FITS file
+    containing ABSORBER, METADATA, and optionally COLUMN_DENSITY extensions.
+    """
+
+    def __init__(self, filepath, verbose=True):
+        """
+        Initializes the AbsorberData class.
+
+        Args:
+            filepath (str): Path to the FITS file containing Absorber catalog.
+            verbose (bool): if want to print time info
+        """
+        self.filepath = filepath
+        self.verbose = verbose
+
+        # Get all extension names
+        self.extnames = get_all_extnames(self.filepath)
+
+    def read_catalog(self):
+        """Read catalog from the file"""
+
+        start_time = time.time()
+        # Temporary dictionary to store all data from different extensions
+        all_data = {}
+
+        # Read each extension
+        for idx, ext_name, hdu_type in self.extnames:
+            if self.verbose:
+                print(f"Reading extension '{ext_name}' ({hdu_type})")
+
+            # Use index for PRIMARY HDU, name for others
+            hdu_identifier = idx if ext_name in ['PRIMARY', f'HDU_{idx}'] else ext_name
+            hdr, data = read_any_fits_file(self.filepath, hdu_name=hdu_identifier)
+            all_data[ext_name] = data
+
+        # Assign specific extensions as attributes
+        self.catalog = all_data.get('ABSORBER', None)
+        self.absorber = self.catalog  # Alias for backward compatibility
+        self.metadata = all_data.get('METADATA', None)
+        self.column_density = all_data.get('COLUMN_DENSITY', None)  # May be None
+
+        # Store header from last read
+        self.header = hdr
+
+        # Check required extensions
+        if self.catalog is None:
+            raise ValueError(f"Required extension 'ABSORBER' not found in {self.filepath}")
+        if self.metadata is None:
+            raise ValueError(f"Required extension 'METADATA' not found in {self.filepath}")
+
+        if self.verbose:
+            print(f"Loaded {len(self.extnames)} extensions from {self.filepath}")
+            print(f"  ABSORBER: {len(self.catalog)} rows")
+            print(f"  METADATA: {len(self.metadata)} rows")
+            if self.column_density is not None:
+                print(f"  COLUMN_DENSITY: {len(self.column_density)} rows")
+            else:
+                print(f"  COLUMN_DENSITY: Not present (optional)")
+            elapsed(start_time, f"INFO: Time taken to read catalog from {self.filepath}")

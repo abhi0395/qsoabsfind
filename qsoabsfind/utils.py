@@ -30,6 +30,17 @@ def get_package_versions():
             versions[pkg] = 'not installed'
     return versions
 
+def get_all_extnames(filename):
+    """Get list of all HDU extension names in a FITS file"""
+
+    with fits.open(filename) as hdul:
+        extnames = []
+        for i, hdu in enumerate(hdul):
+            name = hdu.name if hdu.name else f"HDU_{i}"
+            extnames.append((i, name, type(hdu).__name__))
+
+    return extnames
+
 
 def update_header(args, user_constants):
     """Add search parameters and package versions to headers.
@@ -391,6 +402,7 @@ def combine_fits_files(directory, output_file):
                             print(f"Initialized HDU '{hdu_name}' with data from file {i + 1}.")
 
     # Create the HDUs to write to the output file
+    primary_hdu.header['EXTNAME'] = 'PRIMARY'
     hdul_out = fits.HDUList([primary_hdu])
 
     for hdu_name, table in combined_tables.items():

@@ -683,7 +683,9 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
     """
 
     z1 = (fitted_obs_l1 / line1) - 1
-    z2 = ((line2 - line1) * (1 + z1) + fitted_obs_l1) / line2 - 1
+    # define from first line and redshift (more stable and correct)
+    fitted_obs_l2 = fitted_obs_l1 + (line2 - line1) * (1 + z1)
+    z2 = fitted_obs_l2 / line2 - 1
 
     err1 = (std_fitted_obs_l1 / line1)
     err2 = (std_fitted_obs_l2 / line2)
