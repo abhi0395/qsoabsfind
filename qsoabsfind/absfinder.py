@@ -55,6 +55,12 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
             - errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber
             - errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber
             - errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber
+            - zabs_err (list): errors on redshifts of absorbers detected
+            - sn1 (list): SNR of line 1 for each absorber
+            - sn2 (list): SNR of of line 2 for each absorber
+            - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
+            - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
+            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
 
     Raises:
         AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.
@@ -157,6 +163,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             - sn2 (list): SNR of of line 2 for each absorber
             - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
             - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
+            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
     """
 
     # return if there are less than 10 wavelength pixels available to search for

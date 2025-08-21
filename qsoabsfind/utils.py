@@ -31,7 +31,13 @@ def get_package_versions():
     return versions
 
 def get_all_extnames(filename):
-    """Get list of all HDU extension names in a FITS file"""
+    """Get list of all HDU extension names in a FITS file
+
+    Args:
+        filename (str): fits file
+    Returns:
+        list: list containing extension names
+    """
 
     with fits.open(filename) as hdul:
         extnames = []
