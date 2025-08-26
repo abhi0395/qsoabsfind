@@ -82,6 +82,7 @@
 
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
@@ -111,17 +112,45 @@
     <span class="k">return</span> <span class="n">versions</span></div>
 
 
+<div class="viewcode-block" id="get_all_extnames">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.get_all_extnames">[docs]</a>
+<span class="k">def</span> <span class="nf">get_all_extnames</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get list of all HDU extension names in a FITS file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): fits file</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: list containing extension names</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="n">extnames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">hdu</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hdul</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;HDU_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">extnames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">hdu</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">extnames</span></div>
+
+
 
 <div class="viewcode-block" id="update_header">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.update_header">[docs]</a>
 <span class="k">def</span> <span class="nf">update_header</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">user_constants</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add search parameters and package versions to headers.</span>
 
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add search parameters and package versions to headers</span>
+<span class="sd">    Updates FITS header with search parameters from command-line arguments and</span>
+<span class="sd">    user-defined constants, along with relevant package version information for</span>
+<span class="sd">    reproducibility.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        args (parser argument)</span>
-<span class="sd">        user_constants (constants attributes)</span>
+<span class="sd">        args (argparse.Namespace): Parsed command-line arguments containing search</span>
+<span class="sd">            parameters and configuration options.</span>
+<span class="sd">        user_constants (object): Object containing user-defined constants and</span>
+<span class="sd">            configuration attributes used in the search/analysis.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        Fits headers</span>
+<span class="sd">        astropy.io.fits.Header: Updated FITS header containing search parameters,</span>
+<span class="sd">            constants, and package version information.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Prepare headers</span>
     <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
@@ -299,7 +328,7 @@
 
     <span class="n">gauss_kernel</span> <span class="o">=</span> <span class="n">gauss_two_lines_kernel</span><span class="p">(</span><span class="n">lam_ker</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">ker_parm</span><span class="p">)</span>
 
-    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">gauss_kernel</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">fftconvolve</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">gauss_kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
 
     <span class="c1">#check if input and output array size are same</span>
     <span class="n">bad_conv</span> <span class="o">=</span> <span class="n">validate_sizes</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
@@ -417,7 +446,28 @@
 <div class="viewcode-block" id="numeric_key">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.numeric_key">[docs]</a>
 <span class="k">def</span> <span class="nf">numeric_key</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts first integer from filename for sorting; falls back to name if no number found.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract first integer from filename for sorting.</span>
+
+<span class="sd">    Extracts the first sequence of digits found in a filename to use as a numeric</span>
+<span class="sd">    sorting key. Files without numbers are placed at the end of the sort order.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): Filename or path from which to extract the numeric key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int or float: First integer found in the filename, or float(&#39;inf&#39;) if no</span>
+<span class="sd">            number is present (ensuring numberless files sort last).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;file_123_data.txt&quot;)</span>
+<span class="sd">        123</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;report_42.pdf&quot;)</span>
+<span class="sd">        42</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;no_numbers_here.txt&quot;)</span>
+<span class="sd">        inf</span>
+<span class="sd">        &gt;&gt;&gt; sorted([&quot;file3.txt&quot;, &quot;file20.txt&quot;, &quot;file1.txt&quot;], key=numeric_key)</span>
+<span class="sd">        [&#39;file1.txt&#39;, &#39;file3.txt&#39;, &#39;file20.txt&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">re</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\d+&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">())</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>  <span class="c1"># put no-number files at end</span></div>
@@ -478,6 +528,7 @@
                             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initialized HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; with data from file </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
     <span class="c1"># Create the HDUs to write to the output file</span>
+    <span class="n">primary_hdu</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;EXTNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRIMARY&#39;</span>
     <span class="n">hdul_out</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">primary_hdu</span><span class="p">])</span>
 
     <span class="k">for</span> <span class="n">hdu_name</span><span class="p">,</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">combined_tables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -796,7 +847,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

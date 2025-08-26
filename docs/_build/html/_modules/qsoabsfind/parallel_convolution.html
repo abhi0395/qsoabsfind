@@ -77,7 +77,8 @@
              
   <h1>Source code for qsoabsfind.parallel_convolution</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a function that runs the absorber finder in parallel for many spectra.</span>
+<span class="sd">This script contains a function that runs the absorber</span>
+<span class="sd">finder in parallel for many spectra.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">argparse</span>
 <span class="kn">import</span> <span class="nn">time</span>
@@ -212,6 +213,13 @@
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doublet_keys</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: Unsupported absorber, it must be from </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==== USER PROVIDED ARGUMENTS========&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=====================================&#39;</span><span class="p">)</span>
+
     <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;start_rest_wave&quot;</span><span class="p">],</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;end_rest_wave&quot;</span><span class="p">])</span>
 
     <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_blue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lam_blue</span>
@@ -299,7 +307,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

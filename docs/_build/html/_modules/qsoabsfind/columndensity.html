@@ -106,7 +106,7 @@
 <span class="sd">        delta_logN (float): difference between logN of first and second lines</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        correction based on Savage &amp; Sembach 1991 paper (array)</span>
+<span class="sd">        array: correction based on Savage &amp; Sembach 1991 paper</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">delta_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
         <span class="mf">0.000</span><span class="p">,</span> <span class="mf">0.010</span><span class="p">,</span> <span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.030</span><span class="p">,</span> <span class="mf">0.040</span><span class="p">,</span> <span class="mf">0.050</span><span class="p">,</span> <span class="mf">0.060</span><span class="p">,</span> <span class="mf">0.070</span><span class="p">,</span> <span class="mf">0.080</span><span class="p">,</span> <span class="mf">0.090</span><span class="p">,</span>
@@ -136,7 +136,7 @@
 <span class="sd">        continuum_error_frac (float): assumed systematics on continuum normalized flux (default 5%)</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        apparent optical depth array and corresponding error arrays</span>
+<span class="sd">        tuple: apparent optical depth array and corresponding error arrays</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">F_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Avoid log(0) issues</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">F_lambda</span><span class="p">)</span>
@@ -161,7 +161,7 @@
 <span class="sd">        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        velocities (observed and in rest-frame, array in km/s)</span>
+<span class="sd">        tuple: velocities (observed and in rest-frame, array in km/s)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">logwave</span><span class="p">:</span>
         <span class="n">d_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">lambda_array</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">lambda_array</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
@@ -195,7 +195,7 @@
 <span class="sd">        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        results (dict): dictionary containing column density and error</span>
+<span class="sd">        dict: dictionary containing column density and error</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -251,7 +251,7 @@
 <span class="sd">        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        results (dict): dictionary containing apparent column density and error</span>
+<span class="sd">        dict: dictionary containing apparent column density and error</span>
 <span class="sd">        and flag showing if its saturated</span>
 
 <span class="sd">    Note:</span>
@@ -325,10 +325,34 @@
 <div class="viewcode-block" id="compute_single_column_density">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.columndensity.compute_single_column_density">[docs]</a>
 <span class="k">def</span> <span class="nf">compute_single_column_density</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to compute column density of one absorbers</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute column density for a single absorber.</span>
+
+<span class="sd">    Wrapper function for parallel processing that unpacks arguments and computes</span>
+<span class="sd">    the total column density for a single absorption system using the doublet method.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        args (tuple): Packed arguments containing:</span>
+<span class="sd">            - flux (array-like): Normalized flux spectrum.</span>
+<span class="sd">            - error (array-like): Normalized Flux uncertainty array.</span>
+<span class="sd">            - wavelength (array-like): Observed wavelength array.</span>
+<span class="sd">            - tt_row (object): Table row or object containing absorber properties.</span>
+<span class="sd">            - f1 (float): Oscillator strength of line 1.</span>
+<span class="sd">            - f2 (float): Oscillator strength of line 2.</span>
+<span class="sd">            - l1 (float): Rest wavelength of line 1.</span>
+<span class="sd">            - l2 (float): Rest wavelength of line 2.</span>
+<span class="sd">            - continuum_error_frac (float): Fractional continuum placement uncertainty.</span>
+<span class="sd">            - dv (float): Velocity range for integration in km/s.</span>
+<span class="sd">            - logwave (bool): Whether wavelength array is in log spacing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Dictionary containing column density measurements and uncertainties,</span>
+<span class="sd">            typically including keys like &#39;log10N&#39;, &#39;sig_log10N&#39;, &#39;saturation&#39;, &#39;fn&#39;</span>
+<span class="sd">            flags are diagnostic information from the calculation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span> <span class="n">args</span>
-    <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="o">=</span><span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">velocity_range</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="n">logwave</span><span class="p">)</span></div>
+    <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">logwave</span> <span class="o">=</span> <span class="n">args</span>
+    <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span>
+                                <span class="n">continuum_error_frac</span><span class="o">=</span><span class="n">continuum_error_frac</span><span class="p">,</span>
+                                <span class="n">velocity_range</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">logwave</span><span class="o">=</span><span class="n">logwave</span><span class="p">)</span></div>
 
 
 
@@ -402,7 +426,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

@@ -77,7 +77,8 @@
              
   <h1>Source code for qsoabsfind.absorberutils</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a function to find metal absorbers in QSO spectra.</span>
+<span class="sd">This script contains a utility functions that are repeatedly</span>
+<span class="sd">called during the absorber search in QSO spectra.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -496,7 +497,54 @@
                              <span class="n">sn1</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn2</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span>
                              <span class="n">vel1</span><span class="p">,</span> <span class="n">vel2</span><span class="p">,</span> <span class="n">min_dr</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">max_dr</span><span class="p">,</span>
                              <span class="n">ew1_snr</span><span class="p">,</span> <span class="n">ew2_snr</span><span class="p">,</span> <span class="n">delta_chi2</span><span class="p">,</span> <span class="n">conf_level</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">120</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check absorber selection criteria, print details, and count satisfied conditions.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check absorber selection criteria, print details, and count satisfied conditions.</span>
+
+<span class="sd">    Evaluates whether a candidate absorber passes various selection criteria based on</span>
+<span class="sd">    spectral line properties, signal-to-noise ratios, velocity constraints, and</span>
+<span class="sd">    statistical significance.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        qso_id (str): Unique identifier for the quasar/QSO.</span>
+<span class="sd">        zabs (float): Absorption redshift of the candidate system.</span>
+<span class="sd">        gaussian_parameters (array-like): Fitted parameters for the double Gaussian model,</span>
+<span class="sd">            typically [amp1, center1, width1, amp2, center2, width2].</span>
+<span class="sd">        bound (bool): Bounds for Gaussian fit parameters.</span>
+<span class="sd">        lower_del_lam (float): Lower wavelength offset/deviation.</span>
+<span class="sd">        c0 (float): Central wavelength or reference wavelength for line 1.</span>
+<span class="sd">        c1 (float): Central wavelength or reference wavelength for line 2.</span>
+<span class="sd">        upper_del_lam (float): Upper wavelength offset/deviation.</span>
+<span class="sd">        sn1 (float): Signal-to-noise ratio near line 1.</span>
+<span class="sd">        sn_line1 (float): Signal-to-noise ratio thresholde at line 1 center.</span>
+<span class="sd">        sn2 (float): Signal-to-noise ratio for continuum near line 2.</span>
+<span class="sd">        sn_line2 (float): Signal-to-noise ratio thresholde at line 2 center.</span>
+<span class="sd">        vel1 (float): Velocity width of line 1 component in km/s.</span>
+<span class="sd">        vel2 (float): Velocity width of line 2 component in km/s.</span>
+<span class="sd">        min_dr (float): Minimum doublet ratio threshold.</span>
+<span class="sd">        dr (float): Measured doublet ratio (e.g., CIV 1548/1550 ratio).</span>
+<span class="sd">        max_dr (float): Maximum doublet ratio threshold.</span>
+<span class="sd">        ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.</span>
+<span class="sd">        ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.</span>
+<span class="sd">        delta_chi2 (float): Chi-squared difference between flat and fitted models.</span>
+<span class="sd">        conf_level (float, optional): Confidence level for statistical significance.</span>
+<span class="sd">            Defaults to 0.95 (95% confidence).</span>
+<span class="sd">        vmax (float, optional): Maximum allowed velocity difference between components</span>
+<span class="sd">            in km/s. Defaults to 120.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if the absorber passes the selection criteria, False otherwise.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        The function evaluates multiple selection criteria including:</span>
+<span class="sd">        - Wavelength bounds for both lines</span>
+<span class="sd">        - S/N thresholds for continuum and line centers</span>
+<span class="sd">        - Velocity constraints between components</span>
+<span class="sd">        - Doublet ratio physical limits</span>
+<span class="sd">        - Equivalent width significance</span>
+<span class="sd">        - Statistical significance via delta chi-squared test</span>
+
+<span class="sd">        Prints detailed information about each criterion and whether it passes.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">critical_value</span> <span class="o">=</span> <span class="n">chi2</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">conf_level</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gaussian_parameters</span><span class="p">))</span>
 
@@ -751,7 +799,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">z1</span> <span class="o">=</span> <span class="p">(</span><span class="n">fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-    <span class="n">z2</span> <span class="o">=</span> <span class="p">((</span><span class="n">line2</span> <span class="o">-</span> <span class="n">line1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z1</span><span class="p">)</span> <span class="o">+</span> <span class="n">fitted_obs_l1</span><span class="p">)</span> <span class="o">/</span> <span class="n">line2</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="c1"># define from first line and redshift (more stable and correct)</span>
+    <span class="n">fitted_obs_l2</span> <span class="o">=</span> <span class="n">fitted_obs_l1</span> <span class="o">+</span> <span class="p">(</span><span class="n">line2</span> <span class="o">-</span> <span class="n">line1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z1</span><span class="p">)</span>
+    <span class="n">z2</span> <span class="o">=</span> <span class="n">fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span> <span class="o">-</span> <span class="mi">1</span>
 
     <span class="n">err1</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l1</span> <span class="o">/</span> <span class="n">line1</span><span class="p">)</span>
     <span class="n">err2</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_fitted_obs_l2</span> <span class="o">/</span> <span class="n">line2</span><span class="p">)</span>
@@ -1005,7 +1055,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

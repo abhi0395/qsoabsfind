@@ -77,7 +77,8 @@
              
   <h1>Source code for qsoabsfind.absfinder</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a function to run convolution based absorber finder on a single spectrum.</span>
+<span class="sd">This script contains a function to run the main convolution</span>
+<span class="sd">based absorber algorithm on a single spectrum.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
 <span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">add</span>
@@ -134,6 +135,12 @@
 <span class="sd">            - errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber</span>
 <span class="sd">            - errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber</span>
 <span class="sd">            - errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber</span>
+<span class="sd">            - zabs_err (list): errors on redshifts of absorbers detected</span>
+<span class="sd">            - sn1 (list): SNR of line 1 for each absorber</span>
+<span class="sd">            - sn2 (list): SNR of of line 2 for each absorber</span>
+<span class="sd">            - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)</span>
+<span class="sd">            - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)</span>
+<span class="sd">            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.</span>
@@ -174,7 +181,8 @@
     <span class="k">assert</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_error</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="s2">&quot;Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error&quot;</span>
 
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">,</span> <span class="s2">&quot;start_rest_wave&quot;</span><span class="p">,</span> <span class="s2">&quot;end_rest_wave&quot;</span><span class="p">,</span> <span class="s2">&quot;dv&quot;</span><span class="p">,</span> <span class="s2">&quot;continuum_error_frac&quot;</span><span class="p">,</span> <span class="s2">&quot;lam_red&quot;</span><span class="p">,</span> <span class="s2">&quot;lam_blue&quot;</span><span class="p">]:</span>
-        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="c1"># just remove this keyword as its not used the following function.</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="c1"># just remove this keyword as its not used the following function.</span>
 
     <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;verbose&quot;</span><span class="p">]:</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: search absorber = </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -238,6 +246,7 @@
 <span class="sd">            - sn2 (list): SNR of of line 2 for each absorber</span>
 <span class="sd">            - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)</span>
 <span class="sd">            - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)</span>
+<span class="sd">            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># return if there are less than 10 wavelength pixels available to search for</span>
@@ -469,7 +478,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

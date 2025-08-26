@@ -77,7 +77,7 @@
              
   <h1>Source code for qsoabsfind.io</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains functions to read and write files.</span>
+<span class="sd">This script contains functions to read, append and write fits files.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
@@ -206,6 +206,39 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span></div>
 
 
+
+<div class="viewcode-block" id="read_any_fits_file">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.read_any_fits_file">[docs]</a>
+<span class="k">def</span> <span class="nf">read_any_fits_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">hdu_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read any fits file given filename and hdu_name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): fits filepath</span>
+<span class="sd">        hdu_name (str or int): HDU extension name or number</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        astropy data: Table for BinTableHDU, data array for Image/Primary HDU</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+    <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="c1"># Get the specific HDU</span>
+        <span class="n">hdu</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span>
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span> <span class="c1"># Primary Headers</span>
+
+        <span class="c1"># Check HDU type and read accordingly</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">ImageHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reading </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">hdu</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; as data array&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span></div>
+
+
+
 </pre></div>
 
            </div>
@@ -216,7 +249,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

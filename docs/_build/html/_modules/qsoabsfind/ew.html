@@ -77,7 +77,8 @@
              
   <h1>Source code for qsoabsfind.ew</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a function to fit a given absorption profile with a double gaussian and measure equivalent widths.</span>
+<span class="sd">This script contains a function to fit a given absorption profile</span>
+<span class="sd">with a double gaussian and measure equivalent widths.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -250,6 +251,38 @@
 <div class="viewcode-block" id="bootstrap_fitting_and_ew">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.ew.bootstrap_fitting_and_ew">[docs]</a>
 <span class="k">def</span> <span class="nf">bootstrap_fitting_and_ew</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">nboot</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ix0</span><span class="p">,</span> <span class="n">ix1</span><span class="p">,</span> <span class="n">bound</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span> <span class="n">num_iter</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform bootstrap resampling to estimate uncertainties in fitting parameters and equivalent widths.</span>
+
+<span class="sd">    Conducts bootstrap analysis on spectral data to derive robust estimates of double Gaussian</span>
+<span class="sd">    fitting parameters and equivalent widths with associated uncertainties for a doublet system.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        index (int): Index or identifier for the current fitting process.</span>
+<span class="sd">        nboot (int): Number of bootstrap iterations to perform.</span>
+<span class="sd">        z (float): Redshift of the absorption system.</span>
+<span class="sd">        wavelength (array-like): Observed Wavelength array of the spectrum.</span>
+<span class="sd">        flux (array-like): Flux array of the spectrum.</span>
+<span class="sd">        error (array-like): Flux uncertainty array.</span>
+<span class="sd">        ix0 (int): Starting index of the spectral region to fit.</span>
+<span class="sd">        ix1 (int): Ending index of the spectral region to fit.</span>
+<span class="sd">        bound (tuple or list): Bounds for the fitting parameters.</span>
+<span class="sd">        amp_ratio (float): Expected amplitude ratio between the two lines in the doublet.</span>
+<span class="sd">        line1 (float): Rest wavelength of the first line in the doublet.</span>
+<span class="sd">        line2 (float): Rest wavelength of the second line in the doublet.</span>
+<span class="sd">        num_iter (int): Maximum number of iterations for each fitting attempt.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing:</span>
+<span class="sd">            - fit_params_mean (array): Mean values of fitted parameters across bootstrap samples.</span>
+<span class="sd">            - fit_param_std (array): Standard deviations of fitted parameters.</span>
+<span class="sd">            - ew1_mean (float): Mean equivalent width of line 1.</span>
+<span class="sd">            - ew2_mean (float): Mean equivalent width of line 2.</span>
+<span class="sd">            - ew_total_mean (float): Mean total equivalent width of the doublet.</span>
+<span class="sd">            - ew1_std (float): Standard deviation of line 1 equivalent width.</span>
+<span class="sd">            - ew2_std (float): Standard deviation of line 2 equivalent width.</span>
+<span class="sd">            - ew_total_std (float): Standard deviation of total equivalent width.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">fit_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nboot</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
     <span class="n">ew1_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nboot</span><span class="p">)</span>
@@ -601,7 +634,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-20.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 
