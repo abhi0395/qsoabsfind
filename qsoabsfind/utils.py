@@ -4,6 +4,7 @@ This script contains some utility functions.
 
 import time
 import numpy as np
+from scipy import signal
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
@@ -226,7 +227,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
 
     gauss_kernel = gauss_two_lines_kernel(lam_ker, a=ker_parm)
 
-    result = np.convolve(gauss_kernel, residual_arr_after_mask, mode='same')
+    result = signal.fftconvolve(residual_arr_after_mask, gauss_kernel, mode='same')
 
     #check if input and output array size are same
     bad_conv = validate_sizes(result, residual_arr_after_mask, index)
