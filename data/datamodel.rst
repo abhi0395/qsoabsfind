@@ -1,40 +1,20 @@
-qsoabsfind
-==========
-
-Instructions
--------------
-
-Please read and perform the following steps.
-
-Running Help Command
---------------------
-
-To get an overview of the tool's functionality and options, run:
-
-::
-
-    qsoabsfind --help
+File formats
+============
 
 Input FITS File Structure
 -------------------------
 
 The input `fits file` must have the following HDU extensions:
 
-- **FLUX**: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).
-- **WAVELENGTH**: Observed wavelength (in Angstroms).
-- **ERROR**: Error on residuals.
-- **METADATA**: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
+- ``FLUX``: Should ideally contain the residual spectra (usually the flux/continuum, i.e., the continuum normalized spectra).
+- ``WAVELENGTH``: Observed wavelength (in Angstroms).
+- ``ERROR``: Error on residuals.
+- ``METADATA``: Spectral details (such as Z_QSO, RA_QSO, DEC_QSO).
 
 I have also provided two example QSO spectra FITS files. You can use these files to test an example run as described below.
 
     - ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra.
     - ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized DESI DR1 QSO spectra.
-
-**Example Catalog**
----------
-
-Example output catalogs for MgII and CIV absorber (without column densities) searches in both SDSS and DESI test spectra are already saved in the ``data/sdss/`` and ``data/desi/`` directories, respectively.
-
 
 Output FITS File Structure
 --------------------------
@@ -43,18 +23,19 @@ The **output** `fits file` will have two (or three, optional) HDUs **ABSORBER** 
 
 **1) ABSORBER** HDU will contain the following structured data:
 
-- **INDEX_SPEC**: (int), Index of quasar (can be used to read the RA, DEC, and Z of QSOs).
-- **Z_ABS**: (float), Redshift of absorber.
-- **${METAL}_${LINE}_EW**: (float), Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.
-- **${METAL}_${LINE}_EW_ERROR**: (float), Uncertainties in rest-frame EWs of absorber lines in Angstroms.
-- **Z_ABS_ERR**: (float), Measured error in the redshift of the absorber.
-- **GAUSS_FIT**: (float array), Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
-- **GAUSS_FIT_STD**: (float array), Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.
-- **SN_${METAL}_${LINE}**: (float), Signal-to-noise ratio of the lines.
-- **${METAL}_EW_TOTAL**: (float), Total EW of the lines in Angstroms.
-- **${METAL}_EW_TOTAL_ERROR**: (float), Uncertainties in total EW of the lines in Angstroms.
-- **${METAL}_${LINE}_VDISP**: (float), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
-- **DELTA_CHI2**: (*float*), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).
+- ``INDEX_SPEC``: (*int*), Index of quasar (can be used to read the RA, DEC, and Z of QSOs).
+- ``Z_ABS``: (*float*), Redshift of absorber.
+- ``${METAL}_${LINE}_EW``: (*float*), Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.
+- ``${METAL}_${LINE}_EW_ERROR``: (*float*), Uncertainties in rest-frame EWs of absorber lines in Angstroms.
+- ``Z_ABS_ERR``: (*float*), Measured error in the redshift of the absorber.
+- ``GAUSS_FIT``: (*float array*), Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
+- ``GAUSS_FIT_STD``: (*float array*), Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.
+- ``SN_${METAL}_${LINE}``: (*float*), Signal-to-noise ratio of the lines.
+- ``${METAL}_EW_TOTAL``: (*float*), Total EW of the lines in Angstroms.
+- ``${METAL}_EW_TOTAL_ERROR``: (*float*), Uncertainties in total EW of the lines in Angstroms.
+- ``${METAL}_${LINE}_VDISP``: (*float*), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
+- ``DELTA_CHI2``: (*float*), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).
+
 
 **2) METADATA** HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.
 
@@ -65,11 +46,7 @@ This implementation follows the methodology described by `Savage & Sembach (1991
 
 This optional HDU will contain:
 
-- **LOG10N**: (float), log of **total column density** (in cm<sup>-2</sup>), calculated from apparent optical depth method.
-- **SIG_LOG10N**: (float), uncertainty on log of **total column density** (in cm<sup>-2</sup>), calculated from apparent optical depth method.
-- **SATURATION**: (int), saturation flag, 1: saturated, 0: unsaturated
-- **fN**: (int), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.
-
-| Thanks,
-| Abhijeet Anand
-| Lawrence Berkeley National Lab
+- ``LOG10N``: (*float*), log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
+- ``SIG_LOG10N``: (*float*), uncertainty on log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
+- ``SATURATION``: (*int*), saturation flag, 1: saturated, 0: unsaturated
+- ``fN``: (*int*), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.

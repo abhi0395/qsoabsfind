@@ -18,7 +18,7 @@ Usage:
 
 search_parameters = {
     'ker_width_pixels':[3, 4, 5, 6, 7, 8], # Gaussian kernel widths (in pixels) for convolution
-    'pm_pixel': 200, # Window size around feature for threshold calculation for convolved array
+    'pm_pixel': 100, # Window size around feature for threshold calculation for convolved array
     'coeff_sigma': 2, # for convolution the SNR cut
     'mult_resi': 1, # Multiplication factor for residual spectrum (to shift the normalization up or down)
     'd_pix': 0.6, # tolerance (in Angs) for line difference from true values
@@ -26,7 +26,7 @@ search_parameters = {
     'sn_line2': 2, # SNR cut for second line
     'use_covariance': False, # to use covariance matrix in EW error calculation
     'logwave': True,  # Assume SDSS-style log scale by default
-    'lam_edge_sep': 50, # Wavelength cut from spectrum edges (in Ang)
+    'lam_edge_sep': 25, # Wavelength cut from spectrum edges (in Ang)
     'conf_level':0.95, # 95 percent confidence level for absorber selection
     'verbose': True, # for printing statements for debugging
     'dv': 5000,  # velocity offset from quasars redshift in km/s
