@@ -173,8 +173,9 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     ew1, ew2 = abs_cat[f"{lambda1[0].upper()}_EW"], abs_cat[f"{lambda2[0].upper()}_EW"]
     err_ew1, err_ew2 = abs_cat[f"{lambda1[0].upper()}_EW_ERROR"], abs_cat[f"{lambda2[0].upper()}_EW_ERROR"]
 
-    dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2)
-    sflag = 0 if dr > 2 - dr_error else 1
+    dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2, f1, f2)
+    max_dr = max(f1, f2) / min(f1, f2)
+    sflag = 0 if dr > max_dr - dr_error else 1
 
     results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range, logwave=logwave)
     results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range,logwave=logwave)
@@ -183,9 +184,14 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
     sig_N1, sig_N2 = results1["N_err"], results2["N_err"]
     flag1, flag2 = results1["flag"], results2["flag"]
 
+    if f1 < f2: # in case second line is stronger theoretically
+        N1, N2 = results2["N"], results1["N"]
+        sig_N1, sig_N2 = results2["N_err"], results1["N_err"]
+        flag1, flag2 = results2["flag"], results1["flag"]
+
     log_N, err_log_N = np.nan, np.nan
 
-    if dr > 2 - dr_error:
+    if dr > max_dr - dr_error:
         # Unsaturated
         if flag1 > 0 and flag2 > 0:
             w1, w2 = 1 / sig_N1**2, 1 / sig_N2**2
@@ -213,10 +219,10 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
             val_flag = 4  # S&S corrected weak line
         elif flag2 > 0:
             N_tot, N_tot_err = N2, sig_N2
-            val_flag = 5  # lower limit from weak line
+            val_flag = 5  # lower limit from first line
         elif flag1 > 0:
             N_tot, N_tot_err = N1, sig_N1
-            val_flag = 6  # lower limit from strong line
+            val_flag = 6  # lower limit from second line
         else:
             N_tot = N_tot_err = np.nan
             val_flag = -1

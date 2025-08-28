@@ -298,7 +298,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                         # usually 1 < DR < line_ratio (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
 
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
-                            dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
+                            dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0], f1, f2)
                             min_dr, max_dr = 1 - dr_error, line_ratio + dr_error
                             ew1_snr, ew2_snr = EW_first_temp_mean[0] / EW_first_error_temp[0], EW_second_temp_mean[0] / EW_second_error_temp[0]
                         else:

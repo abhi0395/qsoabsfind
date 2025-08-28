@@ -92,7 +92,7 @@ def estimate_local_sigma_conv_array(conv_array, pm_pixel):
     return sigma_cr
 
 @jit(nopython=True)
-def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
+def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error, f1, f2):
     """
     Calculate the doublet ratio and its associated error.
 
@@ -101,6 +101,8 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
         ew2 (float): Equivalent width of the second line.
         ew1_error (float): Error associated with the first equivalent width.
         ew2_error (float): Error associated with the second equivalent width.
+        f1 (float): oscillator strength of first line
+        f2 (float): oscillator strength of second line
 
     Returns:
         tuple: A tuple containing:
@@ -108,7 +110,9 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error):
             - doublet_ratio_error (float): The propagated error for the doublet ratio.
     """
     # Calculate the doublet ratio
-    doublet_ratio = ew1 / ew2
+    doublet_ratio = ew1 / ew2 # default definition
+    if f1 < f2:
+        doublet_ratio = ew2 / ew1
 
     # Propagate the error using standard error propagation formula for division
     doublet_ratio_error = doublet_ratio * np.sqrt((ew1_error / ew1) ** 2 + (ew2_error / ew2) ** 2)
