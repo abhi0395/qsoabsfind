@@ -41,7 +41,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
         absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
-        kwargs (dict): search parameters as described in qsoabsfind.constants()
+        kwargs (dict): search parameters as taken in convolution_method..()
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -100,15 +100,19 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    for key in ["lam_edge_sep", "start_rest_wave", "end_rest_wave", "dv", "continuum_error_frac", "lam_red", "lam_blue"]:
-        if key in kwargs:
-            kwargs.pop(key) # just remove this keyword as its not used the following function.
+    not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
+                            "dv", "continuum_error_frac", "lam_red", "lam_blue"]
+
+    conv_kwargs = {}
+    for key in kwargs.keys():
+        if key not in not_allowed_args:
+            conv_kwargs[key] = kwargs[key]
 
     if kwargs["verbose"]:
         print(f'INFO: search absorber = {absorber}')
         print(f'INFO: Z_QSO = {z_qso[0]}')
 
-    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **kwargs)
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **conv_kwargs)
 
     # Print progress for every spectrum processed
     elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
