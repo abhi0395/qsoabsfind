@@ -86,11 +86,16 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     hdr = fits.Header()
     for key, header in headers.items():
         hdr[key] = (header["value"], header["comment"])
+    
+    # Primay header
+    primary_hdu = fits.PrimaryHDU(header=hdr)
+    primary_hdu.header['EXTNAME'] = 'PRIMARY'
 
     # load the QSO METADATA
     _,_, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
-    hdul = fits.HDUList([fits.PrimaryHDU(header=hdr), hdu, qso_hdu])
+    
+    hdul = fits.HDUList([primary_hdu, hdu, qso_hdu])
 
     hdul.writeto(output_file, overwrite=True)
     print(f'INFO: ouptut file {output_file} written.')

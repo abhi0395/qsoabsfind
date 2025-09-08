@@ -409,6 +409,9 @@ def combine_fits_files(directory, output_file):
                             print(f"Initialized HDU '{hdu_name}' with data from file {i + 1}.")
 
     # Create the HDUs to write to the output file
+    if primary_hdu is None:
+        primary_hdu = fits.PrimaryHDU()
+
     primary_hdu.header['EXTNAME'] = 'PRIMARY'
     hdul_out = fits.HDUList([primary_hdu])
 
