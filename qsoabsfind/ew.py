@@ -208,8 +208,11 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
 
     for i in range(nboot):
         # #best-fit corresponding to this best redshift
-        sigma1 = np.random.uniform(bound[0][2], bound[1][2])
-        sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+        if bound is not None:
+            sigma1 = np.random.uniform(bound[0][2], bound[1][2])
+            sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+        else:
+            sigma1 = sigma2 = np.random.uniform(0.2, 5)
         init_cond = [amp_first_nmf, line1, sigma1, amp_second_nmf, line2, sigma2]
         fit_params[i], _, ew1_array[i], ew2_array[i], ew_total_array[i], _ = double_curve_fit(
             index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv= num_iter)
@@ -373,8 +376,11 @@ def measure_absorber_properties_double_gaussian(
             amp_first_nmf = max(0.05, 1 - np.nanmin(nmf_resi))
             amp_second_nmf = min(0.95, amp_ratio * amp_first_nmf)
             line_first = line_centre1
-            sigma1 = uniform(bound[0][2], bound[1][2])
-            sigma2 = uniform(bound[0][5], bound[1][5])
+            if bound is not None:
+                sigma1 = uniform(bound[0][2], bound[1][2])
+                sigma2 = uniform(bound[0][5], bound[1][5])
+            else:
+                sigma1 = sigma2 = uniform(0.2, 5)
             line_second = line_centre2
             init_cond = [amp_first_nmf, line_first, sigma1, amp_second_nmf, line_second, sigma2]
 
