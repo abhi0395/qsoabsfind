@@ -198,7 +198,7 @@ Additionally, please also cite the associated [Zenodo record](https://zenodo.org
 
 You can also copy the BibTeX entry directly from below.
 
-      @ARTICLE{AnandSDSS2021,
+    @ARTICLE{2021MNRAS.504...65A,
       author = {{Anand}, Abhijeet and {Nelson}, Dylan and {Kauffmann}, Guinevere},
       title = "{Characterizing the abundance, properties, and kinematics of the cool circumgalactic medium of galaxies in absorption with SDSS DR16}",
       journal = {\mnras},
@@ -216,20 +216,22 @@ You can also copy the BibTeX entry directly from below.
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
     }
 
-    @ARTICLE{AnandDESI2025,
-      author = {{Anand}, Abhijeet and {Aguilar}, J. and {Ahlen}, S. and {Bianchi}, D. and {Brodzeller}, A. and {Brooks}, D. and {Canning}, R. and {Claybaugh}, T. and {Cuceu}, A. and {de la Macorra}, A. and {Doel}, P. and {Ferraro}, S. and {Font-Ribera}, A. and {Forero-Romero}, J.~E. and {Gazta{\~n}aga}, E. and {Gontcho}, S. Gontcho A and {Gutierrez}, G. and {Guy}, J. and {Herrera-Alcantar}, H.~K. and {Ishak}, M. and {Juneau}, S. and {Kehoe}, R. and {Kremin}, A. and {Landriau}, M. and {Le Guillou}, L. and {Levi}, M.~E. and {Manera}, M. and {Meisner}, A. and {Miquel}, R. and {Moustakas}, J. and {Mu{\~n}oz-Guti{\'e}rrez}, A. and {Napolitano}, L. and {P{\'e}rez-R{\`a}fols}, I. and {Rossi}, G. and {Sanchez}, E. and {Schlegel}, D. and {Schubnell}, M. and {Sprayberry}, D. and {Tarl{\'e}}, G. and {Temple}, M.~J. and {Weaver}, B.~A. and {Zhou}, R.},
-      title = "{The Cosmic Evolution of CIV Absorbers at $1.4<z<4.5$: Insights from $100,000$ Systems in DESI Quasars}",
-      journal = {arXiv e-prints},
-      keywords = {Cosmology and Nongalactic Astrophysics},
-      year = 2025,
-      month = apr,
-      eid = {arXiv:2504.20299},
-      pages = {arXiv:2504.20299},
-      doi = {10.48550/arXiv.2504.20299},
+    @ARTICLE{2025ApJ...990..151A,
+       author = {{Anand}, Abhijeet and {Aguilar}, J. and {Ahlen}, S. and {Bianchi}, D. and {Brodzeller}, A. and {Brooks}, D. and {Canning}, R. and {Claybaugh}, T. and {Cuceu}, A. and {de la Macorra}, A. and {Doel}, P. and {Ferraro}, S. and {Font-Ribera}, A. and {Forero-Romero}, J.~E. and {Gazta{\~n}aga}, E. and {Gontcho A Gontcho}, S. and {Gutierrez}, G. and {Guy}, J. and {Herrera-Alcantar}, H.~K. and {Ishak}, M. and {Juneau}, S. and {Kehoe}, R. and {Kremin}, A. and {Landriau}, M. and {Le Guillou}, L. and {Levi}, M.~E. and {Manera}, M. and {Meisner}, A. and {Miquel}, R. and {Moustakas}, J. and {Mu{\~n}oz-Guti{\'e}rrez}, A. and {Napolitano}, L. and {P{\'e}rez-R{\`a}fols}, I. and {Rossi}, G. and {Sanchez}, E. and {Schlegel}, D. and {Schubnell}, M. and {Sprayberry}, D. and {Tarl{\'e}}, G. and {Temple}, M.~J. and {Weaver}, B.~A. and {Zhou}, R.},
+        title = "{The Cosmic Evolution of C IV Absorbers at 1.4 < z < 4.5: Insights from 100,000 Systems in DESI Quasars}",
+      journal = {\apj},
+     keywords = {Quasar absorption line spectroscopy, Intergalactic medium, Redshift surveys, Astronomy software, 1317, 813, 1378, 1855, Cosmology and Nongalactic Astrophysics},
+         year = 2025,
+        month = sep,
+       volume = {990},
+       number = {2},
+          eid = {151},
+        pages = {151},
+          doi = {10.3847/1538-4357/adef3c},
       archivePrefix = {arXiv},
-      eprint = {2504.20299},
+       eprint = {2504.20299},
       primaryClass = {astro-ph.CO},
-      adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025ApJ...990..151A},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
     }
 
