@@ -87,9 +87,7 @@ If you use this code in your analysis, please cite `Anand, Nelson & Kauffmann 20
 
 If you use this **codebase**, please also cite the associated `Zenodo record <https://zenodo.org/records/15685771>`_. Additionally, consider starring the repository if you find it useful or use it in your work.
 
-.. code-block:: bibtex
-
-    You can also copy the BibTeX entry directly from below.
+You can also copy the BibTeX entry directly from below.
 
 .. code-block:: bibtex
 
