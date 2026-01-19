@@ -1,11 +1,12 @@
 """
-This script contains a function to run convolution based absorber finder on a single spectrum.
+This script contains a function to run the main convolution
+based absorber algorithm on a single spectrum.
 """
-
-import numpy as np
-from astropy.table import Table
 from functools import reduce
 from operator import add
+import time
+import numpy as np
+from astropy.table import Table
 from .utils import convolution_fun, vel_dispersion, elapsed
 from .absorberutils import (
     estimate_local_sigma_conv_array,
@@ -17,17 +18,16 @@ from .absorberutils import (
     absorber_search_window,
     find_valid_indices,
     calculate_doublet_ratio,
-    group_and_select_weighted_redshift
+    group_and_select_weighted_redshift,
+    check_absorber_selection
 )
 from .ew import (
     measure_absorber_properties_double_gaussian
 )
-from .config import load_constants
 from .spec import QSOSpecRead
-import time
 
-constants = load_constants()
-lines, oscillator_parameters, speed_of_light = constants.lines, constants.oscillator_parameters, constants.speed_of_light
+# Constants
+from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
 
 def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
     """
@@ -40,8 +40,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          The file must include extensions for FLUX, ERROR, WAVELENGTH
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
-        absorber (str): Name of the absorber to search for (e.g., 'MgII', 'CIV').
-        kwargs (dict): search parameters as described in qsoabsfind.constants()
+        absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
+        kwargs (dict): search parameters as taken in convolution_method..()
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -55,6 +55,12 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
             - errors EW1 (list of floats): errors on Equivalent width of line 1 for each absorber
             - errors EW2 (list of floats): errors on Equivalent width of line 2 for each absorber
             - errors EW total (list of floats): errors on Total Equivalent width of line 1 and line 2 for each absorber
+            - zabs_err (list): errors on redshifts of absorbers detected
+            - sn1 (list): SNR of line 1 for each absorber
+            - sn2 (list): SNR of of line 2 for each absorber
+            - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
+            - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
+            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
 
     Raises:
         AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.
@@ -65,7 +71,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     """
     start_time = time.time()
     # Read the specified QSO spectrum from the FITS file
-    print(f'INFO: Starting search for QSO INDEX = {spec_index}')
+    print(f'\nINFO: Starting search for QSO INDEX = {spec_index}')
     spectra = QSOSpecRead(fits_file, index=spec_index, autoload=False, verbose=kwargs["verbose"]) # verbose=True, shows time
     spectra.read_fits() # load data explicitly for this quasar
     spectra.metadata = Table(spectra.metadata) # in case spectra.metadata is a Row
@@ -74,7 +80,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
-    
+
     # Define the wavelength range for searching the absorber
     min_wave, max_wave = lam_obs.min(), lam_obs.max()
 
@@ -88,27 +94,34 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
     # Identify the wavelength region for searching the specified absorber
     lam_search, unmsk_residual, unmsk_error = absorber_search_window(
-        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, lam_edge_sep= kwargs["lam_edge_sep"], verbose=kwargs['verbose'])
+        lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
+        dv=kwargs["dv"], lam_edge_sep= kwargs["lam_edge_sep"], verbose=kwargs['verbose'])
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    kwargs.pop("lam_edge_sep") # just remove this keyword as its not used the following function.
+    not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
+                            "dv", "continuum_error_frac", "lam_red", "lam_blue"]
+
+    conv_kwargs = {}
+    for key in kwargs.keys():
+        if key not in not_allowed_args:
+            conv_kwargs[key] = kwargs[key]
+
     if kwargs["verbose"]:
         print(f'INFO: search absorber = {absorber}')
-        print(f'INFO: Z_qso = {z_qso[0]}')
+        print(f'INFO: Z_QSO = {z_qso[0]}')
 
-    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, unmsk_error, **kwargs)
+    (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2) = convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber, lam_obs, residual, error, lam_search, unmsk_residual, **conv_kwargs)
 
     # Print progress for every spectrum processed
-    elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is: \n")
+    elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
+    print('-------\n')
 
-    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2)
+    return (index_spec, pure_z_abs, pure_gauss_fit, pure_gauss_fit_std, pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean, pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error, redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None,
-lam_search=None, unmsk_residual=None, unmsk_error=None, ker_width_pixels=[3, 4, 5, 6, 7, 8], coeff_sigma=2.5,
-mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -118,14 +131,13 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     Args:
         spec_index (int): Index of quasar in the spectra 2D array.
-        absorber (str): Absorber name for searching doublets (MgII, CIV). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
         lam_obs (numpy.array): observed wavelength array.
         residual (numpy.array): residual (i.e. flux/continuum) array
         error (numpy.array): error on residuals
         lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).
         unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)
-        unmsk_error (numpy.array): error on residuals array in search wavelength region
-        ker_width_pix (list): List of kernel widths in pixels. Default is [3, 4, 5, 6, 7, 8].
+        ker_width_pix (int or list): List of kernel widths in pixels, default=5
         coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
         mult_resi (float): Factor to shift the residual up or down. Default is 1.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
@@ -135,6 +147,8 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
         use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
         logwave (bool): if wavelength on log scale (default True for SDSS)
         verbose (bool): if want to print a lot of outputs for debugging (default False)
+        nboot (int): if provided, will perform bootstrapping fitting (default None)
+        conf_level (float): confidence level of absorber for chi2 statistics (default 0.95)
 
     Returns:
         tuple: Contains lists of various parameters related to detected absorbers.
@@ -153,6 +167,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             - sn2 (list): SNR of of line 2 for each absorber
             - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
             - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
+            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
     """
 
     # return if there are less than 10 wavelength pixels available to search for
@@ -162,28 +177,29 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
     else:
         # Constants
-        if absorber == 'MgII':
-            line1, line2 = lines['MgII_2796'], lines['MgII_2803']
-            f1, f2 = oscillator_parameters['MgII_f1'], oscillator_parameters['MgII_f2']
-        elif absorber == 'CIV':
-            line1, line2 = lines['CIV_1548'], lines['CIV_1550']
-            f1, f2 = oscillator_parameters['CIV_f1'], oscillator_parameters['CIV_f2']
+        if absorber not in doublet_keys:
+            raise ValueError(f"No support for {absorber}, only supports {doublet_keys.keys()}")
         else:
-            raise ValueError(f"No support for {absorber}, only supports MgII and CIV")
+            line1, line2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
+            f1, f2 = oscillator_parameters[f'{absorber}_f1'], oscillator_parameters[f'{absorber}_f2']
+            prod1 = f1 * line1
+            prod2 = f2 * line2
+            line_ratio = max(prod1, prod2) / min(prod1, prod2)
 
         line_sep = line2 - line1
-        del_z = line_sep / (0.5 * (line1+line2))
+        del_z = line_sep / line1
 
         if verbose:
-            print(f'INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
+            print(f'INFO: For {absorber}, theoretical oscillator strength ratio: {line_ratio}')
+            print('INFO: instrumental resolution will be calculated from wavelength array, it is assumed that wavelength pixels are less than FWHM, so will not divide by 2.355')
 
         if not logwave:
             # per pixel resolution in case wavelength is on linear scale
             wave_res = np.nanmedian(np.diff(lam_search)) # robust to outliers
             resolution  = wave_res/lam_obs * speed_of_light # an array, it is assumed that it's true one and not FWHM
-            del_sigma = np.nanmedian(resolution) * line1 / speed_of_light #this is just to define the lower boundary for gaussian sigma
             mean_resolution = np.nanmean(resolution)
-
+            #this is just to define the lower boundary for gaussian sigma
+            del_sigma = mean_resolution * line1 / speed_of_light
         else:
             log_obs_wave = np.log10(lam_search)
             wave_res = np.nanmedian(np.diff(log_obs_wave))
@@ -192,28 +208,31 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             del_sigma /=2.355 ## FWHM sqrt(8ln2) #this is just to define the lower boundary for gaussian sigma
             mean_resolution = resolution
 
-        print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s]')
-        
+        print(f'INFO: mean wave_resolution = {wave_res:.5f}, mean resolution per pixel  = {mean_resolution:.3f} [km/s], del_sigma: {del_sigma}')
+
         bd_ct, x_sep = 1.0, 30 # multiple for bound definition (for line centres and widths of line, max can be 30 times of min)
 
         # bounds for gaussian fitting, to avoid very bad candidates
         edge = 0.1
-        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, del_sigma - edge, 2e-2, line2 - bd_ct * d_pix, del_sigma - edge])),
+        bound = ((np.array([2e-2, line1 - bd_ct * d_pix, max(0.1,del_sigma - edge), 2e-2, line2 - bd_ct * d_pix, max(0.1, del_sigma - edge)])),
                  (np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge, 1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])))
 
         # line separation tolerance (fitted line centers should not be outside, centre +/- d_pix)
         lower_del_lam = line_sep - d_pix
         upper_del_lam = line_sep + d_pix
 
+        if isinstance(ker_width_pixels, int):
+            ker_width_pixels = [ker_width_pixels]
         # Kernel width computation
         width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
 
         combined_final_our_z = []
 
         for sig_ker in width_kernel:
+            print(f'INFO: convolving for kernel width: {sig_ker} Angstrom.')
             line_centre = (line1 + line2) / 2
 
-            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index)
+            conv_arr = convolution_fun(absorber, mult_resi * unmsk_residual, sig_ker, log=logwave, wave_res=wave_res, index=spec_index, f1=f1, f2=f2)
             sigma_cr = estimate_local_sigma_conv_array(conv_arr, pm_pixel=pm_pixel)
             thr = np.nanmedian(conv_arr) - coeff_sigma * sigma_cr
 
@@ -223,19 +242,23 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
 
             our_z = lam_search[our_z_ind] / line_centre - 1
             residual_our_z = unmsk_residual[our_z_ind]
+            print('INFO: sigma cut on convolved flux for potential candidates...')
 
-            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, d_pix, f1 / f2, line1, line2, logwave)
-            final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, del_z)
+            new_our_z, new_res_arr = find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, line_ratio, line1, line2, logwave)
+            final_our_z =  group_and_select_weighted_redshift(new_our_z, new_res_arr, residual, lam_obs, line1, line2, del_z)
             combined_final_our_z.append(final_our_z)
 
+        print('INFO: combining redshifts...')
         combined_final_our_z = reduce(add, combined_final_our_z)
         combined_final_our_z = list(set(combined_final_our_z))
+        print(f'INFO: potential candidates before combining: {combined_final_our_z}')
         combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs, residual, d_pix=d_pix, use_kernel=absorber, delta_z=del_z)
         combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
+        print(f'INFO: potential candidates after combining: {combined_final_our_z}')
 
         if len(combined_final_our_z)>0:
-            z_abs, z_err, fit_param, fit_param_std, EW_first_line_mean, EW_second_line_mean, EW_total_mean, EW_first_line_error, EW_second_line_error, EW_total_error = measure_absorber_properties_double_gaussian(
-                index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance)
+            z_abs, _, fit_param, _, _, _, _, _, _, _,_ = measure_absorber_properties_double_gaussian(
+                index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=combined_final_our_z, bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
 
             pure_z_abs = np.zeros(len(z_abs))
             pure_gauss_fit = np.zeros((len(z_abs), 6))
@@ -251,18 +274,21 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             sn2_all = np.zeros(len(z_abs))
             vel_disp1 = np.zeros(len(z_abs))
             vel_disp2 = np.zeros(len(z_abs))
+            delta_chi2_array = np.zeros(len(z_abs))
 
             z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
-
+            print(f'INFO: performing final selection based on physical properties..')
+            print(f'INFO: only absorbers with conf_level > {conf_level} will be selected')
             for m in z_inds:
                 if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
 
-                    z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp = measure_absorber_properties_double_gaussian(
-                        index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix)
+                    z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp, delta_chi2 = measure_absorber_properties_double_gaussian(
+                        index=spec_index, wavelength=lam_obs, flux=residual, error=error, absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber, d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
+                    delta_chi2 = delta_chi2[0]
 
                     if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                         gaussian_parameters = np.array(fit_param_temp[0])
-                        lam_rest = lam_obs / (1 + z_abs[m])
+                        lam_rest = lam_obs / (1 + z_new)
                         c0 = gaussian_parameters[1]
                         c1 = gaussian_parameters[4]
                         sig1, sig2  = gaussian_parameters[2], gaussian_parameters[5]
@@ -270,20 +296,24 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                         sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
 
                         # resolution corrected velocity dispersion (should be greater than 0)
-                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_abs[m], lam_obs)
+                        vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5], resolution, z_new, lam_obs)
 
                         # calculate best -fit doublet ratio and errors and check if they are within the range.
-                        # usually 1 < DR < f1/f2 (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
+                        # usually 1 < DR < line_ratio (doublet ratio =2, for MgII, CIV), also applying SNR for EW >1, these are strict cuts
 
                         if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
-                            dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0])
-                            min_dr, max_dr = 1 -  dr_error, f1/f2 +  dr_error
+                            dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0], EW_first_error_temp[0], EW_second_error_temp[0], f1, f2)
+                            min_dr, max_dr = 1 - dr_error, line_ratio + dr_error
                             ew1_snr, ew2_snr = EW_first_temp_mean[0] / EW_first_error_temp[0], EW_second_temp_mean[0] / EW_second_error_temp[0]
                         else:
                             dr, min_dr, max_dr = 0, 0, -1 #failure case
                             ew1_snr, ew2_snr = 0, 0 # failure case
-
-                        if (gaussian_parameters > bound[0]+0.001).all() and (gaussian_parameters < bound[1]-0.001).all() and lower_del_lam <= c1 - c0 <= upper_del_lam and sn1 >= sn_line1 and sn2 >= sn_line2 and vel1 >= 0 and vel2 >= 0 and min_dr < dr < max_dr and ew1_snr >1 and ew2_snr>1:
+                        good = check_absorber_selection(spec_index, z_new, gaussian_parameters, bound,
+                             lower_del_lam, c0, c1, upper_del_lam,
+                             sn1, sn_line1, sn2, sn_line2,
+                             vel1, vel2, min_dr, dr, max_dr,
+                             ew1_snr, ew2_snr, delta_chi2, conf_level)
+                        if good:
                             pure_z_abs[m] = z_new
                             pure_gauss_fit[m] = fit_param_temp[0]
                             pure_gauss_fit_std[m] = fit_param_std_temp[0]
@@ -298,6 +328,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                             sn2_all[m] = sn2
                             vel_disp1[m] = vel1
                             vel_disp2[m] = vel2
+                            delta_chi2_array[m] = delta_chi2
 
             valid_indices = pure_z_abs != 0
             pure_z_abs = pure_z_abs[valid_indices]
@@ -314,10 +345,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
             sn2_all = sn2_all[valid_indices]
             vel_disp1 = vel_disp1[valid_indices]
             vel_disp2 = vel_disp2[valid_indices]
-
+            delta_chi2_array = delta_chi2_array[valid_indices]
+            print(f'INFO: final candidates: {pure_z_abs}')
             if len(pure_z_abs) > 0:
                 if absorber=='MgII':
-                    match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(spec_index, pure_z_abs, lam_obs, residual, error, d_pix, logwave)
+                    match_abs1 = remove_Mg_falsely_come_from_Fe_absorber(pure_z_abs, lam_obs, residual, error, d_pix, logwave)
                 else:
                     match_abs1 = -1*np.ones(len(pure_z_abs))
                 match_abs2 = z_abs_from_same_metal_absorber(pure_z_abs, lam_obs, residual, error, d_pix, absorber, logwave)
@@ -339,6 +371,7 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                 sn2_all = sn2_all[sel_indices]
                 vel_disp1 = vel_disp1[sel_indices]
                 vel_disp2 = vel_disp2[sel_indices]
+                delta_chi2_array = delta_chi2_array[sel_indices]
             else:
                 redshift_err = np.array([0])
                 pure_z_abs = np.array([0])
@@ -347,10 +380,11 @@ mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=Fal
                 pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
                 sn1_all = sn2_all = np.array([0])
                 vel_disp1 = vel_disp2= np.array([0])
+                delta_chi2_array = np.array([0])
 
             not_found = max(1, len(pure_z_abs))
             index_spec = [spec_index for _ in range(not_found)]
             return (index_spec, pure_z_abs.tolist(), pure_gauss_fit.tolist(), pure_gauss_fit_std.tolist(), pure_ew_first_line_mean.tolist(), pure_ew_second_line_mean.tolist(), pure_ew_total_mean.tolist(),
-                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist(), vel_disp1.tolist(), vel_disp2.tolist())
+                    pure_ew_first_line_error.tolist(), pure_ew_second_line_error.tolist(), pure_ew_total_error.tolist(), redshift_err.tolist(), sn1_all.tolist(), sn2_all.tolist(), vel_disp1.tolist(), vel_disp2.tolist(), delta_chi2_array.tolist())
         else:
-            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+            return ([spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])

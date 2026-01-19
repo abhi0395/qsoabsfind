@@ -5,12 +5,12 @@ Prerequisites
 -------------
 
 - Python 3.6 or higher
-- `numpy`
-- `scipy`
-- `astropy`
-- `numba`
-- `matplotlib`
-- `pytest` (for running tests)
+- ``numpy``
+- ``scipy``
+- ``astropy``
+- ``numba``
+- ``matplotlib``
+- ``pytest`` (for running tests)
 
 Clone the Repository
 --------------------
@@ -21,51 +21,75 @@ First, clone the repository to your local machine:
 
     git clone https://github.com/abhi0395/qsoabsfind.git
     cd qsoabsfind
+
+Set Up Environment
+------------------
+
+**Option 1: Using Conda (Recommended, python>=3.9)**
+
+Create and activate a conda environment:
+
+.. code-block:: bash
+
+    # Create environment with Python 3.9
+    conda create -n qsoabsfind python=3.9
+    conda activate qsoabsfind
+
+    # Install dependencies
+    conda install numpy scipy astropy numba matplotlib
+    conda install -c conda-forge pytest
+
+**Option 2: Using pip with virtual environment**
+
+.. code-block:: bash
+
+    # Create virtual environment
+    python -m venv qsoabsfind-env
+    source qsoabsfind-env/bin/activate  # Linux/Mac
+
+    # Install dependencies
+    pip install numpy scipy astropy numba matplotlib pytest
+
+Install Package
+---------------
+
+Install qsoabsfind:
+
+.. code-block:: bash
+
     pip install .
+
+For developers (editable mode installation):
+
+.. code-block:: bash
+
+    pip install -e .
+
+Run Unit tests
+---------
+
+Verify the installation by running tests:
+
+.. code-block:: bash
+
     python -m unittest discover -s tests
 
-Running example:
-----------------
 
-Before running, please read :doc:`File formats <fileformat>`. 
+Quick installation test
+----------
 
-**1. SDSS spectra** (MgII or CIV search):
------------------------------------------------
+Test the installation:
 
-I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
+.. code-block:: python
 
-.. code-block:: bash
+    python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
 
-    qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-               --constant-file data/sdss/sdss_constants.py \
-               --absorber MgII \
-               --output test_MgII.fits \
-               --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --ncpus 4
 
-**2. DESI DR1 spectra** (MgII or CIV search):
------------------------------------------------
+Description
+-----------
 
-Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 500 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
+To see available options and usage:
 
 .. code-block:: bash
 
-    qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
-               --constant-file data/desi/desi_constants.py \
-               --absorber MgII \
-               --output test_MgII.fits \
-               --headers SURVEY=DESI AUTHOR=YOUR_NAME \
-               --ncpus 4
-
-Useful notes:
--------------
-
-Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
-
-   - **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
-
-   - **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
-
-   - **Merge results at the end:** After processing, you can merge your results using `qsoabsfind.utils.combine_fits_files <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/utils.py>`_ function. Please read the description before using it.
-
-In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
+    qsoabsfind --help

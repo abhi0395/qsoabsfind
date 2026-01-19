@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>qsoabsfind.spec &mdash; qsoabsfind 0.1.0 documentation</title>
+  <title>qsoabsfind.spec &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -14,7 +14,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -74,61 +77,150 @@
              
   <h1>Source code for qsoabsfind.spec</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a classes and functions to read a given spectra fits files.</span>
+<span class="sd">This script contains a class and functions to read/write spectra fits files.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">read_fits_file</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">.io</span> <span class="kn">import</span> <span class="n">read_fits_file</span><span class="p">,</span> <span class="n">read_any_fits_file</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span><span class="p">,</span> <span class="n">get_all_extnames</span>
 
 <div class="viewcode-block" id="QSOSpecRead">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead">[docs]</a>
 <span class="k">class</span> <span class="nc">QSOSpecRead</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.&quot;&quot;&quot;</span>
+<span class="sd">    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="QSOSpecRead.__init__">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the QSOSpecRead class.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            fits_file (str): Path to the FITS file containing QSO spectra.</span>
 <span class="sd">            index (int, list, or np.ndarray, optional): Index or indices of the rows to load. Default is None.</span>
+<span class="sd">            autoload (bool): if True, class itself will load the data (default=False),</span>
+<span class="sd">                             in True case, user does not need to use available class functions.</span>
+<span class="sd">            verbose (bool): if want to print time info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span> <span class="o">=</span> <span class="n">fits_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flux</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">read_fits</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span> <span class="o">=</span> <span class="n">autoload</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_fits</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="QSOSpecRead.read_fits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.read_fits">[docs]</a>
     <span class="k">def</span> <span class="nf">read_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Reads the FITS file and measures the time taken for the</span>
-<span class="sd">        operation.</span>
+<span class="sd">        Reads the FITS file and measures the time taken for the operation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span>
         <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-        <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Time taken to read FITS file&quot;</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;INFO: Time taken to read </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fits_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="QSOSpecRead.get_metadata">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.get_metadata">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asdict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the METADATA data with keyword handling.</span>
+<span class="sd">        Returns the METADATA data with keyword handling (must be used after read_fits() option).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            asdict (bool): if True, metadata will be returned as a dictionary, otherwise astropy.table</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict: The metadata data with keywords.</span>
+<span class="sd">            dict or Table: The metadata data with keywords (if asdict=True), otherwise a Table</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
-        <span class="k">return</span> <span class="n">details_dict</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ERROR: there is no metadata available, use read_fits()&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">asdict</span><span class="p">:</span>
+            <span class="n">details_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
+            <span class="k">return</span> <span class="n">details_dict</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span></div>
+</div>
+
+
+<div class="viewcode-block" id="AbsorberData">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData">[docs]</a>
+<span class="k">class</span> <span class="nc">AbsorberData</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class to read and handle Absorber table FITS file</span>
+<span class="sd">    containing ABSORBER, METADATA, and optionally COLUMN_DENSITY extensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AbsorberData.__init__">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the AbsorberData class.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filepath (str): Path to the FITS file containing Absorber catalog.</span>
+<span class="sd">            verbose (bool): if want to print time info</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filepath</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+
+        <span class="c1"># Get all extension names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extnames</span> <span class="o">=</span> <span class="n">get_all_extnames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AbsorberData.read_catalog">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData.read_catalog">[docs]</a>
+    <span class="k">def</span> <span class="nf">read_catalog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read catalog from the file&quot;&quot;&quot;</span>
+
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="c1"># Temporary dictionary to store all data from different extensions</span>
+        <span class="n">all_data</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Read each extension</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">ext_name</span><span class="p">,</span> <span class="n">hdu_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extnames</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reading extension &#39;</span><span class="si">{</span><span class="n">ext_name</span><span class="si">}</span><span class="s2">&#39; (</span><span class="si">{</span><span class="n">hdu_type</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Use index for PRIMARY HDU, name for others</span>
+            <span class="n">hdu_identifier</span> <span class="o">=</span> <span class="n">idx</span> <span class="k">if</span> <span class="n">ext_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;PRIMARY&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;HDU_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="n">ext_name</span>
+            <span class="n">hdr</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">read_any_fits_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">,</span> <span class="n">hdu_name</span><span class="o">=</span><span class="n">hdu_identifier</span><span class="p">)</span>
+            <span class="n">all_data</span><span class="p">[</span><span class="n">ext_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+
+        <span class="c1"># Assign specific extensions as attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span> <span class="o">=</span> <span class="n">all_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ABSORBER&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">absorber</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span>  <span class="c1"># Alias for backward compatibility</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">all_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;METADATA&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_density</span> <span class="o">=</span> <span class="n">all_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;COLUMN_DENSITY&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># May be None</span>
+
+        <span class="c1"># Store header from last read</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="n">hdr</span>
+
+        <span class="c1"># Check required extensions</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Required extension &#39;ABSORBER&#39; not found in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Required extension &#39;METADATA&#39; not found in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extnames</span><span class="p">)</span><span class="si">}</span><span class="s2"> extensions from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ABSORBER: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  METADATA: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_density</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  COLUMN_DENSITY: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_density</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  COLUMN_DENSITY: Not present (optional)&quot;</span><span class="p">)</span>
+            <span class="n">elapsed</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;INFO: Time taken to read catalog from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 </div>
 
 </pre></div>
@@ -140,8 +232,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2025-08-26.
       </span></p>
   </div>
 

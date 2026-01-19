@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>qsoabsfind.io &mdash; qsoabsfind 0.1.0 documentation</title>
+  <title>qsoabsfind.io &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -14,7 +14,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -74,11 +77,15 @@
              
   <h1>Source code for qsoabsfind.io</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a functions to read and write files.</span>
+<span class="sd">This script contains functions to read, append and write fits files.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">fits</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
+<span class="c1">#Constants</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">doublet_keys</span>
 
 <div class="viewcode-block" id="read_fits_file">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.read_fits_file">[docs]</a>
@@ -94,50 +101,51 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        tuple: A tuple containing the flux, error, wavelength, and metadata data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Read the metadata Table first:</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s2">&quot;METADATA&quot;</span><span class="p">)</span> <span class="c1">## this preserves the units</span>
     <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">memmap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+        <span class="n">wavelength</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;WAVELENGTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>  <span class="c1"># Assuming wavelength is common for all spectra</span>
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
-            <span class="n">wavelength</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;WAVELENGTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
-            <span class="n">metadata</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="c1">## get metadata only for the input index (or indices)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="c1"># flux, error should be 1D for a single spectrum</span>
                 <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-                <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">flux</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;FLUX&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
                 <span class="n">error</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;ERROR&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-                <span class="n">metadata</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;METADATA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-            <span class="n">wavelength</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="s1">&#39;WAVELENGTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>  <span class="c1"># Assuming wavelength is common for all spectra</span>
-    <span class="k">return</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">metadata</span></div>
+
+    <span class="k">return</span> <span class="n">header</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">metadata</span></div>
 
 
 <div class="viewcode-block" id="save_results_to_fits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.save_results_to_fits">[docs]</a>
-<span class="k">def</span> <span class="nf">save_results_to_fits</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">absorber</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">save_results_to_fits</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">absorber</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Save the results to a FITS file.</span>
+<span class="sd">    Save the absorber results to a FITS file along with the metadata of QSOs.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        results (dict): The results dictionary.</span>
+<span class="sd">        intput_file (str): The path to the input spectra FITS file.</span>
 <span class="sd">        output_file (str): The path to the output FITS file.</span>
 <span class="sd">        headers (dict): The headers to include in the FITS file.</span>
 <span class="sd">        absorber (str): The absorber type (MgII or CIV).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A fits file containing detected absorber properties in &#39;ABSORBER&#39; HDU and</span>
+<span class="sd">        corresponding QSO metadata in &#39;METADATA&#39; HDU.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">EW_TOTAL</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">absorber</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1">_EW_TOTAL&#39;</span>
-    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
-        <span class="n">sn_1</span> <span class="o">=</span> <span class="s1">&#39;SN_MGII_2796&#39;</span>
-        <span class="n">sn_2</span> <span class="o">=</span> <span class="s1">&#39;SN_MGII_2803&#39;</span>
-        <span class="n">EW_1</span> <span class="o">=</span> <span class="s1">&#39;MGII_2796_EW&#39;</span>
-        <span class="n">EW_2</span> <span class="o">=</span> <span class="s1">&#39;MGII_2803_EW&#39;</span>
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
-        <span class="n">sn_1</span> <span class="o">=</span> <span class="s1">&#39;SN_CIV_1548&#39;</span>
-        <span class="n">sn_2</span> <span class="o">=</span> <span class="s1">&#39;SN_CIV_1550&#39;</span>
-        <span class="n">EW_1</span> <span class="o">=</span> <span class="s1">&#39;CIV_1548_EW&#39;</span>
-        <span class="n">EW_2</span> <span class="o">=</span> <span class="s1">&#39;CIV_1550_EW&#39;</span>
+    <span class="k">if</span> <span class="n">absorber</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doublet_keys</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber, must be in </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber: </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">EW_TOTAL</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">absorber</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1">_EW_TOTAL&#39;</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="n">sn_1</span><span class="p">,</span> <span class="n">sn_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;SN_</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;SN_</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">EW_1</span><span class="p">,</span> <span class="n">EW_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s1">_EW&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s1">_EW&#39;</span>
+        <span class="n">VDISP1</span><span class="p">,</span> <span class="n">VDISP2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s1">_VDISP&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s1">_VDISP&#39;</span>
 
     <span class="n">hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="o">.</span><span class="n">from_columns</span><span class="p">([</span>
         <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;INDEX_SPEC&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;K&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;index_spec&#39;</span><span class="p">])),</span>
@@ -152,15 +160,89 @@
         <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">EW_TOTAL</span><span class="si">}</span><span class="s1">_ERROR&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;Angstrom&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;ew_total_error&#39;</span><span class="p">])),</span>
         <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Z_ABS_ERR&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;z_abs_err&#39;</span><span class="p">])),</span>
         <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">sn_1</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;sn_1&#39;</span><span class="p">])),</span>
-        <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">sn_2</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;sn_2&#39;</span><span class="p">]))</span>
+        <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">sn_2</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;sn_2&#39;</span><span class="p">])),</span>
+        <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">VDISP1</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;km s-1&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;vel_disp1&#39;</span><span class="p">])),</span>
+        <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">VDISP2</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;km s-1&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;vel_disp2&#39;</span><span class="p">])),</span>
+        <span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;DELTA_CHI2&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;delta_chi2&#39;</span><span class="p">])),</span>
     <span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;ABSORBER&#39;</span><span class="p">)</span>
 
     <span class="n">hdr</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">Header</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">headers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">hdr</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="s2">&quot;comment&quot;</span><span class="p">])</span>
+    
+    <span class="c1"># Primay header</span>
+    <span class="n">primary_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">hdr</span><span class="p">)</span>
+    <span class="n">primary_hdu</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;EXTNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRIMARY&#39;</span>
 
-    <span class="n">hdul</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">hdr</span><span class="p">),</span> <span class="n">hdu</span><span class="p">])</span>
-    <span class="n">hdul</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+    <span class="c1"># load the QSO METADATA</span>
+    <span class="n">_</span><span class="p">,</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;index_spec&#39;</span><span class="p">]))</span>
+    <span class="n">qso_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;METADATA&#39;</span><span class="p">)</span>
+    
+    <span class="n">hdul</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">primary_hdu</span><span class="p">,</span> <span class="n">hdu</span><span class="p">,</span> <span class="n">qso_hdu</span><span class="p">])</span>
+
+    <span class="n">hdul</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: ouptut file </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s1"> written.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="append_table_to_fits">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.append_table_to_fits">[docs]</a>
+<span class="k">def</span> <span class="nf">append_table_to_fits</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">hdu_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Append an Astropy Table as a new BinTableHDU to a FITS file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): Path to the FITS file to write to.</span>
+<span class="sd">        table (astropy.table.Table): Table to append.</span>
+<span class="sd">        hdu_name (str): Name of the new HDU (used for identification).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">Table</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Provided &#39;table&#39; must be an astropy.table.Table object&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the new HDU</span>
+    <span class="n">new_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">table</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="c1"># Open existing file and append</span>
+        <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;update&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+            <span class="n">hdul</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_hdu</span><span class="p">)</span>
+            <span class="n">hdul</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> does not exist&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="read_any_fits_file">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.io.read_any_fits_file">[docs]</a>
+<span class="k">def</span> <span class="nf">read_any_fits_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">hdu_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read any fits file given filename and hdu_name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): fits filepath</span>
+<span class="sd">        hdu_name (str or int): HDU extension name or number</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        astropy data: Table for BinTableHDU, data array for Image/Primary HDU</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+    <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="c1"># Get the specific HDU</span>
+        <span class="n">hdu</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span>
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span> <span class="c1"># Primary Headers</span>
+
+        <span class="c1"># Check HDU type and read accordingly</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">ImageHDU</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reading </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">hdu</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; as data array&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">hdu</span><span class="o">.</span><span class="n">data</span></div>
+
+
 
 </pre></div>
 
@@ -171,8 +253,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 

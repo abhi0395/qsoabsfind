@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>qsoabsfind.utils &mdash; qsoabsfind 0.1.0 documentation</title>
+  <title>qsoabsfind.utils &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -14,7 +14,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../paramfile.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -78,20 +81,135 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="c1">#import logging</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Row</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">importlib.metadata</span> <span class="kn">import</span> <span class="n">version</span><span class="p">,</span> <span class="n">PackageNotFoundError</span>
 
-<span class="c1"># Configure logging</span>
-<span class="c1">#logging.basicConfig(level=logging.DEBUG, format=&#39;%(asctime)s - %(levelname)s - %(message)s&#39;)</span>
+<span class="c1"># Constants</span>
+<span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">oscillator_parameters</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">doublet_keys</span><span class="p">,</span> <span class="n">amplitude_dict</span>
 
-<span class="c1"># Set the logging level for Matplotlib to WARNING to suppress DEBUG messages</span>
-<span class="c1">#logging.getLogger(&#39;matplotlib&#39;).setLevel(logging.WARNING)</span>
+<div class="viewcode-block" id="get_package_versions">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.get_package_versions">[docs]</a>
+<span class="k">def</span> <span class="nf">get_package_versions</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the versions of qsoabsfind and other relevant packages.</span>
 
-<span class="n">constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">()</span>
-<span class="n">lines</span><span class="p">,</span> <span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">speed_of_light</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">lines</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">amplitude_dict</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">speed_of_light</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the versions of the packages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">packages</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;qsoabsfind&#39;</span><span class="p">,</span> <span class="s1">&#39;numpy&#39;</span><span class="p">,</span> <span class="s1">&#39;astropy&#39;</span><span class="p">,</span> <span class="s1">&#39;scipy&#39;</span><span class="p">,</span> <span class="s1">&#39;numba&#39;</span><span class="p">,</span> <span class="s1">&#39;matplotlib&#39;</span><span class="p">]</span>
+    <span class="n">versions</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">pkg</span> <span class="ow">in</span> <span class="n">packages</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">versions</span><span class="p">[</span><span class="n">pkg</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span><span class="p">(</span><span class="n">pkg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+            <span class="n">versions</span><span class="p">[</span><span class="n">pkg</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;not installed&#39;</span>
+    <span class="k">return</span> <span class="n">versions</span></div>
+
+
+<div class="viewcode-block" id="get_all_extnames">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.get_all_extnames">[docs]</a>
+<span class="k">def</span> <span class="nf">get_all_extnames</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get list of all HDU extension names in a FITS file</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): fits file</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: list containing extension names</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="n">extnames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">hdu</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hdul</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;HDU_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">extnames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">hdu</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">extnames</span></div>
+
+
+
+<div class="viewcode-block" id="update_header">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.update_header">[docs]</a>
+<span class="k">def</span> <span class="nf">update_header</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">user_constants</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add search parameters and package versions to headers.</span>
+
+<span class="sd">    Updates FITS header with search parameters from command-line arguments and</span>
+<span class="sd">    user-defined constants, along with relevant package version information for</span>
+<span class="sd">    reproducibility.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        args (argparse.Namespace): Parsed command-line arguments containing search</span>
+<span class="sd">            parameters and configuration options.</span>
+<span class="sd">        user_constants (object): Object containing user-defined constants and</span>
+<span class="sd">            configuration attributes used in the search/analysis.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        astropy.io.fits.Header: Updated FITS header containing search parameters,</span>
+<span class="sd">            constants, and package version information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Prepare headers</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span>
+        <span class="n">headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+
+    <span class="n">headers</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+        <span class="s1">&#39;ABSORBER&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">absorber</span><span class="p">,</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Absorber name&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;KERWIDTH&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;ker_width_pixels&quot;</span><span class="p">]),</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Kernel width in pixels (ker_width_pixels)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;COEFFSIG&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;coeff_sigma&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;sigma threshold (coeff_sigma)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;MULTRE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;mult_resi&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Multiplicative factor for residuals (mult_resi)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;D_PIX&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;d_pix&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;tolerance for line separation (in Ang) (d_pix)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;PM_PIXEL&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;pm_pixel&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;N_Pixel for noise estimation (pm_pixel)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE1&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;sn_line1&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for first line (sn_line1)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;SN_LINE2&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;sn_line2&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;S/N threshold for second line (sn_line2)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;EWCOVAR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;use_covariance&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use covariance for EW error (use_covariance)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;LOGWAVE&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;logwave&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;Use log wavelength scaling (logwave)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;LAM_ESEP&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_edge_sep&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;lambda edges to avoid edges (lam_edge_sep)&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;BLUE_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_blue&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;blue end of quasar-rest frame (Ang) for search&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;RED_LAM&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;lam_red&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;red end of quasar-rest frame (Ang) for search&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;CONTERR&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;continuum_error_frac&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;fractional error in continuum normalization&#39;</span><span class="p">},</span>
+        <span class="s1">&#39;CONFLEV&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">[</span><span class="s2">&quot;conf_level&quot;</span><span class="p">],</span> <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s1">&#39;minimum confidence level for selection&#39;</span><span class="p">},</span>
+    <span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">headers</span></div>
+
+
+<div class="viewcode-block" id="parse_qso_sequence">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.parse_qso_sequence">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_qso_sequence</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse a bash-like sequence or a single integer to generate QSO indices.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        qso_sequence (str or int): Bash-like sequence (e.g., &#39;1-1000&#39;, &#39;1-1000:10&#39;) or an integer.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.array: Array of QSO indices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">)</span>
+
+    <span class="c1"># Handle string input</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">qso_sequence</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">qso_sequence</span><span class="p">))</span>
+
+        <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(\d+)-(\d+)(?::(\d+))?&quot;</span><span class="p">,</span> <span class="n">qso_sequence</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">step</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">)</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">step</span><span class="p">)</span> <span class="k">if</span> <span class="n">step</span> <span class="k">else</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+    <span class="c1"># If none of the conditions matched, raise an error</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid QSO sequence format: &#39;</span><span class="si">{</span><span class="n">qso_sequence</span><span class="si">}</span><span class="s2">&#39;. Use &#39;start-end[:step]&#39; or an integer.&quot;</span><span class="p">)</span></div>
+
+
 
 <div class="viewcode-block" id="elapsed">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.elapsed">[docs]</a>
@@ -128,24 +246,60 @@
     <span class="n">a1</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">a2</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
 
-    <span class="n">norm_constant</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="c1">#/((a1+a2)*(2*np.pi*a[1]**2)**0.5)</span>
+    <span class="n">norm_constant</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
 
-    <span class="k">return</span> <span class="n">norm_constant</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">a1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">a2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.5</span></div>
+    <span class="k">return</span> <span class="n">norm_constant</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">a1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">a2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> <span class="o">/</span> <span class="n">a</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="compute_doublet_amplitudes">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.compute_doublet_amplitudes">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_doublet_amplitudes</span><span class="p">(</span><span class="n">A1_input</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes amplitudes for the first and second lines of a doublet</span>
+<span class="sd">    based on the user-defined A1_input and oscillator strengths f1 and f2.</span>
+
+<span class="sd">    Ensures that both amplitudes remain &lt;= 1.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A1_input (float): Desired amplitude of the stronger line (usually &lt;= 1).</span>
+<span class="sd">        f1 (float): Oscillator strength of the first line.</span>
+<span class="sd">        f2 (float): Oscillator strength of the second line.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (A1, A2): Tuple of amplitudes for line1 and line2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Normalize f1 and f2 such that max(A1, A2) = A1_input if possible</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">f2</span> <span class="o">/</span> <span class="n">f1</span>
+    <span class="n">A2</span> <span class="o">=</span> <span class="n">A1_input</span> <span class="o">*</span> <span class="n">ratio</span>
+
+    <span class="c1"># If A2 exceeds 1, we need to scale both amplitudes down</span>
+    <span class="k">if</span> <span class="n">A2</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">A2</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">A1_input</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="n">A2</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">A1_input</span>
+
+    <span class="k">return</span> <span class="n">A1</span><span class="p">,</span> <span class="n">A2</span></div>
+
 
 
 <div class="viewcode-block" id="convolution_fun">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.convolution_fun">[docs]</a>
-<span class="k">def</span> <span class="nf">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">amp_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">convolution_fun</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">wave_res</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convolves the spectrum with a Gaussian kernel.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        absorber (str): Type of absorber (e.g., &#39;MgII&#39;, &#39;CIV&#39;).</span>
+<span class="sd">        absorber (str): Type of absorber (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).</span>
 <span class="sd">        residual_arr_after_mask (numpy.ndarray): Final residual array after masking.</span>
 <span class="sd">        width (float): The width of the Gaussian kernel (decide base dupon width of real absorption feature).</span>
-<span class="sd">        amp_ratio (float): Amplitude ratio for the Gaussian lines (default 0.5).</span>
-<span class="sd">        log (bool): if log bins should be used for wavelength (dlam = 0.0001, default True)</span>
+<span class="sd">        log (bool): if log bins should be used for wavelength</span>
+<span class="sd">        wave_res (float): wavelength pixel size (SDSS: 0.0001 on log scale, DESI: 0.8 on linear scale)</span>
 <span class="sd">        index (int): QSO index</span>
+<span class="sd">        f1 (float): Oscillator strength of the first line.</span>
+<span class="sd">        f2 (float): Oscillator strength of the second line.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        numpy.ndarray: The convolved residual array.</span>
@@ -154,30 +308,27 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type. Available types are: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">amplitude_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="n">A_main</span> <span class="o">=</span> <span class="n">amplitude_dict</span><span class="p">[</span><span class="n">absorber</span><span class="p">]</span>
-    <span class="n">A_secondary</span> <span class="o">=</span> <span class="n">A_main</span> <span class="o">*</span> <span class="n">amp_ratio</span>
-    <span class="n">ct</span> <span class="o">=</span> <span class="mi">5</span>
-    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
-        <span class="n">ker_parm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">A_main</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">,</span> <span class="n">A_secondary</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2803&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">])</span>
-        <span class="n">lam_ker_start</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2796&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1"># +/- 5sigma , #rest-frame</span>
-        <span class="n">lam_ker_end</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2803&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span>
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
-        <span class="n">ker_parm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">A_main</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1548&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">,</span> <span class="n">A_secondary</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1550&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">])</span>
-        <span class="n">lam_ker_start</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1548&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1"># +/- 5sigma , #rest-frame</span>
-        <span class="n">lam_ker_end</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1550&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">ct</span><span class="o">*</span><span class="n">width</span> <span class="c1">#</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type for specific Args: </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">A_main</span><span class="p">,</span> <span class="n">A_secondary</span> <span class="o">=</span> <span class="n">compute_doublet_amplitudes</span><span class="p">(</span><span class="n">A_main</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+    <span class="n">ct</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="c1"># extract lambdas for the doublet</span>
+    <span class="n">lambda1</span><span class="p">,</span> <span class="n">lambda2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span> <span class="n">lines</span><span class="p">[</span><span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">ker_parm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">A_main</span><span class="p">,</span> <span class="n">lambda1</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">A_secondary</span><span class="p">,</span> <span class="n">lambda2</span><span class="p">,</span> <span class="n">width</span><span class="p">])</span>
+    <span class="n">lam_ker_start</span> <span class="o">=</span> <span class="n">lambda1</span> <span class="o">-</span> <span class="n">ct</span> <span class="o">*</span> <span class="n">width</span> <span class="c1"># +/- 10sigma , #rest-frame</span>
+    <span class="n">lam_ker_end</span> <span class="o">=</span> <span class="n">lambda2</span> <span class="o">+</span> <span class="n">ct</span> <span class="o">*</span> <span class="n">width</span>
+
     <span class="k">if</span> <span class="n">log</span><span class="p">:</span>
-        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_end</span><span class="p">),</span> <span class="mf">0.0001</span><span class="p">)</span> <span class="c1">#SDSS-like wavelength resolution</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lam_ker_end</span><span class="p">)</span><span class="o">+</span><span class="n">wave_res</span><span class="p">,</span> <span class="n">wave_res</span><span class="p">)</span> <span class="c1">#SDSS-like wavelength resolution</span>
         <span class="n">lam_ker</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="n">lam_ker</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">,</span> <span class="n">lam_ker_end</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span> <span class="c1"># DESI-like wavelength resolution</span>
+        <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lam_ker_start</span><span class="p">,</span> <span class="n">lam_ker_end</span><span class="o">+</span><span class="n">wave_res</span><span class="p">,</span> <span class="n">wave_res</span><span class="p">)</span> <span class="c1"># DESI-like wavelength resolution</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lam_ker</span><span class="p">)</span><span class="o">&gt;</span><span class="nb">len</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">):</span>
         <span class="n">lam_ker</span> <span class="o">=</span> <span class="n">lam_ker</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">)]</span>
 
     <span class="n">gauss_kernel</span> <span class="o">=</span> <span class="n">gauss_two_lines_kernel</span><span class="p">(</span><span class="n">lam_ker</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="n">ker_parm</span><span class="p">)</span>
 
-    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">gauss_kernel</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">fftconvolve</span><span class="p">(</span><span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">gauss_kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
 
     <span class="c1">#check if input and output array size are same</span>
     <span class="n">bad_conv</span> <span class="o">=</span> <span class="n">validate_sizes</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">residual_arr_after_mask</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
@@ -268,6 +419,171 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved as </span><span class="si">{</span><span class="n">plot_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
+
+<div class="viewcode-block" id="modify_units">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.modify_units">[docs]</a>
+<span class="k">def</span> <span class="nf">modify_units</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modify the unit of a column based on the column name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        col_name (str): The name of the column.</span>
+<span class="sd">        col (Column): The column object.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The modified unit if conditions are met, otherwise the original unit.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;EW&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s1">&#39;Angstrom&#39;</span>
+    <span class="k">elif</span> <span class="s1">&#39;VDISP&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s1">&#39;km s-1&#39;</span>
+    <span class="k">elif</span> <span class="s1">&#39;10N&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s1">&#39;cm-2&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="numeric_key">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.numeric_key">[docs]</a>
+<span class="k">def</span> <span class="nf">numeric_key</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract first integer from filename for sorting.</span>
+
+<span class="sd">    Extracts the first sequence of digits found in a filename to use as a numeric</span>
+<span class="sd">    sorting key. Files without numbers are placed at the end of the sort order.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename (str): Filename or path from which to extract the numeric key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int or float: First integer found in the filename, or float(&#39;inf&#39;) if no</span>
+<span class="sd">            number is present (ensuring numberless files sort last).</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;file_123_data.txt&quot;)</span>
+<span class="sd">        123</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;report_42.pdf&quot;)</span>
+<span class="sd">        42</span>
+<span class="sd">        &gt;&gt;&gt; numeric_key(&quot;no_numbers_here.txt&quot;)</span>
+<span class="sd">        inf</span>
+<span class="sd">        &gt;&gt;&gt; sorted([&quot;file3.txt&quot;, &quot;file20.txt&quot;, &quot;file1.txt&quot;], key=numeric_key)</span>
+<span class="sd">        [&#39;file1.txt&#39;, &#39;file3.txt&#39;, &#39;file20.txt&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">re</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\d+&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">())</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>  <span class="c1"># put no-number files at end</span></div>
+
+
+
+<div class="viewcode-block" id="combine_fits_files">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.combine_fits_files">[docs]</a>
+<span class="k">def</span> <span class="nf">combine_fits_files</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output_file</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Combines data from several FITS files in a directory into a single FITS file.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        This function assumes that all FITS files have the same HDU structure and that all HDUs are Tables. Any column with &#39;EW&#39; in its name will have its unit set to Angstrom. The `INDEX_SPEC` column is not concatenated. The primary HDU from the first FITS file is copied to the final combined file. So make sure that directory contains only qsoabsfind output files.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        directory (str): Path to the directory containing the FITS files.</span>
+<span class="sd">        output_file (str): Path to the output FITS file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None: The combined FITS file is saved to the specified output path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">vstack</span>
+    <span class="c1"># Initialize a dictionary to store tables for each HDU</span>
+    <span class="n">combined_tables</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">primary_hdu</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">formats</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># Loop through each file in the directory</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">numeric_key</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">file_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">):</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing file: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">primary_hdu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># Copy the primary HDU from the first file</span>
+                    <span class="n">primary_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Primary HDU copied from the first file.&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">hdu</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                        <span class="n">hdu_name</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span>
+                        <span class="n">formats</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">hdu</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                            <span class="n">formats</span><span class="p">[</span><span class="n">hdu</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="n">col</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">format</span>
+                <span class="k">for</span> <span class="n">hdu</span> <span class="ow">in</span> <span class="n">hdul</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hdu</span><span class="p">,</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">):</span>
+                        <span class="n">hdu_name</span> <span class="o">=</span> <span class="n">hdu</span><span class="o">.</span><span class="n">name</span>
+                        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
+
+                        <span class="c1"># Remove the INDEX_SPEC column if it exists</span>
+                        <span class="k">if</span> <span class="s1">&#39;INDEX_SPEC&#39;</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+                            <span class="n">table</span><span class="o">.</span><span class="n">remove_column</span><span class="p">(</span><span class="s1">&#39;INDEX_SPEC&#39;</span><span class="p">)</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removed &#39;INDEX_SPEC&#39; column from HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">hdu_name</span> <span class="ow">in</span> <span class="n">combined_tables</span><span class="p">:</span>
+                            <span class="n">combined_tables</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">vstack</span><span class="p">([</span><span class="n">combined_tables</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">],</span> <span class="n">table</span><span class="p">],</span> <span class="n">metadata_conflicts</span><span class="o">=</span><span class="s1">&#39;silent&#39;</span><span class="p">)</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concatenated data to HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">combined_tables</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initialized HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; with data from file </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the HDUs to write to the output file</span>
+    <span class="k">if</span> <span class="n">primary_hdu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">primary_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">()</span>
+
+    <span class="n">primary_hdu</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;EXTNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRIMARY&#39;</span>
+    <span class="n">hdul_out</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">primary_hdu</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">hdu_name</span><span class="p">,</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">combined_tables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># Explicitly handle units by creating columns with modified unit information</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span>
+
+            <span class="c1"># Modify the unit based on the column name</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">modify_units</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+
+            <span class="c1"># Create the FITS column, let the format be inferred</span>
+            <span class="n">fits_format</span> <span class="o">=</span> <span class="n">formats</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">][</span><span class="n">col_name</span><span class="p">]</span>
+            <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fits</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">col_name</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="n">col</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">fits_format</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">))</span>
+        <span class="n">hdu_out</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="o">.</span><span class="n">from_columns</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">hdu_name</span><span class="p">)</span>
+        <span class="n">hdul_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hdu_out</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Added HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; to the output file.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Write the combined data to the output FITS file</span>
+    <span class="n">hdul_out</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Combined FITS file saved to </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="match_order">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.match_order">[docs]</a>
+<span class="k">def</span> <span class="nf">match_order</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span> <span class="n">arr2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Matching order based on match key fot given two arrays</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        arr1 (array): First array (will be assumed to be the reference array)</span>
+<span class="sd">        arr2 (array): Second array (target array for which the order to be matched)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matching indices such that arr2[indices]=arr1</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Raises Assertion error if sizes do not match</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="n">arr1</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="n">arr2</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">arr2</span><span class="p">:</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">arr1</span> <span class="o">==</span> <span class="n">el</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ii</span><span class="p">)</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">updated_arr2</span> <span class="o">=</span> <span class="n">arr2</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span> <span class="n">updated_arr2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">indices</span></div>
+
+
+
 <div class="viewcode-block" id="validate_sizes">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.validate_sizes">[docs]</a>
 <span class="k">def</span> <span class="nf">validate_sizes</span><span class="p">(</span><span class="n">conv_arr</span><span class="p">,</span> <span class="n">unmsk_residual</span><span class="p">,</span> <span class="n">spec_index</span><span class="p">):</span>
@@ -287,104 +603,189 @@
         <span class="k">assert</span> <span class="n">conv_arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span>
     <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
         <span class="n">bad_conv</span><span class="o">=</span><span class="mi">1</span>
-        <span class="c1"># logging.error(f&quot;Size mismatch detected in spec_index {spec_index}&quot;)</span>
-        <span class="c1"># logging.debug(f&quot;conv_arr size: {conv_arr.size}, unmsk_residual size: {unmsk_residual.size}&quot;)</span>
-        <span class="c1"># raise</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: Size mismatch detected in spec_index </span><span class="si">{</span><span class="n">spec_index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">bad_conv</span></div>
 
 
 <div class="viewcode-block" id="vel_dispersion">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.vel_dispersion">[docs]</a>
-<span class="k">def</span> <span class="nf">vel_dispersion</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">,</span> <span class="n">resolution</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">vel_dispersion</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">sigma1</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">,</span> <span class="n">resolution</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculates velocity dispersion using Gaussian quadrature.</span>
+<span class="sd">    Calculates and corrects velocity dispersion using Gaussian quadrature.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        c1 (float): fitted line center 1 (in Ang).</span>
-<span class="sd">        c2 (float): fitted line center 2 (in Ang).</span>
-<span class="sd">        sigma1 (float): fitted width 1 (in Ang).</span>
-<span class="sd">        sigma2 (float): fitted width 2 (in Ang).</span>
-<span class="sd">        resoultion (float): instrumental resolution (in km/s).</span>
+<span class="sd">        c1 (float): rest-frame fitted line center 1 (in Ang).</span>
+<span class="sd">        c2 (float): rest-frame fitted line center 2 (in Ang).</span>
+<span class="sd">        sigma1 (float): rest-frame fitted width 1 (in Ang).</span>
+<span class="sd">        sigma2 (float): rest-frame fitted width 2 (in Ang).</span>
+<span class="sd">        resolution (float or np.array): instrumental true resolution (in km/s), see note.</span>
+<span class="sd">        z (float): redshift of absorber</span>
+<span class="sd">        obs_wave (np.array): observed wavelength in Angstroms</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        resolution corrected velocity dispersion</span>
+<span class="sd">        instrumental resolution corrected velocity dispersion in km/s</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">v1_sig</span> <span class="o">=</span> <span class="n">sigma1</span> <span class="o">/</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">speed_of_light</span>
     <span class="n">v2_sig</span> <span class="o">=</span> <span class="n">sigma2</span> <span class="o">/</span> <span class="n">c2</span> <span class="o">*</span> <span class="n">speed_of_light</span>
 
-    <span class="n">del_v1_sq</span> <span class="o">=</span> <span class="n">v1_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">resolution</span><span class="o">**</span><span class="mi">2</span>
-    <span class="n">del_v2_sq</span> <span class="o">=</span> <span class="n">v2_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">resolution</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">lam_obs1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="n">c1</span>
+    <span class="n">lam_obs2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="n">c2</span>
+
+    <span class="c1"># Get per-line instrumental sigma_v (km/s)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resolution</span><span class="p">):</span>
+        <span class="n">res1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+        <span class="n">res2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">resolution</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Interpolate instrumental sigma_v at the exact observed wavelengths</span>
+        <span class="c1"># Assumes obs_wave is monotonic and same length as resolution.</span>
+        <span class="n">res1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs1</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
+        <span class="n">res2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">lam_obs2</span><span class="p">,</span> <span class="n">obs_wave</span><span class="p">,</span> <span class="n">resolution</span><span class="p">))</span>
+
+    <span class="c1">#Gaussian quadrature correction</span>
+    <span class="n">del_v1_sq</span> <span class="o">=</span> <span class="n">v1_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">res1</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">del_v2_sq</span> <span class="o">=</span> <span class="n">v2_sig</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">res2</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="n">is_resolved1</span> <span class="o">=</span> <span class="n">del_v1_sq</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+    <span class="n">is_resolved2</span> <span class="o">=</span> <span class="n">del_v2_sq</span> <span class="o">&gt;=</span> <span class="mi">0</span>
 
     <span class="c1"># Correct for instrumental resolution</span>
-    <span class="k">if</span> <span class="n">del_v1_sq</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">del_v2_sq</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">corr_del_v1_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v1_sq</span><span class="p">)</span>
-        <span class="n">corr_del_v2_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v2_sq</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">corr_del_v1_sq</span>  <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># Set to 0 if the observed width is less than instrumental width</span>
-        <span class="n">corr_del_v2_sq</span>  <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="c1"># Set to NaN if the fitted  width is less than rest-frame instrumental width</span>
+    <span class="c1"># One line may resolved and one may be not, so this condition is a little relaxed</span>
+    <span class="n">corr_del_v1_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v1_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">corr_del_v2_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">del_v2_sq</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_resolved2</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
     <span class="k">return</span> <span class="n">corr_del_v1_sq</span><span class="p">,</span> <span class="n">corr_del_v2_sq</span></div>
 
 
+
 <div class="viewcode-block" id="plot_absorber">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.plot_absorber">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_absorber</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;obs wave (ang)&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;residual&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;QSO&#39;</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zoom</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">plot_absorber</span><span class="p">(</span><span class="n">spectra</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">zabs</span><span class="p">,</span> <span class="n">show_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Saves a plot of spectra with absorber in the current working directory.</span>
+<span class="sd">    Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along</span>
+<span class="sd">    with its Gaussian fit in the current working directory or in the user-defined</span>
+<span class="sd">    directory.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        lam (array-like): Observed wavelength.</span>
-<span class="sd">        residual (array-like): Residual flux.</span>
-<span class="sd">        absorber (str): Type of absorber, e.g., &#39;MgII&#39;, &#39;CIV&#39;.</span>
-<span class="sd">        zabs (list): List of absorber redshifts.</span>
-<span class="sd">        xlabel (str): The label for the x-axis. Default is &#39;obs wave (ang)&#39;.</span>
-<span class="sd">        ylabel (str): The label for the y-axis. Default is &#39;residual&#39;.</span>
-<span class="sd">        title (str): The title of the plot. Default is &#39;QSO&#39;.</span>
+<span class="sd">        spectra (object): spectra class, output of QSOSpecRead()</span>
+<span class="sd">        absorber (str): Type of absorber, e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII</span>
+<span class="sd">        zabs (Table, Row, dict, np.ndarray or float): Must have &#39;Z_ABS&#39; and &#39;GAUSS_FIT&#39; columns, if not float.</span>
+<span class="sd">        show_error (bool): if error bars should be shown (default False)</span>
 <span class="sd">        plot_filename (str): If provided, will save the plot to the given filename.</span>
-<span class="sd">        zoom (bool): If True, adds an inset plot to show a zoomed-in version of the absorber lines.</span>
+<span class="sd">        **kwargs: Additional keyword arguments for matplotlib plot functions, such as:</span>
+<span class="sd">                  xlabel (str): The label for the x-axis.</span>
+<span class="sd">                  ylabel (str): The label for the y-axis.</span>
+<span class="sd">                  title (str): The super title of the plot.</span>
+<span class="sd">                  fontsize (int): Font size for the title and labels.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Create the main plot</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+
+    <span class="c1"># Extract common plot parameters from kwargs or set to default values</span>
+    <span class="n">xlabel</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;xlabel&#39;</span><span class="p">,</span> <span class="s1">&#39;obs wave (ang)&#39;</span><span class="p">)</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;ylabel&#39;</span><span class="p">,</span> <span class="s1">&#39;residual&#39;</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;QSO&#39;</span><span class="p">)</span>
+    <span class="n">fontsize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;fontsize&#39;</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+
+    <span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="n">spectra</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span> <span class="n">spectra</span><span class="o">.</span><span class="n">error</span>
+    <span class="c1"># If zabs is a Table or structured array, extract redshifts and fit parameters</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">zabs</span><span class="p">,</span> <span class="p">(</span><span class="n">Table</span><span class="p">,</span> <span class="n">Row</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;Z_ABS&#39;</span> <span class="ow">in</span> <span class="n">zabs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="s1">&#39;GAUSS_FIT&#39;</span> <span class="ow">in</span> <span class="n">zabs</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="n">redshifts</span> <span class="o">=</span> <span class="n">zabs</span><span class="p">[</span><span class="s1">&#39;Z_ABS&#39;</span><span class="p">]</span>
+        <span class="n">fit_params</span> <span class="o">=</span> <span class="n">zabs</span><span class="p">[</span><span class="s1">&#39;GAUSS_FIT&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">redshifts</span> <span class="o">=</span> <span class="n">zabs</span>
+        <span class="n">fit_params</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">redshifts</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">redshifts</span> <span class="o">=</span> <span class="p">[</span><span class="n">redshifts</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">fit_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fit_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">fit_params</span><span class="p">]</span>
+
+    <span class="n">num_absorbers</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">redshifts</span><span class="p">)</span>
+
+    <span class="n">sep</span> <span class="o">=</span> <span class="mi">25</span>  <span class="c1"># Set separation for zoomed plot ranges</span>
+
+    <span class="c1"># Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">13.5</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">hspace</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>  <span class="c1"># Adjust space between plots</span>
+
+    <span class="c1"># Super title for the entire figure</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+
+    <span class="c1"># Create the main plot in the first row</span>
+    <span class="n">ax_main</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_absorbers</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">colspan</span><span class="o">=</span><span class="n">num_absorbers</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;residual&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_error</span><span class="p">:</span>
+        <span class="n">ax_main</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">ymask</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">residual</span><span class="p">)</span>
+    <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="n">lam</span><span class="p">[</span><span class="n">ymask</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">lam</span><span class="p">[</span><span class="n">ymask</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">prop</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;size&#39;</span><span class="p">:</span><span class="mi">11</span><span class="p">})</span>
 
     <span class="c1"># Determine the absorber line labels</span>
-    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
-        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;MgII_2796&#39;</span><span class="p">,</span> <span class="s1">&#39;MgII_2803&#39;</span>
-    <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
-        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="s1">&#39;CIV_1548&#39;</span><span class="p">,</span> <span class="s1">&#39;CIV_1550&#39;</span>
-    <span class="k">else</span><span class="p">:</span>
+
+    <span class="k">if</span> <span class="n">absorber</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doublet_keys</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber type: </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">doublet_keys</span><span class="p">[</span><span class="n">absorber</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
 
-    <span class="c1"># Plot vertical lines for the absorber lines</span>
-    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zabs</span><span class="p">:</span>
+    <span class="c1"># Plot vertical lines for the absorber lines in the main plot</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">redshifts</span><span class="p">:</span>
         <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s1"> z=</span><span class="si">{</span><span class="n">z</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s1"> z=</span><span class="si">{</span><span class="n">z</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">ax_main</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">ax_main</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
 
-    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">minorticks_on</span><span class="p">()</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+    <span class="n">ax_main</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;minor&#39;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
 
-    <span class="c1"># Add inset zoomed plot if requested</span>
-    <span class="k">if</span> <span class="n">zoom</span><span class="p">:</span>
-        <span class="n">sep</span> <span class="o">=</span> <span class="mi">25</span>
-        <span class="n">ax_inset</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">inset_axes</span><span class="p">([</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">])</span>  <span class="c1"># position: [x0, y0, width, height]</span>
-        <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zabs</span><span class="p">:</span>
-            <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">),</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&gt;</span> <span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&lt;</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">)</span>  <span class="c1"># zoom range around the lines</span>
-            <span class="n">ax_inset</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
-            <span class="n">ax_inset</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
-            <span class="n">ax_inset</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
-        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">,</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">])</span>
-        <span class="c1">#Determine appropriate y-limits for inset based on data</span>
-        <span class="n">y_min</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="c1"># Add subplots for zoomed-in regions in the second row</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">redshifts</span><span class="p">):</span>
+        <span class="n">shift_z</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">z</span>
+        <span class="n">ax_zoom</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_absorbers</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">idx</span><span class="p">))</span>
+        <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">l1</span><span class="p">]</span> <span class="o">*</span> <span class="n">shift_z</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="n">l2</span><span class="p">]</span> <span class="o">*</span> <span class="n">shift_z</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&gt;</span> <span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam</span> <span class="o">&lt;</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">)</span>  <span class="c1"># Define zoom range around the lines</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">show_error</span><span class="p">:</span>
+            <span class="n">ax_zoom</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax_zoom</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">lam</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">yerr</span><span class="o">=</span><span class="n">error</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">,</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">])</span>
+
+        <span class="c1"># Determine appropriate y-limits for the subplot based on data</span>
+        <span class="n">y_min</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">])),</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">residual</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
         <span class="n">y_margin</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_max</span> <span class="o">-</span> <span class="n">y_min</span><span class="p">)</span>  <span class="c1"># Add a margin for better visibility</span>
-        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">y_min</span> <span class="o">-</span> <span class="n">y_margin</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">+</span> <span class="n">y_margin</span><span class="p">)</span>
-        <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Zoomed-In </span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s1"> Lines&#39;</span><span class="p">)</span>
-        <span class="n">ax_inset</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">y_min</span> <span class="o">-</span> <span class="n">y_margin</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">+</span> <span class="n">y_margin</span><span class="p">)</span>
+
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s1"> at z=</span><span class="si">{</span><span class="n">z</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">minorticks_on</span><span class="p">()</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">ylabel</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;minor&#39;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="c1"># Add Gaussian fit</span>
+        <span class="k">if</span> <span class="n">fit_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">fit_params</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="c1"># Adjust fit parameters for the redshift</span>
+            <span class="c1"># Plot the Gaussian fit</span>
+            <span class="n">lam_fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">sep</span><span class="p">,</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">sep</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">fit_curve</span> <span class="o">=</span> <span class="n">double_gaussian</span><span class="p">(</span>
+                <span class="n">lam_fit</span><span class="p">,</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">shift_z</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">shift_z</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">shift_z</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">shift_z</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">ax_zoom</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lam_fit</span><span class="p">,</span> <span class="n">fit_curve</span><span class="p">,</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Gaussian Fit&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ax_zoom</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">prop</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;size&#39;</span><span class="p">:</span><span class="mi">11</span><span class="p">})</span>
+
+    <span class="c1"># Use tight_layout to ensure there are no overlaps</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">(</span><span class="n">rect</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">0.96</span><span class="p">])</span>  <span class="c1"># Reserve space for suptitle</span>
 
     <span class="c1"># Save or display the plot</span>
     <span class="k">if</span> <span class="n">plot_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -392,7 +793,9 @@
         <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
 
         <span class="c1"># Define the full path for the plot</span>
-        <span class="n">plot_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="n">plot_filename</span><span class="p">)</span>
+        <span class="n">plot_path</span> <span class="o">=</span> <span class="n">plot_filename</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">plot_filename</span><span class="p">):</span>
+            <span class="n">plot_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="n">plot_filename</span><span class="p">)</span>
 
         <span class="c1"># Save the plot</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_path</span><span class="p">)</span>
@@ -401,6 +804,41 @@
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved as </span><span class="si">{</span><span class="n">plot_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="read_nqso_from_header">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.utils.read_nqso_from_header">[docs]</a>
+<span class="k">def</span> <span class="nf">read_nqso_from_header</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hdu_name</span><span class="o">=</span><span class="s1">&#39;METADATA&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read the NAXIS2 value from the header of a specified HDU in a FITS file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path: str, path to the FITS file.</span>
+<span class="sd">        hdu_name: str, name of the HDU from which to read NAXIS1 (default: &#39;METADATA&#39;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        naxis2_value: int, value of NAXIS2 from the specified HDU header.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check if the file exists</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The FITS file </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Open the FITS file in read-only mode and load headers only</span>
+    <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;readonly&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+        <span class="c1"># Attempt to access the specified HDU by name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Load only the header of the specified HDU</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="n">hdu_name</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+
+            <span class="c1"># Read the NAXIS1 value from the header</span>
+            <span class="n">naxis2_value</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NAXIS2&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">naxis2_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;NAXIS2 not found in the &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; HDU header.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">naxis2_value</span>
+
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; HDU found in </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 
@@ -411,8 +849,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2024-08-01 23:18:45.166774.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 

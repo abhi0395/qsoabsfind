@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; qsoabsfind 0.1.0 documentation</title>
+  <title>Installation &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -15,14 +15,14 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=01f34227"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="File formats" href="fileformat.html" />
-    <link rel="prev" title="qsoabsfind’s documentation" href="index.html" /> 
+    <link rel="prev" title="qsoabsfind: Quasar Absorber Finder" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,11 +49,17 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#clone-the-repository">Clone the Repository</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-example">Running example:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#useful-notes">Useful notes:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#set-up-environment">Set Up Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-package">Install Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-unit-tests">Run Unit tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-installation-test">Quick installation test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#description">Description</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="fileformat.html">File formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="searchwindows.html">Absorber Search Windows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="paramfile.html">Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examplerun.html">Running examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="qsoabsfind.html">Full qsoabsfind API reference</a></li>
 </ul>
 
@@ -87,12 +93,12 @@
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Python 3.6 or higher</p></li>
-<li><p><cite>numpy</cite></p></li>
-<li><p><cite>scipy</cite></p></li>
-<li><p><cite>astropy</cite></p></li>
-<li><p><cite>numba</cite></p></li>
-<li><p><cite>matplotlib</cite></p></li>
-<li><p><cite>pytest</cite> (for running tests)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scipy</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">astropy</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">numba</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytest</span></code> (for running tests)</p></li>
 </ul>
 </section>
 <section id="clone-the-repository">
@@ -100,35 +106,63 @@
 <p>First, clone the repository to your local machine:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/abhi0395/qsoabsfind.git
 <span class="nb">cd</span><span class="w"> </span>qsoabsfind
-pip<span class="w"> </span>install<span class="w"> </span>.
-python<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w"> </span>discover<span class="w"> </span>-s<span class="w"> </span>tests
 </pre></div>
 </div>
 </section>
-<section id="running-example">
-<h2>Running example:<a class="headerlink" href="#running-example" title="Link to this heading"></a></h2>
-<p>Before running, please read <a class="reference internal" href="fileformat.html"><span class="doc">File formats</span></a>. I have provided an example QSO spectra FITS file, <cite>data/qso_test.fits</cite>, which contains 500 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--input-fits-file<span class="w"> </span>data/qso_test.fits<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--n-qso<span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--absorber<span class="w"> </span>MgII<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--output<span class="w"> </span>test_MgII.fits<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--headers<span class="w"> </span><span class="nv">SURVEY</span><span class="o">=</span>SDSS<span class="w"> </span><span class="nv">AUTHOR</span><span class="o">=</span>YOUR_NAME<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--n-tasks<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--ncpus<span class="w"> </span><span class="m">4</span>
+<section id="set-up-environment">
+<h2>Set Up Environment<a class="headerlink" href="#set-up-environment" title="Link to this heading"></a></h2>
+<p><strong>Option 1: Using Conda (Recommended, python&gt;=3.9)</strong></p>
+<p>Create and activate a conda environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create environment with Python 3.9</span>
+conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>qsoabsfind<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.9
+conda<span class="w"> </span>activate<span class="w"> </span>qsoabsfind
+
+<span class="c1"># Install dependencies</span>
+conda<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>astropy<span class="w"> </span>numba<span class="w"> </span>matplotlib
+conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>pytest
+</pre></div>
+</div>
+<p><strong>Option 2: Using pip with virtual environment</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create virtual environment</span>
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>qsoabsfind-env
+<span class="nb">source</span><span class="w"> </span>qsoabsfind-env/bin/activate<span class="w">  </span><span class="c1"># Linux/Mac</span>
+
+<span class="c1"># Install dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>astropy<span class="w"> </span>numba<span class="w"> </span>matplotlib<span class="w"> </span>pytest
 </pre></div>
 </div>
 </section>
-<section id="useful-notes">
-<h2>Useful notes:<a class="headerlink" href="#useful-notes" title="Link to this heading"></a></h2>
-<p>Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p><strong>Divide your file into smaller chunks:</strong> Split the FITS file into several smaller files, each containing approximately <cite>N</cite> spectra. Then run the code on these smaller files.</p></li>
-<li><p><strong>Use a rule of thumb for file size:</strong> Ensure that the size of each individual file is no larger than <cite>total_memory/ncpu</cite> of your node or system. Based on this idea you can decide your <cite>N</cite>. I would suggest <cite>N = 1000</cite>.</p></li>
-<li><p><strong>Merge results at the end:</strong> After processing, you can merge your results.</p></li>
-</ul>
-</div></blockquote>
-<p>In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.</p>
+<section id="install-package">
+<h2>Install Package<a class="headerlink" href="#install-package" title="Link to this heading"></a></h2>
+<p>Install qsoabsfind:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+<p>For developers (editable mode installation):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="run-unit-tests">
+<h2>Run Unit tests<a class="headerlink" href="#run-unit-tests" title="Link to this heading"></a></h2>
+<p>Verify the installation by running tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w"> </span>discover<span class="w"> </span>-s<span class="w"> </span>tests
+</pre></div>
+</div>
+</section>
+<section id="quick-installation-test">
+<h2>Quick installation test<a class="headerlink" href="#quick-installation-test" title="Link to this heading"></a></h2>
+<p>Test the installation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print(&#39;Installation successful!&#39;)&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="description">
+<h2>Description<a class="headerlink" href="#description" title="Link to this heading"></a></h2>
+<p>To see available options and usage:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--help
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -136,15 +170,15 @@ python<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w">
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="qsoabsfind’s documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral float-left" title="qsoabsfind: Quasar Absorber Finder" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="fileformat.html" class="btn btn-neutral float-right" title="File formats" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2024, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2024-08-01 23:30:26.821787.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 
