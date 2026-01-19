@@ -198,6 +198,8 @@ Additionally, please also cite the associated [Zenodo record](https://zenodo.org
 
 You can also copy the BibTeX entry directly from below.
 
+```bibtex
+
     @ARTICLE{2021MNRAS.504...65A,
       author = {{Anand }, Abhijeet and {Nelson}, Dylan and {Kauffmann}, Guinevere},
       title = "{Characterizing the abundance, properties, and kinematics of the cool circumgalactic medium of galaxies in absorption with SDSS DR16}",
@@ -247,6 +249,7 @@ You can also copy the BibTeX entry directly from below.
       url          = {https://doi.org/10.5281/zenodo.15685771},
     }
 
+```
 
 Contribution
 ------------
