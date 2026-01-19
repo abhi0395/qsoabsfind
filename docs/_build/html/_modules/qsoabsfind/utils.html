@@ -528,6 +528,9 @@
                             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initialized HDU &#39;</span><span class="si">{</span><span class="n">hdu_name</span><span class="si">}</span><span class="s2">&#39; with data from file </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
     <span class="c1"># Create the HDUs to write to the output file</span>
+    <span class="k">if</span> <span class="n">primary_hdu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">primary_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">()</span>
+
     <span class="n">primary_hdu</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;EXTNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRIMARY&#39;</span>
     <span class="n">hdul_out</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">primary_hdu</span><span class="p">])</span>
 
@@ -846,8 +849,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-26.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 

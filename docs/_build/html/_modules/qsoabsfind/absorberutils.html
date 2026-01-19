@@ -178,7 +178,7 @@
 <div class="viewcode-block" id="calculate_doublet_ratio">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.calculate_doublet_ratio">[docs]</a>
 <span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">calculate_doublet_ratio</span><span class="p">(</span><span class="n">ew1</span><span class="p">,</span> <span class="n">ew2</span><span class="p">,</span> <span class="n">ew1_error</span><span class="p">,</span> <span class="n">ew2_error</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">calculate_doublet_ratio</span><span class="p">(</span><span class="n">ew1</span><span class="p">,</span> <span class="n">ew2</span><span class="p">,</span> <span class="n">ew1_error</span><span class="p">,</span> <span class="n">ew2_error</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate the doublet ratio and its associated error.</span>
 
@@ -187,6 +187,8 @@
 <span class="sd">        ew2 (float): Equivalent width of the second line.</span>
 <span class="sd">        ew1_error (float): Error associated with the first equivalent width.</span>
 <span class="sd">        ew2_error (float): Error associated with the second equivalent width.</span>
+<span class="sd">        f1 (float): oscillator strength of first line</span>
+<span class="sd">        f2 (float): oscillator strength of second line</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        tuple: A tuple containing:</span>
@@ -194,7 +196,9 @@
 <span class="sd">            - doublet_ratio_error (float): The propagated error for the doublet ratio.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Calculate the doublet ratio</span>
-    <span class="n">doublet_ratio</span> <span class="o">=</span> <span class="n">ew1</span> <span class="o">/</span> <span class="n">ew2</span>
+    <span class="n">doublet_ratio</span> <span class="o">=</span> <span class="n">ew1</span> <span class="o">/</span> <span class="n">ew2</span> <span class="c1"># default definition</span>
+    <span class="k">if</span> <span class="n">f1</span> <span class="o">&lt;</span> <span class="n">f2</span><span class="p">:</span>
+        <span class="n">doublet_ratio</span> <span class="o">=</span> <span class="n">ew2</span> <span class="o">/</span> <span class="n">ew1</span>
 
     <span class="c1"># Propagate the error using standard error propagation formula for division</span>
     <span class="n">doublet_ratio_error</span> <span class="o">=</span> <span class="n">doublet_ratio</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">ew1_error</span> <span class="o">/</span> <span class="n">ew1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">ew2_error</span> <span class="o">/</span> <span class="n">ew2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
@@ -1054,8 +1058,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-26.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 

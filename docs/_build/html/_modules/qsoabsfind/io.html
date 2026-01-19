@@ -169,11 +169,16 @@
     <span class="n">hdr</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">Header</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">header</span> <span class="ow">in</span> <span class="n">headers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">hdr</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">header</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">header</span><span class="p">[</span><span class="s2">&quot;comment&quot;</span><span class="p">])</span>
+    
+    <span class="c1"># Primay header</span>
+    <span class="n">primary_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">hdr</span><span class="p">)</span>
+    <span class="n">primary_hdu</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;EXTNAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRIMARY&#39;</span>
 
     <span class="c1"># load the QSO METADATA</span>
     <span class="n">_</span><span class="p">,</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">metadata</span> <span class="o">=</span> <span class="n">read_fits_file</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;index_spec&#39;</span><span class="p">]))</span>
     <span class="n">qso_hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">BinTableHDU</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;METADATA&#39;</span><span class="p">)</span>
-    <span class="n">hdul</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">hdr</span><span class="p">),</span> <span class="n">hdu</span><span class="p">,</span> <span class="n">qso_hdu</span><span class="p">])</span>
+    
+    <span class="n">hdul</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">([</span><span class="n">primary_hdu</span><span class="p">,</span> <span class="n">hdu</span><span class="p">,</span> <span class="n">qso_hdu</span><span class="p">])</span>
 
     <span class="n">hdul</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: ouptut file </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s1"> written.&#39;</span><span class="p">)</span></div>
@@ -248,8 +253,8 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-26.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 

@@ -40,7 +40,7 @@ A minimal example for the ``constants.py``
         'sn_line1': 3, # SNR cut for first line
         'sn_line2': 2, # SNR cut for second line
         'use_covariance': False, # to use covariance matrix in EW error calculation
-        'logwave': False,  # Assume DESI-style log scale by default
+        'logwave': False,  # Assume DESI-style linear scale by default
         'lam_edge_sep': 50, # Wavelength cut from spectrum edges (in Ang)
         'conf_level':0.95, # 95 percent confidence level for absorber selection
         'verbose': True, # for printing statements for debugging

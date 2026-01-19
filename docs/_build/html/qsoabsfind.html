@@ -289,7 +289,7 @@ The file must include extensions for FLUX, ERROR, WAVELENGTH
 and METADATA which must contain keyword Z_QSO.</p></li>
 <li><p><strong>spec_index</strong> (<em>int</em>) – Index of the quasar spectrum to retrieve from the FITS file.</p></li>
 <li><p><strong>absorber</strong> (<em>str</em>) – Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).</p></li>
-<li><p><strong>kwargs</strong> (<em>dict</em>) – search parameters as described in qsoabsfind.constants()</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – search parameters as taken in convolution_method..()</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -370,7 +370,7 @@ search.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="qsoabsfind.absorberutils.calculate_doublet_ratio">
-<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">calculate_doublet_ratio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ew1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew1_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew2_error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#calculate_doublet_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.calculate_doublet_ratio" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">qsoabsfind.absorberutils.</span></span><span class="sig-name descname"><span class="pre">calculate_doublet_ratio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ew1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew1_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ew2_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/qsoabsfind/absorberutils.html#calculate_doublet_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qsoabsfind.absorberutils.calculate_doublet_ratio" title="Link to this definition"></a></dt>
 <dd><p>Calculate the doublet ratio and its associated error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -379,6 +379,8 @@ search.</p>
 <li><p><strong>ew2</strong> (<em>float</em>) – Equivalent width of the second line.</p></li>
 <li><p><strong>ew1_error</strong> (<em>float</em>) – Error associated with the first equivalent width.</p></li>
 <li><p><strong>ew2_error</strong> (<em>float</em>) – Error associated with the second equivalent width.</p></li>
+<li><p><strong>f1</strong> (<em>float</em>) – oscillator strength of first line</p></li>
+<li><p><strong>f2</strong> (<em>float</em>) – oscillator strength of second line</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1856,8 +1858,8 @@ and flag showing if its saturated</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021-2025, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2025-08-26.
+    <p>&#169; Copyright 2021-2026, Abhijeet Anand.
+      <span class="lastupdated">Last updated on 2026-01-19.
       </span></p>
   </div>
 
