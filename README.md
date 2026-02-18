@@ -22,6 +22,7 @@
 
 The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
+
 ### Supported Metal Doublets Systems
 
 | Absorber | Line 1 (Å)  | Line 2 (Å) |
@@ -48,6 +49,13 @@ Key Features
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
 
+
+**qsoabsfind** is suitable for
+---------
+- Large absorber catalog construction
+- Metal-line evolution studies
+- CGM/IGM absorber statistics
+- Survey-scale quasar spectral analysis
 
 Documentation
 -------------
@@ -95,12 +103,12 @@ source qsoabsfind-env/bin/activate
 # Install dependencies
 pip install numpy scipy astropy numba matplotlib pytest
 
-### Install Package
+# Install a tagged version (stable and reproducible). Replace vX.Y.Z with the desired Git tag (for example v2.0.1).
+pip install --upgrade "git+https://github.com/abhi0395/qsoabsfind.git@vX.Y.Z"
 
-pip install .
-
-# For developers (editable mode installation):
+# For developers (editable mode installation or directly from main branch):
 pip install -e .
+
 ```
 
 ### 3. Run Unit tests
@@ -111,6 +119,7 @@ python -m unittest discover -s tests
 
 ### 4. Quick installation test
 ```bash
+python -c "import qsoabsfind; print(qsoabsfind.__version__)"
 python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
 ```
 

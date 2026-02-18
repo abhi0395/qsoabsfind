@@ -53,11 +53,13 @@ Create and activate a conda environment:
 Install Package
 ---------------
 
-Install qsoabsfind:
+Install qsoabsfind (tagged version, stable and reproducible):
 
 .. code-block:: bash
 
-    pip install .
+    pip install --upgrade "git+https://github.com/abhi0395/qsoabsfind.git@vX.Y.Z"
+
+Replace vX.Y.Z with the desired Git tag (for example v2.0.1).
 
 For developers (editable mode installation):
 
@@ -82,6 +84,7 @@ Test the installation:
 
 .. code-block:: python
 
+    python -c "import qsoabsfind; print(qsoabsfind.__version__)"
     python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
 
 

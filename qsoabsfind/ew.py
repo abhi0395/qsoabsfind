@@ -345,9 +345,10 @@ def measure_absorber_properties_double_gaussian(
     # Return empty arrays if no absorbers
     if size_array == 0:
         return (
-            z_abs_array, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
+            z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
             EW_first_line, EW_second_line, EW_total,
-            EW_first_line_error, EW_second_line_error, EW_total_error
+            EW_first_line_error, EW_second_line_error, EW_total_error,
+            delta_chi2
         )
 
     # Process each absorber

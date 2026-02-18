@@ -134,10 +134,11 @@ pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> 
 </section>
 <section id="install-package">
 <h2>Install Package<a class="headerlink" href="#install-package" title="Link to this heading"></a></h2>
-<p>Install qsoabsfind:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.
+<p>Install qsoabsfind (tagged version, stable and reproducible):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span><span class="s2">&quot;git+https://github.com/abhi0395/qsoabsfind.git@vX.Y.Z&quot;</span>
 </pre></div>
 </div>
+<p>Replace vX.Y.Z with the desired Git tag (for example v2.0.1).</p>
 <p>For developers (editable mode installation):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </pre></div>
@@ -153,7 +154,8 @@ pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> 
 <section id="quick-installation-test">
 <h2>Quick installation test<a class="headerlink" href="#quick-installation-test" title="Link to this heading"></a></h2>
 <p>Test the installation:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print(&#39;Installation successful!&#39;)&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import qsoabsfind; print(qsoabsfind.__version__)&quot;</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print(&#39;Installation successful!&#39;)&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -178,7 +180,7 @@ pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> 
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-01-19.
+      <span class="lastupdated">Last updated on 2026-02-18.
       </span></p>
   </div>
 

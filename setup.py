@@ -1,11 +1,9 @@
 from setuptools import setup, find_packages
-import setuptools_scm
 
 setup(
     name='qsoabsfind',
-    use_scm_version=True, # Automatically detects version from Git tag
-    setup_requires=["setuptools_scm"],
-    description='A module to search for MgII/CIV absorption features in QSO spectra using convolution based adaptive S/N approach',
+    use_scm_version=True,
+    description='A Convolution-Based, Adaptive S/N Framework for Detecting Metal Doublet Absorption in Low-Resolution Quasar Spectra',
     packages=find_packages(),
     install_requires=[
         'numpy',
@@ -18,9 +16,6 @@ setup(
         'console_scripts': [
             'qsoabsfind=qsoabsfind.parallel_convolution:main',
         ],
-    },
-    package_data={
-        'qsoabsfind': ['*.py'],
     },
     author='Abhijeet Anand',
     author_email='abhijeetanand2011@gmail.com',

@@ -61,6 +61,12 @@ Key Features
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
 
+**qsoabsfind** is suitable for
+---------
+- Large absorber catalog construction
+- Metal-line evolution studies
+- CGM/IGM absorber statistics
+- Survey-scale quasar spectral analysis
 
 .. toctree::
    :maxdepth: 1
