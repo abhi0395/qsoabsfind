@@ -158,3 +158,18 @@ Fe II (2586, 2600 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
+
+Na I (5891, 5897 Å)
+~~~~~~~~~~~~~~~~~~~~
+
+- **Emission lines**: blue side - Ly-alpha (1215.67 Å), red side - 9800 Å (arbitrary high)
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+

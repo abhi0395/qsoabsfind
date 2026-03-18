@@ -18,7 +18,7 @@
 
 ## qsoabsfind: Quasar Absorber Finder
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in like low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
 
 The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
@@ -34,6 +34,7 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 | Al III (Al²⁺)   | 1854.72     | 1862.79    |
 | Fe II (Fe⁺)  | 2586.65     | 2600.17     |
 | Mg II (Mg⁺)   | 2796.35    | 2803.52     |
+| NaI (Na)   | 5891.58    | 5897.57     |
 
 
 Key Features
@@ -66,12 +67,13 @@ The full documentation is available at [https://qsoabsfind.readthedocs.io](https
 
 ### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - `numpy`
 - `scipy`
 - `astropy`
 - `numba`
 - `matplotlib`
+- `tqdm`
 - `pytest` (for running tests)
 
 ### 1. Clone the Repository

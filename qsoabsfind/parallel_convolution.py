@@ -5,10 +5,13 @@ finder in parallel for many spectra.
 import argparse
 import time
 import os
+import logging
 import multiprocessing
+import warnings
 from multiprocessing import Pool
 from datetime import datetime
 import numpy as np
+from tqdm import tqdm
 from .absfinder import read_single_spectrum_and_find_absorber
 from .columndensity import return_total_column_density_table
 from .io import append_table_to_fits
@@ -16,6 +19,28 @@ from .io import save_results_to_fits
 from .absorberutils import return_search_window_wavelength_range
 from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence, update_header
 from .constants import doublet_keys
+
+logger = logging.getLogger(__name__)
+
+_WARNING_LOG_PATH = None
+_ORIGINAL_SHOWWARNING = warnings.showwarning
+
+
+def _worker_showwarning(message, category, filename, lineno, file=None, line=None):
+    """Write worker warnings to a shared log file instead of stderr."""
+    if _WARNING_LOG_PATH:
+        formatted = warnings.formatwarning(message, category, filename, lineno, line)
+        with open(_WARNING_LOG_PATH, "a", encoding="utf-8") as handle:
+            handle.write(formatted)
+    else:
+        _ORIGINAL_SHOWWARNING(message, category, filename, lineno, file=file, line=line)
+
+
+def _init_worker_warning_capture(warnings_file):
+    """Configure warning handling in each worker process."""
+    global _WARNING_LOG_PATH
+    _WARNING_LOG_PATH = warnings_file
+    warnings.showwarning = _worker_showwarning
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
     """
@@ -28,12 +53,19 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
         kwargs (dict): search parameters as described in data/desi/desi_constants.py
 
     Returns:
-        tuples containing detected absorber details
+        dict or tuple: Detected absorber details from single-spectrum run.
 
     """
     return read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs)
 
-def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indices, absorber, n_jobs, **kwargs):
+
+def _run_single_job(params):
+    """Unpack tuple params for imap-based iteration."""
+    return run_convolution_method_absorber_finder_QSO_spectra(*params)
+
+def parallel_convolution_method_absorber_finder_QSO_spectra(
+    fits_file, spec_indices, absorber, n_jobs, warnings_file=None, **kwargs
+):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
     multiprocessing.
@@ -51,9 +83,22 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
 
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
-    # Run the jobs in parallel
-    with Pool(processes=n_jobs) as pool:
-        results = pool.starmap(run_convolution_method_absorber_finder_QSO_spectra, params_list)
+    # Run jobs in parallel with live progress bar (ordered, streamed results)
+    pool_kwargs = {"processes": n_jobs}
+    if warnings_file:
+        pool_kwargs["initializer"] = _init_worker_warning_capture
+        pool_kwargs["initargs"] = (warnings_file,)
+
+    with Pool(**pool_kwargs) as pool:
+        results_iter = pool.imap(_run_single_job, params_list)
+        results = list(
+            tqdm(
+                results_iter,
+                total=len(params_list),
+                desc=f'{absorber} search',
+                unit='spec',
+            )
+        )
 
     # Combine the results
     combined_results = {
@@ -76,8 +121,28 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_indi
     }
 
     for result in results:
-        (index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean, ew_total_mean,
-         ew_1_error, ew_2_error, ew_total_error, z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2, delta_chi2_array) = result
+        # Prefer dictionary output from the absorber finder, but keep tuple support
+        # for backward compatibility with older return signatures.
+        if isinstance(result, dict):
+            index_spec = result['index_spec']
+            z_abs = result['z_abs']
+            gauss_fit = result['gauss_fit']
+            gauss_fit_std = result['gauss_fit_std']
+            ew_1_mean = result['ew_1_mean']
+            ew_2_mean = result['ew_2_mean']
+            ew_total_mean = result['ew_total_mean']
+            ew_1_error = result['ew_1_error']
+            ew_2_error = result['ew_2_error']
+            ew_total_error = result['ew_total_error']
+            z_abs_err = result['z_abs_err']
+            sn_1 = result['sn_1']
+            sn_2 = result['sn_2']
+            vel_disp1 = result['vel_disp1']
+            vel_disp2 = result['vel_disp2']
+            delta_chi2_array = result['delta_chi2']
+        else:
+            (index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean, ew_total_mean,
+             ew_1_error, ew_2_error, ew_total_error, z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2, delta_chi2_array) = result
 
         valid_indices = np.array(z_abs) > 0
 
@@ -111,15 +176,38 @@ def main():
     parser.add_argument('--ncpus', type=int, required=False, default=4, help='Number of CPUs for parallel processing.')
     parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
     parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
+    parser.add_argument('--verbose', action='store_true', help='Enable detailed per-spectrum/debug logging.')
 
-    print(f"\nINFO: Script started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("==========\n")
     args = parser.parse_args()
+
+    # Set up warnings to log file in same directory as output
+    output_dir = os.path.dirname(os.path.abspath(args.output))
+    warnings_file = os.path.join(output_dir, 'warnings.log')
+    logging.captureWarnings(True)
+    warn_logger = logging.getLogger('py.warnings')
+    warn_handler = logging.FileHandler(warnings_file)
+    warn_handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s %(levelname)s %(name)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
+    )
+    warn_logger.addHandler(warn_handler)
+    warn_logger.propagate = False
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
+    logger.info("\n\nScript started at: %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S\n'))
+    logger.info("\n\nWarnings logged to: %s\n", warnings_file)
 
     # Read search parameters from user-provided file
     if args.constant_file and os.path.abspath(args.constant_file):
         const_path = os.path.abspath(args.constant_file)
-        print(f"INFO: Using user-provided constants from: {const_path}")
+        logger.info("Using user-provided constants from: %s", const_path)
     else:
         raise FileNotFoundError(f"ERROR: Provided constants file does not exist: {const_path}")
 
@@ -130,14 +218,20 @@ def main():
     if args.absorber not in doublet_keys:
         raise ValueError(f"ERROR: Unsupported absorber, it must be from {doublet_keys.keys()}")
 
-    print('==== USER PROVIDED ARGUMENTS========')
+    logger.info('User provided arguments and constants loaded')
     for key, value in vars(args).items():
-        print(f"INFO: {key}: {value}")
+        logger.info("%s: %s", key, value)
     for key, value in user_constants.search_parameters.items():
-        print(f"INFO: {key}: {value}")
-    print('=====================================')
+        logger.info("%s: %s", key, value)
 
-    lam_blue, lam_red = return_search_window_wavelength_range(args.absorber, user_constants.search_parameters["start_rest_wave"], user_constants.search_parameters["end_rest_wave"])
+    user_constants.search_parameters["verbose"] = args.verbose
+
+    lam_blue, lam_red = return_search_window_wavelength_range(
+        args.absorber,
+        user_constants.search_parameters["start_rest_wave"],
+        user_constants.search_parameters["end_rest_wave"],
+        verbose=args.verbose
+    )
 
     user_constants.search_parameters["lam_blue"] = lam_blue
     user_constants.search_parameters["lam_red"] = lam_red
@@ -145,7 +239,7 @@ def main():
     headers = update_header(args, user_constants)
 
     if args.coldens:
-        print('INFO: Will also calculate column densities using apparent optical depth method (AODM)')
+        logger.info('Will also calculate column densities using apparent optical depth method (AODM)')
         headers.update({
                 'N_METHOD': {
                     'value': 'AODM',
@@ -169,35 +263,34 @@ def main():
     if not args.n_qso:
         nqso = read_nqso_from_header(args.input_fits_file)
         args.n_qso = nqso
-        print(f'INFO:: Total quasars found in the input file = {args.n_qso}, will run on all of them..')
+        logger.info('Total quasars found in the input file = %s, will run on all of them', args.n_qso)
     # Parse the QSO sequence
     spec_indices = parse_qso_sequence(args.n_qso)
 
     # define number of CPUs cores
     n_jobs = min(args.ncpus, max(1, multiprocessing.cpu_count() - 1)) ## getting some CPUs for safe I/O processing
-    print(f'INFO: number of CPUs used = {n_jobs}')
+    logger.info('number of CPUs used = %s', n_jobs)
 
+    nboot = user_constants.search_parameters.get("nboot")
     if "nboot" not in user_constants.search_parameters:
         user_constants.search_parameters["nboot"] = None
-    else:
-        nboot = user_constants.search_parameters["nboot"]
 
     if nboot is not None and nboot>0:
-        print(f'INFO: Gaussian fitting Parameter estimation will be done with {nboot} bootstrapping estimation')
+        logger.info('Gaussian fitting parameter estimation will be done with %s bootstrapping iterations', nboot)
 
     # Run the convolution method in parallel
     results = parallel_convolution_method_absorber_finder_QSO_spectra(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        n_jobs=n_jobs, **user_constants.search_parameters
+        n_jobs=n_jobs, warnings_file=warnings_file, **user_constants.search_parameters
     )
 
     # only save absorber file if there at least one absorber is detected
     if len(results["index_spec"])>0:
         # Save the results to a FITS file
-        print(f'INFO: Number of {args.absorber} systems found: {len(results["index_spec"])}')
+        logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
         save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
     else:
-        print(f'INFO: No {args.absorber} absorbers found, no file saved..')
+        logger.info('No %s absorbers found, no file saved', args.absorber)
 
     if args.coldens:
         logwave = user_constants.search_parameters["logwave"]
@@ -207,9 +300,8 @@ def main():
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.2f} seconds")
-    print(f"INFO: Script ended at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    print("===========\n")
+    logger.info("Elapsed time: %.2f seconds", elapsed_time)
+    logger.info("Script ended at: %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 if __name__ == "__main__":
     main()

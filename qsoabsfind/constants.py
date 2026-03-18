@@ -14,6 +14,13 @@ Usage:
 
 speed_of_light = 299792.458   # Speed of light in km/s
 
+LARGE_WAVE = 9800.0 # for DESI observed wave
+SMALL_WAVE = 500.0 # for DESI observed wave
+
+MIN_NPIXEL = 10 # minum number of pixels required for a valid search region
+
+LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid confusion with Silicon forest)
+
 # ===================
 # Supported absorbers
 # ===================
@@ -25,7 +32,8 @@ doublet_keys = {
         'NV':   ('NV_1238', 'NV_1242'),
         'SiIV': ('SiIV_1394', 'SiIV_1403'),
         'AlIII': ('AlIII_1855', 'AlIII_1863'),
-        'FeII': ('FeII_2586', 'FeII_2600')
+        'FeII': ('FeII_2586', 'FeII_2600'),
+        'NaI': ('NaI_5891', 'NaI_5897')
     }
 
 # ==============================
@@ -70,6 +78,10 @@ lines = {
     # FeII lines (two strongest)
     'FeII_2586': 2586.650,
     'FeII_2600': 2600.173,
+
+    # NaI doublet
+    'NaI_5891': 5891.583,
+    'NaI_5897': 5897.566
 }
 
 # ==============================
@@ -84,6 +96,7 @@ amplitude_dict = {
     'SiIV': 0.5,
     'OVI': 0.5,
     'NV': 0.5,
+    'NaI': 0.5
 
 }
 
@@ -118,7 +131,11 @@ oscillator_parameters = {
 
     # FeII lines
     'FeII_f1': 0.0691,   # 2586.650
-    'FeII_f2': 0.239    # 2600.173
+    'FeII_f2': 0.239,    # 2600.173
+
+    # NaI doublet
+    'NaI_f1': 0.6405,     # 5891.583
+    'NaI_f2': 0.3199      # 5897.566
 }
 
 

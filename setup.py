@@ -11,6 +11,7 @@ setup(
         'scipy',
         'numba',
         'matplotlib',
+        'tqdm',
     ],
     entry_points={
         'console_scripts': [

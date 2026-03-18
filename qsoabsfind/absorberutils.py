@@ -6,13 +6,16 @@ called during the absorber search in QSO spectra.
 import numpy as np
 from numba import jit
 import time
+import logging
 from astropy.table import Table
 from scipy.stats import chi2
 from .config import load_constants
 from .utils import elapsed
 
 # Constants
-from .constants import lines, speed_of_light, doublet_keys
+from .constants import lines, speed_of_light, doublet_keys, SMALL_WAVE, LARGE_WAVE, MIN_NPIXEL, LAM_CIV_MIN
+
+logger = logging.getLogger(__name__)
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
@@ -396,7 +399,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120):
+                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -482,13 +485,12 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
     false_count = len(conds) - true_count
     result = all(c[0] for c in conds)
 
-    print(f"INFO: QSO_INDEX = {qso_id}, Condition checks for Z_ABS = {zabs}:")
-    for i, (status, detail, text) in enumerate(conds, 1):
-        print(f"INFO: {text}: {detail}: {status}")
-
-    print(f"INFO: Summary: {true_count} / {len(conds)} conditions satisfied, {false_count} failed.")
-    print(f"INFO: Final result: {result}")
-    print('=========')
+    if verbose:
+        logger.debug("QSO_INDEX = %s, Condition checks for Z_ABS = %s", qso_id, zabs)
+        for status, detail, text in conds:
+            logger.debug("%s: %s: %s", text, detail, status)
+        logger.debug("Summary: %s / %s conditions satisfied, %s failed.", true_count, len(conds), false_count)
+        logger.debug("Final result: %s", result)
 
     return result
 
@@ -704,7 +706,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
 
     return z_corr, z_err
 
-def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None):
+def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None, verbose=False):
 
     """
     Return default red and blue end rest-frame quasar emission wavelength range
@@ -720,23 +722,23 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
     """
 
     if start_rest_wave is not None and end_rest_wave is not None:
-        print('INFO: using user-defined wavelength search window')
+        if verbose:
+            logger.info('using user-defined wavelength search window')
         lam_blue = start_rest_wave
         lam_red = end_rest_wave
     else:
-        print('INFO: using default wavelength search window')
+        if verbose:
+            logger.info('using default wavelength search window')
         if absorber in ['MgII', 'FeII']:
             lam_blue = lines['CIV_1549']
             lam_red = lines['MgII_2799']
 
         elif absorber == 'CIV':
-            lam_blue = 1310.0
+            lam_blue = LAM_CIV_MIN
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            # assuming 3600 to be starting wavelength
-            # and maximum redshift of quasar to be 6 in SDSS/DESI like spectra
-            lam_blue = 3600/(1+6.2)
+            lam_blue = SMALL_WAVE
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
@@ -751,12 +753,16 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_blue = lines['CIV_1549']
             lam_red = lines['AlIII_1857']
 
+        elif absorber == 'NaI':
+            lam_blue = lines['Lya']
+            lam_red = LARGE_WAVE
+
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 
     return lam_blue, lam_red
 
-def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0):
+def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, verbose=False):
     """
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
@@ -777,9 +783,10 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     # Convert velocity offset to redshift offset
     dz = (abs(dv) / speed_of_light) * (1 + zqso)
 
-    lam_blue, lam_red = return_search_window_wavelength_range(absorber, start_rest_wave, end_rest_wave)
+    lam_blue, lam_red = return_search_window_wavelength_range(absorber, start_rest_wave, end_rest_wave, verbose=verbose)
 
-    print(f'INFO: wavelength search window in quasar-rest frame: {lam_blue, lam_red} Angstroms')
+    if verbose:
+        logger.info('wavelength search window in quasar-rest frame: %s Angstroms', (lam_blue, lam_red))
 
     lam_blue_obs = lam_blue * (1 + zqso + dz)
     lam_red_obs = lam_red * (1 + zqso - dz)
@@ -813,7 +820,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     """
     start = elapsed(None, "")
 
-    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep)
+    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep, verbose=verbose)
 
     imp_ind = np.where((wavelength >= lam_start) & (wavelength <= lam_end))[0]
     lam_search = wavelength[imp_ind]
@@ -879,7 +886,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
 
-    if lam_obs.size <= 10:
+    if lam_obs.size <= MIN_NPIXEL:
         return 0
 
     # Define the wavelength range for searching the absorber
@@ -908,14 +915,16 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, \
         "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    print(f'INFO: Time took to find available search pixels: {time.time()-start_time:.3f} [sec]')
+    if kwargs.get("verbose", False):
+        logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
-    if lam_search.size <= 10:
+    if lam_search.size <= MIN_NPIXEL:
         return 0
 
     if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
         snr_median = np.nanmedian(unmsk_residual / unmsk_error)
-        print(f'INFO: Checking SNR in the wavelength search region (median SNR = {snr_median:.2f}, threshold = {kwargs["snr_cut"]})')
+        if kwargs.get("verbose", False):
+            logger.info('Checking SNR in the wavelength search region (median SNR = %.2f, threshold = %s)', snr_median, kwargs["snr_cut"])
         if snr_median < kwargs["snr_cut"]:
             return 0
 

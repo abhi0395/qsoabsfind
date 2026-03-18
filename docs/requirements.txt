@@ -3,6 +3,7 @@ scipy
 astropy
 numba
 matplotlib
+tqdm
 pytest
 setuptools>60
 Sphinx>6,<7

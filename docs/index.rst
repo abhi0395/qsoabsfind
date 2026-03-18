@@ -46,6 +46,9 @@ Supported Metal Doublet Systems
    * - Mg II (Mg⁺)
      - 2796.35
      - 2803.52
+  * - Na I (Na⁰)
+     - 5891.58
+     - 5897.57
 
 
 Key Features

@@ -3,3 +3,4 @@ numba
 astropy
 scipy
 matplotlib
+tqdm

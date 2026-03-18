@@ -28,7 +28,7 @@ search_parameters = {
     'logwave': False,  # Assume DESI-style log scale by default
     'lam_edge_sep': 25, # Wavelength cut from spectrum edges (in Ang)
     'conf_level':0.95, # 95 percent confidence level for absorber selection
-    'verbose': True, # for printing statements for debugging
+    'verbose': False, # for printing statements for debugging
     'dv': 5000,  # velocity offset from quasars redshift in km/s
     'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
     'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default

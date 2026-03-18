@@ -4,12 +4,13 @@ Installation
 Prerequisites
 -------------
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - ``numpy``
 - ``scipy``
 - ``astropy``
 - ``numba``
 - ``matplotlib``
+- ``tqdm`` (for progress bars))
 - ``pytest`` (for running tests)
 
 Clone the Repository
