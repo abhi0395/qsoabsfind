@@ -27,8 +27,9 @@ from .ew import (
 )
 from .spec import QSOSpecRead
 
-# Constants
-from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys, MIN_NPIXEL
+# Constants — imported via the module object so startup-time patches propagate here.
+from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
+from . import constants as _constants
 
 logger = logging.getLogger(__name__)
 
@@ -224,8 +225,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             'delta_chi2': delta_chi2,
         }
 
-    # return if there are less than 10 wavelength pixels available to search for
-    if lam_search.size<=MIN_NPIXEL or lam_obs.size<=MIN_NPIXEL:
+    # return if there are less than MIN_NPIXEL wavelength pixels available to search for
+    if lam_search.size <= _constants.MIN_NPIXEL or lam_obs.size <= _constants.MIN_NPIXEL:
         if verbose:
             logger.info("No wavelength pixels available in search region, spec index = %s", spec_index)
         return _build_result(

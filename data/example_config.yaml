@@ -1,0 +1,27 @@
+# qsoabsfind configuration file
+# Pass this file with:  qsoabsfind --config /path/to/config.yaml
+#
+# Keys must match the CLI argument names with underscores (not dashes),
+# e.g. "input_fits_file" for --input-fits-file.
+#
+# Any argument supplied on the command line overrides the value here.
+
+# ── Required ──────────────────────────────────────────────────────────────────
+input_fits_file: /path/to/residual_spectra.fits
+absorber: MgII                          # MgII | CIV | OVI | NV | SiIV | AlIII | FeII | NaI
+constant_file: /path/to/constants.py
+output: /path/to/output_catalog.fits
+
+# ── Optional ──────────────────────────────────────────────────────────────────
+n_qso: null        # null = run all; or e.g. "100", "1-1000", "1-1000:10"
+ncpus: 4
+verbose: false
+
+# Column density calculation
+coldens: false
+dv: 300.0          # +/- velocity range (km/s) for optical depth integration
+
+# Extra FITS headers in NAME=VALUE format (leave as [] if none needed)
+headers:
+  - SURVEY=DESI
+  - DR=DR1

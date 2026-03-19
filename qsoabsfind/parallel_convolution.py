@@ -19,6 +19,8 @@ from .io import save_results_to_fits
 from .absorberutils import return_search_window_wavelength_range
 from .utils import read_nqso_from_header, get_package_versions, parse_qso_sequence, update_header
 from .constants import doublet_keys
+from .logger import setup_logging
+from .config import load_yaml_config
 
 logger = logging.getLogger(__name__)
 
@@ -166,40 +168,45 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(
     return combined_results
 
 def main():
-    parser = argparse.ArgumentParser(description='Parallelized convolution-based method to detect metal doublets in SDSS/DESI-like low-resolution quasar spectra using adaptive S/N.')
-    parser.add_argument('--input-fits-file', type=str, required=True, help='Path to the input FITS file, containing residual spectra.')
+    parser = argparse.ArgumentParser(
+        description='Parallelized convolution-based method to detect metal doublets in SDSS/DESI-like low-resolution quasar spectra using adaptive S/N.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument('--config', type=str, default=None, help='Path to a YAML config file. All keys must match CLI argument names (underscores). CLI flags always override YAML values.')
+    parser.add_argument('--input-fits-file', type=str, required=False, help='Path to the input FITS file, containing residual spectra.')
     parser.add_argument('--n-qso', type=str, required=False, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '100', '1-1000', '1-1000:10'). If not provided, code will run all the spectra")
-    parser.add_argument('--absorber', type=str, required=True, help='Absorber name for searching doublets (options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII).')
+    parser.add_argument('--absorber', type=str, required=False, help='Absorber name for searching doublets (options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII).')
     parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as described in the documentation.')
-    parser.add_argument('--output', type=str, required=True, help='Path to the output FITS file to save absorber catalog.')
+    parser.add_argument('--output', type=str, required=False, help='Path to the output FITS file to save absorber catalog.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--ncpus', type=int, required=False, default=4, help='Number of CPUs for parallel processing.')
     parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
     parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
     parser.add_argument('--verbose', action='store_true', help='Enable detailed per-spectrum/debug logging.')
 
+    # --- Two-pass parse: load YAML defaults first, CLI args override them ---
+    # First pass: extract --config without failing on unknown/required args
+    pre_args, _ = parser.parse_known_args()
+    if pre_args.config:
+        yaml_defaults = load_yaml_config(pre_args.config)
+        parser.set_defaults(**yaml_defaults)
+
     args = parser.parse_args()
 
-    # Set up warnings to log file in same directory as output
+    # Validate required args (may come from YAML or CLI)
+    missing = [name for name, val in [
+        ('--input-fits-file', args.input_fits_file),
+        ('--absorber', args.absorber),
+        ('--output', args.output),
+        ('--constant-file', args.constant_file),
+    ] if not val]
+    if missing:
+        parser.error(f"The following required arguments are missing (provide via CLI or --config): {', '.join(missing)}")
+
+    # all runtime, optimization, and warning logs will be written to a log file in the output directory
     output_dir = os.path.dirname(os.path.abspath(args.output))
     warnings_file = os.path.join(output_dir, 'warnings.log')
-    logging.captureWarnings(True)
-    warn_logger = logging.getLogger('py.warnings')
-    warn_handler = logging.FileHandler(warnings_file)
-    warn_handler.setFormatter(
-        logging.Formatter(
-            '%(asctime)s %(levelname)s %(name)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
-    )
-    warn_logger.addHandler(warn_handler)
-    warn_logger.propagate = False
-
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format='[%(asctime)s] %(levelname)s %(name)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-    )
+    setup_logging(verbose=args.verbose, warnings_file=warnings_file)
 
     logger.info("\n\nScript started at: %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S\n'))
     logger.info("\n\nWarnings logged to: %s\n", warnings_file)
@@ -225,6 +232,22 @@ def main():
         logger.info("%s: %s", key, value)
 
     user_constants.search_parameters["verbose"] = args.verbose
+
+    # Patch qsoabsfind.constants in-place with any overrides from the user constants file.
+    # All modules that access constants via `from . import constants as _constants` (i.e.
+    # absorberutils and absfinder) will automatically see the updated values — no function
+    # signature changes needed.
+    from . import constants as _pkg_constants
+    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
+    logger.info('Physical constant resolution (user file overrides shown with *):')
+    for _name in _overridable:
+        _user_val = getattr(user_constants, _name, None)
+        _pkg_val  = getattr(_pkg_constants, _name)
+        if _user_val is not None and _user_val != _pkg_val:
+            logger.info('%-15s = %s  (overrides package default: %s)', _name, _user_val, _pkg_val)
+            setattr(_pkg_constants, _name, _user_val)
+        else:
+            logger.info('%-15s = %s  (package default)', _name, _pkg_val)
 
     lam_blue, lam_red = return_search_window_wavelength_range(
         args.absorber,

@@ -9,7 +9,7 @@ class TestConstants(unittest.TestCase):
         self.absorbers = doublet_keys.keys()
 
     def test_supported_absorbers(self):
-        self.assertEqual(len(self.absorbers), 8)
+        self.assertEqual(len(self.absorbers), 9)
 
     def test_absorber_parameters(self):
         for metal in self.absorbers:

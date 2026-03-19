@@ -9,13 +9,15 @@ import time
 import logging
 from astropy.table import Table
 from scipy.stats import chi2
-from .config import load_constants
 from .utils import elapsed
 
-# Constants
-from .constants import lines, speed_of_light, doublet_keys, SMALL_WAVE, LARGE_WAVE, MIN_NPIXEL, LAM_CIV_MIN
+# Constants — imported via the module object so that startup-time patches
+# (applied in parallel_convolution.main) propagate here automatically.
+from .constants import lines, speed_of_light, doublet_keys
+from . import constants as _constants
 
 logger = logging.getLogger(__name__)
+
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
@@ -734,11 +736,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_red = lines['MgII_2799']
 
         elif absorber == 'CIV':
-            lam_blue = LAM_CIV_MIN
+            lam_blue = _constants.LAM_CIV_MIN
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            lam_blue = SMALL_WAVE
+            lam_blue = _constants.SMALL_WAVE
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
@@ -755,7 +757,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
 
         elif absorber == 'NaI':
             lam_blue = lines['Lya']
-            lam_red = LARGE_WAVE
+            lam_red = _constants.LARGE_WAVE
+
+        elif absorber == 'CaII':
+            lam_blue = lines['Lya']
+            lam_red = _constants.LARGE_WAVE
 
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
@@ -835,15 +841,21 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     if absorber == 'CIV':
         c_z = 1 + zqso
         # OI 1302 and SiII 1304 masking
-        rmv_lam0_1 = (lam_search >= 1296 * c_z) & (lam_search <= 1310 * c_z)
+        rmv_lam0_1 = (lam_search >= 1296 * c_z) & (lam_search <= _constants.LAM_CIV_MIN * c_z)
         lam_search = lam_search[~rmv_lam0_1]
         error_residual = error_residual[~rmv_lam0_1]
         residual = residual[~rmv_lam0_1]
 
-    # Masking other lines (CaII, OH NaD)
-    rmv_lam0 = (lam_search >= 3928) & (lam_search <= 3940) | \
-               (lam_search >= 3963) & (lam_search <= 3975) | \
-               (lam_search >= 5568) & (lam_search <= 5588) | \
+    if absorber == 'MgII':
+        c_z = 1 + zqso
+        # Masking other lines (CaII, OH NaD)
+        rmv_lam0_1 = (lam_search >= 3928 * c_z) & (lam_search <= 3980 * c_z)
+        lam_search = lam_search[~rmv_lam0_1]
+        error_residual = error_residual[~rmv_lam0_1]
+        residual = residual[~rmv_lam0_1]
+
+    # Masking other lines (OH or atomospheric sky lines)
+    rmv_lam0 = (lam_search >= 5568) & (lam_search <= 5588) | \
                (lam_search >= 6295) & (lam_search <= 6305)
 
     lam_search = lam_search[~rmv_lam0]
@@ -858,7 +870,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
 def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs):
     """Check if an absorber can be searched in a given QSO spectrum.
 
-    This function loads a single QSO spectrum from a FITS file,
+    This function loads a single QSO spectrum from a spec.QSOSpecRead object,
     removes NaNs, and determines if the absorber's search window
     falls within the spectrum's observed wavelength range.
 
@@ -886,7 +898,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
 
-    if lam_obs.size <= MIN_NPIXEL:
+    if lam_obs.size <= _constants.MIN_NPIXEL:
         return 0
 
     # Define the wavelength range for searching the absorber
@@ -918,7 +930,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     if kwargs.get("verbose", False):
         logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
-    if lam_search.size <= MIN_NPIXEL:
+    if lam_search.size <= _constants.MIN_NPIXEL:
         return 0
 
     if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
@@ -929,3 +941,97 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
             return 0
 
     return 1
+
+
+def _check_searchable_one(params):
+    """Worker helper for find_searchable_qsos — must be module-level to be picklable."""
+    from .spec import QSOSpecRead
+    fits_file, idx, absorber, kwargs = params
+    spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
+    return idx, int(return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs))
+
+
+def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None, verbose=False):
+    """Run searchability checks for all QSO spectra in parallel.
+
+    For each spectrum, determines whether the given absorber can be searched
+    based on the wavelength coverage and pixel count thresholds defined in the
+    user constants file.  Overridable package constants (``SMALL_WAVE``,
+    ``LARGE_WAVE``, ``LAM_CIV_MIN``, ``MIN_NPIXEL``) are patched from the
+    user constants file before the checks run, exactly as done in the main
+    convolution pipeline.
+
+    Args:
+        fits_file (str): Path to the FITS file containing normalised QSO spectra.
+        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``).
+        constant_file (str): Path to the user constants ``.py`` file.
+        ncpus (int): Number of parallel worker processes (default 4).
+        n_qso (int or str, optional): Number of spectra to check, or a range
+            string such as ``'1-1000'`` or ``'1-1000:10'``.  If ``None``, all
+            spectra in the file are checked.
+        verbose (bool): If ``True``, pass verbose flag to the per-spectrum
+            check (default ``False``).
+
+    Returns:
+        astropy.table.Table: Table with two columns:
+
+        - ``QSO_INDEX`` (int): Spectrum index in the FITS file.
+        - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in
+          that spectrum, ``False`` otherwise.
+    """
+    import os
+    import multiprocessing
+    from multiprocessing import Pool
+    from tqdm import tqdm
+    from .config import load_constants
+    from .utils import read_nqso_from_header, parse_qso_sequence
+
+    # Load and apply user constants (same override logic as in main pipeline)
+    const_path = os.path.abspath(constant_file)
+    user_constants = load_constants(const_path)
+
+    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
+    logger.info('Physical constant resolution (user file overrides shown with *):')
+    for _name in _overridable:
+        _user_val = getattr(user_constants, _name, None)
+        _pkg_val = getattr(_constants, _name)
+        if _user_val is not None and _user_val != _pkg_val:
+            print('INFO: %-15s = %s  (overrides package default: %s)' % (_name, _user_val, _pkg_val))
+            setattr(_constants, _name, _user_val)
+        else:
+            print('INFO: %-15s = %s  (package default)' % (_name, _pkg_val))
+
+    # Build per-spectrum kwargs from the user constants search parameters
+    search_params = dict(user_constants.search_parameters)
+    search_params['verbose'] = verbose
+
+    # Resolve QSO index range
+    if n_qso is None:
+        n_qso = read_nqso_from_header(fits_file)
+    spec_indices = parse_qso_sequence(str(n_qso))
+
+    params_list = [(fits_file, idx, absorber, search_params) for idx in spec_indices]
+    n_jobs = min(ncpus, max(1, multiprocessing.cpu_count() - 1))
+    print('INFO: Checking searchability of %d spectra for %s absorber using %d CPUs' % (
+                len(spec_indices), absorber, n_jobs))
+
+    with Pool(processes=n_jobs) as pool:
+        results = list(
+            tqdm(
+                pool.imap(_check_searchable_one, params_list),
+                total=len(params_list),
+                desc=f'{absorber} searchability check',
+                unit='spec',
+            )
+        )
+
+    qso_indices, flags = zip(*results) if results else ([], [])
+
+    out = Table()
+    out['QSO_INDEX'] = list(qso_indices)
+    out['IS_GOOD'] = [bool(v) for v in flags]
+
+    n_good = sum(out['IS_GOOD'])
+    print('INFO: %d / %d QSOs have a searchable %s window' % (n_good, len(out), absorber))
+
+    return out
