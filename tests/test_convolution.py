@@ -70,11 +70,13 @@ class TestQSOAbsFind(unittest.TestCase):
             self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters)
 
         # Validate the output
-        self.assertIsInstance(sdss_result, tuple)
-        self.assertEqual(len(sdss_result), 16)  # Ensure the correct number of return values
+        self.assertIsInstance(sdss_result, dict)
+        self.assertEqual(len(sdss_result), 16)  # Ensure the correct number of keys
+        self.assertIn('z_abs', sdss_result)
 
-        self.assertIsInstance(desi_result, tuple)
-        self.assertEqual(len(desi_result), 16)  # Ensure the correct number of return values
+        self.assertIsInstance(desi_result, dict)
+        self.assertEqual(len(desi_result), 16)  # Ensure the correct number of keys
+        self.assertIn('z_abs', desi_result)
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function

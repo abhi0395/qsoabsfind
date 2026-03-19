@@ -123,47 +123,24 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(
     }
 
     for result in results:
-        # Prefer dictionary output from the absorber finder, but keep tuple support
-        # for backward compatibility with older return signatures.
-        if isinstance(result, dict):
-            index_spec = result['index_spec']
-            z_abs = result['z_abs']
-            gauss_fit = result['gauss_fit']
-            gauss_fit_std = result['gauss_fit_std']
-            ew_1_mean = result['ew_1_mean']
-            ew_2_mean = result['ew_2_mean']
-            ew_total_mean = result['ew_total_mean']
-            ew_1_error = result['ew_1_error']
-            ew_2_error = result['ew_2_error']
-            ew_total_error = result['ew_total_error']
-            z_abs_err = result['z_abs_err']
-            sn_1 = result['sn_1']
-            sn_2 = result['sn_2']
-            vel_disp1 = result['vel_disp1']
-            vel_disp2 = result['vel_disp2']
-            delta_chi2_array = result['delta_chi2']
-        else:
-            (index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean, ew_total_mean,
-             ew_1_error, ew_2_error, ew_total_error, z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2, delta_chi2_array) = result
+        valid_indices = np.array(result['z_abs']) > 0
 
-        valid_indices = np.array(z_abs) > 0
-
-        combined_results['index_spec'].extend(np.array(index_spec)[valid_indices])
-        combined_results['z_abs'].extend(np.array(z_abs)[valid_indices])
-        combined_results['gauss_fit'].extend(np.array(gauss_fit)[valid_indices])
-        combined_results['gauss_fit_std'].extend(np.array(gauss_fit_std)[valid_indices])
-        combined_results['ew_1_mean'].extend(np.array(ew_1_mean)[valid_indices])
-        combined_results['ew_2_mean'].extend(np.array(ew_2_mean)[valid_indices])
-        combined_results['ew_total_mean'].extend(np.array(ew_total_mean)[valid_indices])
-        combined_results['ew_1_error'].extend(np.array(ew_1_error)[valid_indices])
-        combined_results['ew_2_error'].extend(np.array(ew_2_error)[valid_indices])
-        combined_results['ew_total_error'].extend(np.array(ew_total_error)[valid_indices])
-        combined_results['z_abs_err'].extend(np.array(z_abs_err)[valid_indices])
-        combined_results['sn_1'].extend(np.array(sn_1)[valid_indices])
-        combined_results['sn_2'].extend(np.array(sn_2)[valid_indices])
-        combined_results['vel_disp1'].extend(np.array(vel_disp1)[valid_indices])
-        combined_results['vel_disp2'].extend(np.array(vel_disp2)[valid_indices])
-        combined_results['delta_chi2'].extend(np.array(delta_chi2_array)[valid_indices])
+        combined_results['index_spec'].extend(np.array(result['index_spec'])[valid_indices])
+        combined_results['z_abs'].extend(np.array(result['z_abs'])[valid_indices])
+        combined_results['gauss_fit'].extend(np.array(result['gauss_fit'])[valid_indices])
+        combined_results['gauss_fit_std'].extend(np.array(result['gauss_fit_std'])[valid_indices])
+        combined_results['ew_1_mean'].extend(np.array(result['ew_1_mean'])[valid_indices])
+        combined_results['ew_2_mean'].extend(np.array(result['ew_2_mean'])[valid_indices])
+        combined_results['ew_total_mean'].extend(np.array(result['ew_total_mean'])[valid_indices])
+        combined_results['ew_1_error'].extend(np.array(result['ew_1_error'])[valid_indices])
+        combined_results['ew_2_error'].extend(np.array(result['ew_2_error'])[valid_indices])
+        combined_results['ew_total_error'].extend(np.array(result['ew_total_error'])[valid_indices])
+        combined_results['z_abs_err'].extend(np.array(result['z_abs_err'])[valid_indices])
+        combined_results['sn_1'].extend(np.array(result['sn_1'])[valid_indices])
+        combined_results['sn_2'].extend(np.array(result['sn_2'])[valid_indices])
+        combined_results['vel_disp1'].extend(np.array(result['vel_disp1'])[valid_indices])
+        combined_results['vel_disp2'].extend(np.array(result['vel_disp2'])[valid_indices])
+        combined_results['delta_chi2'].extend(np.array(result['delta_chi2'])[valid_indices])
 
     return combined_results
 
