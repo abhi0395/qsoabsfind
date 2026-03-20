@@ -4,5 +4,4 @@ astropy
 scipy
 matplotlib
 tqdm
-pytest
 pyyaml

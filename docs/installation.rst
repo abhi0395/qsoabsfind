@@ -10,8 +10,8 @@ Prerequisites
 - ``astropy``
 - ``numba``
 - ``matplotlib``
-- ``tqdm`` (for progress bars))
-- ``pytest`` (for running tests)
+- ``tqdm`` (for progress bars)
+- ``pyyaml`` (for configuration file handling)
 
 Clone the Repository
 --------------------

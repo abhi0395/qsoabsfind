@@ -75,9 +75,8 @@ The full documentation is available at [https://qsoabsfind.readthedocs.io](https
 - `astropy`
 - `numba`
 - `matplotlib`
-- `tqdm`
+- `tqdm` (for progress bar)
 - `pyyaml`
-- `pytest` (for running tests)
 
 ### 1. Clone the Repository
 ```bash

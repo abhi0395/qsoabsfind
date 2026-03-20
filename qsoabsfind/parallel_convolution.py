@@ -6,8 +6,8 @@ import argparse
 import time
 import os
 import logging
+import logging.handlers
 import multiprocessing
-import warnings
 from multiprocessing import Pool
 from datetime import datetime
 import numpy as np
@@ -24,25 +24,14 @@ from .config import load_yaml_config
 
 logger = logging.getLogger(__name__)
 
-_WARNING_LOG_PATH = None
-_ORIGINAL_SHOWWARNING = warnings.showwarning
 
-
-def _worker_showwarning(message, category, filename, lineno, file=None, line=None):
-    """Write worker warnings to a shared log file instead of stderr."""
-    if _WARNING_LOG_PATH:
-        formatted = warnings.formatwarning(message, category, filename, lineno, line)
-        with open(_WARNING_LOG_PATH, "a", encoding="utf-8") as handle:
-            handle.write(formatted)
-    else:
-        _ORIGINAL_SHOWWARNING(message, category, filename, lineno, file=file, line=line)
-
-
-def _init_worker_warning_capture(warnings_file):
-    """Configure warning handling in each worker process."""
-    global _WARNING_LOG_PATH
-    _WARNING_LOG_PATH = warnings_file
-    warnings.showwarning = _worker_showwarning
+def _init_worker_logging(queue):
+    """Route all worker-process log records (including captured warnings) through the main-process queue."""
+    root = logging.getLogger()
+    root.handlers = []
+    root.addHandler(logging.handlers.QueueHandler(queue))
+    root.setLevel(logging.WARNING)
+    logging.captureWarnings(True)
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
     """
@@ -90,22 +79,39 @@ def parallel_convolution_search(
 
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
-    # Run jobs in parallel with live progress bar (ordered, streamed results)
+    # Run jobs in parallel with live progress bar (ordered, streamed results).
+    # Worker warnings are routed through a QueueHandler so all writes to
+    # warnings_file are serialised by the main-process QueueListener.
     pool_kwargs = {"processes": n_jobs}
+    listener = None
     if warnings_file:
-        pool_kwargs["initializer"] = _init_worker_warning_capture
-        pool_kwargs["initargs"] = (warnings_file,)
-
-    with Pool(**pool_kwargs) as pool:
-        results_iter = pool.imap(_run_single_job, params_list)
-        results = list(
-            tqdm(
-                results_iter,
-                total=len(params_list),
-                desc=f'{absorber} search',
-                unit='spec',
-            )
+        _warn_queue = multiprocessing.Queue(-1)
+        _warn_handler = logging.FileHandler(warnings_file, encoding='utf-8')
+        _warn_handler.setFormatter(logging.Formatter(
+            '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        ))
+        listener = logging.handlers.QueueListener(
+            _warn_queue, _warn_handler, respect_handler_level=True
         )
+        listener.start()
+        pool_kwargs["initializer"] = _init_worker_logging
+        pool_kwargs["initargs"] = (_warn_queue,)
+
+    try:
+        with Pool(**pool_kwargs) as pool:
+            results_iter = pool.imap(_run_single_job, params_list)
+            results = list(
+                tqdm(
+                    results_iter,
+                    total=len(params_list),
+                    desc=f'{absorber} search',
+                    unit='spec',
+                )
+            )
+    finally:
+        if listener:
+            listener.stop()
 
     # Combine the results
     combined_results = {
@@ -194,7 +200,7 @@ def main():
     logger.info("\n\nWarnings logged to: %s\n", warnings_file)
 
     # Read search parameters from user-provided file
-    if args.constant_file and os.path.abspath(args.constant_file):
+    if args.constant_file and os.path.isfile(args.constant_file):
         const_path = os.path.abspath(args.constant_file)
         logger.info("Using user-provided constants from: %s", const_path)
     else:

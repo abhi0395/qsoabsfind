@@ -3,10 +3,8 @@ Tests for utils.py
 """
 
 import os
-import tempfile
 import unittest
 import numpy as np
-from astropy.table import Table
 from qsoabsfind.utils import (
     convolution_fun,
     compute_doublet_amplitudes,
