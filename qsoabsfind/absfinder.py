@@ -25,7 +25,7 @@ from .absorberutils import (
 from .ew import (
     measure_absorber_properties_double_gaussian
 )
-from .spec import QSOSpecRead
+from .datamodel import QSOSpecRead
 
 # Constants — imported via the module object so startup-time patches propagate here.
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys

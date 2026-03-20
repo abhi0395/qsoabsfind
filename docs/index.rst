@@ -95,6 +95,56 @@ A fully annotated template is provided in ``data/example_config.yaml``.
     ``--input-fits-file``). Set optional keys to ``null`` to let argparse
     use its built-in default.
 
+Reading output catalogs
+---------------------
+
+After running the absorber search, you can load the output FITS catalog using the ``AbsorberData`` class:
+
+.. code-block:: python
+
+      from qsoabsfind.datamodel import AbsorberData
+
+      catalog = AbsorberData('test_MgII.fits', autoload=True)
+
+      print(catalog.catalog)        # absorber table (ABSORBER HDU)
+      print(catalog.metadata)       # QSO metadata (METADATA HDU)
+      print(catalog.column_density) # column densities if present, else None
+
+
+Plotting a random absorber
+--------------------------
+
+Once you have loaded the spectra and the output catalog, you can visualise a
+randomly selected absorber using :func:`qsoabsfind.utils.plot_absorber`:
+
+.. code-block:: python
+
+    import numpy as np
+    from qsoabsfind.datamodel import QSOSpecRead, AbsorberData
+    from qsoabsfind.utils import plot_absorber
+
+    # Load the output absorber catalog
+    catalog = AbsorberData('/path/to/your/absorber.fits', autoload=True)
+
+    # Pick a random absorber from the catalog
+    rng = np.random.default_rng()
+    idx = rng.integers(len(catalog.catalog))
+    row = catalog.catalog[idx]
+
+    # Load the corresponding QSO spectrum
+    spectra = QSOSpecRead('/path/to/your/spectra.fits',
+                          index=int(row['INDEX_SPEC']),
+                          autoload=True)
+
+    # Plot the absorber (full spectrum + zoomed-in doublet view)
+    plot_absorber(spectra, absorber='MgII', zabs=row,
+                  title=f"MgII absorber at z={row['Z_ABS']:.4f}")
+
+Pass ``show_error=True`` to overlay the error spectrum, or
+``plot_filename='absorber.png'`` to save the figure to disk instead of
+displaying it interactively.
+
+
 Pre-filtering searchable QSOs
 ------------------------------
 

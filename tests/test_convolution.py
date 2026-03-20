@@ -10,7 +10,7 @@ from qsoabsfind.absfinder import read_single_spectrum_and_find_absorber
 from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra
 from qsoabsfind.config import load_constants
 from qsoabsfind.columndensity import total_column_density
-from qsoabsfind.spec import QSOSpecRead
+from qsoabsfind.datamodel import QSOSpecRead
 from qsoabsfind.absorberutils import return_if_absorber_can_be_detected_in_a_spectrum
 
 class TestQSOAbsFind(unittest.TestCase):

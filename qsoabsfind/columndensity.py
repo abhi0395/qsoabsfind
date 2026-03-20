@@ -284,7 +284,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
         appends an extra HDU: COLUMN_DENSITY in the absorber catalog output filename
     """
 
-    from .spec import QSOSpecRead
+    from .datamodel import QSOSpecRead
     start = time.time()
 
     tt = Table.read(output, hdu="ABSORBER")

@@ -945,7 +945,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
 
 def _check_searchable_one(params):
     """Worker helper for find_searchable_qsos — must be module-level to be picklable."""
-    from .spec import QSOSpecRead
+    from .datamodel import QSOSpecRead
     fits_file, idx, absorber, kwargs = params
     spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
     return idx, int(return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs))
