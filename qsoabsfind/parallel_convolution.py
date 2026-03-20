@@ -80,8 +80,8 @@ def parallel_convolution_search(
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
     # Run jobs in parallel with live progress bar (ordered, streamed results).
-    # Worker warnings are routed through a QueueHandler so all writes to
-    # warnings_file are serialised by the main-process QueueListener.
+    # Warnings are routed in a separate log file.
+
     pool_kwargs = {"processes": n_jobs}
     listener = None
     if warnings_file:
