@@ -45,15 +45,16 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     Save the absorber results to a FITS file along with the metadata of QSOs.
 
     Args:
-        results (dict): The results dictionary.
-        intput_file (str): The path to the input spectra FITS file.
+        results (dict): The results dictionary from :func:`parallel_convolution_search`.
+        input_file (str): The path to the input spectra FITS file.
         output_file (str): The path to the output FITS file.
         headers (dict): The headers to include in the FITS file.
-        absorber (str): The absorber type (MgII or CIV).
+        absorber (str): The absorber type (e.g. MgII, CIV).
 
     Returns:
-        A fits file containing detected absorber properties in 'ABSORBER' HDU and
-        corresponding QSO metadata in 'METADATA' HDU.
+        None: Writes a FITS file with an ``ABSORBER`` BinTableHDU containing
+        detected absorber properties and a ``METADATA`` BinTableHDU with
+        corresponding QSO metadata.
     """
     if absorber not in doublet_keys:
         raise ValueError(f"Unsupported absorber, must be in {doublet_keys.keys()}")
@@ -86,7 +87,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     hdr = fits.Header()
     for key, header in headers.items():
         hdr[key] = (header["value"], header["comment"])
-    
+
     # Primay header
     primary_hdu = fits.PrimaryHDU(header=hdr)
     primary_hdu.header['EXTNAME'] = 'PRIMARY'
@@ -94,7 +95,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     # load the QSO METADATA
     _,_, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
-    
+
     hdul = fits.HDUList([primary_hdu, hdu, qso_hdu])
 
     hdul.writeto(output_file, overwrite=True)

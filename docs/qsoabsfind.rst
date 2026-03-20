@@ -43,7 +43,7 @@ qsoabsfind.io module
    :show-inheritance:
 
 qsoabsfind.datamodel module
-----------------------
+---------------------------
 
 .. automodule:: qsoabsfind.datamodel
    :members:
@@ -59,7 +59,7 @@ qsoabsfind.utils module
    :show-inheritance:
 
 qsoabsfind.columndensity module
------------------------
+-------------------------------
 
 .. automodule:: qsoabsfind.columndensity
    :members:

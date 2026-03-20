@@ -345,13 +345,13 @@
 <span class="sd">    given spectrum.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        x (numpy.ndarray): List of wavelength points where the user wants to fit the model.</span>
-<span class="sd">        amp1: Amplitude of the first Gaussian.</span>
-<span class="sd">        mean1: Mean (center) of the first Gaussian.</span>
-<span class="sd">        sigma1: Standard deviation (width) of the first Gaussian.</span>
-<span class="sd">        amp2: Amplitude of the second Gaussian.</span>
-<span class="sd">        mean2: Mean (center) of the second Gaussian.</span>
-<span class="sd">        sigma2: Standard deviation (width) of the second Gaussian.</span>
+<span class="sd">        x (numpy.ndarray): Wavelength points where the model is evaluated.</span>
+<span class="sd">        amp1 (float): Amplitude of the first Gaussian.</span>
+<span class="sd">        mean1 (float): Mean (center) of the first Gaussian.</span>
+<span class="sd">        sigma1 (float): Standard deviation (width) of the first Gaussian.</span>
+<span class="sd">        amp2 (float): Amplitude of the second Gaussian.</span>
+<span class="sd">        mean2 (float): Mean (center) of the second Gaussian.</span>
+<span class="sd">        sigma2 (float): Standard deviation (width) of the second Gaussian.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        numpy.ndarray: The function that fits the absorption feature using curve_fit.</span>
@@ -591,12 +591,12 @@
 <span class="sd">    Validate that all arrays have the same size.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        conv_arr (np.ndarray): Convolved array.</span>
-<span class="sd">        unmsk_residual (np.ndarray): Unmasked residual array.</span>
-<span class="sd">        spec_index (int): QSO index</span>
+<span class="sd">        conv_arr (numpy.ndarray): Convolved array.</span>
+<span class="sd">        unmsk_residual (numpy.ndarray): Unmasked residual array.</span>
+<span class="sd">        spec_index (int): QSO index.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        assertion errors</span>
+<span class="sd">        int: 0 if sizes match, 1 if a size mismatch is detected.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">bad_conv</span><span class="o">=</span><span class="mi">0</span>
     <span class="k">try</span><span class="p">:</span>
@@ -623,7 +623,10 @@
 <span class="sd">        obs_wave (np.array): observed wavelength in Angstroms</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        instrumental resolution corrected velocity dispersion in km/s</span>
+<span class="sd">        tuple: A tuple ``(vel1, vel2)`` where each element is a float giving the</span>
+<span class="sd">            instrumental-resolution-corrected velocity dispersion (km/s) for the</span>
+<span class="sd">            respective line. Returns ``numpy.nan`` for a line whose fitted width</span>
+<span class="sd">            is smaller than the instrumental resolution.</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.</span>
@@ -850,7 +853,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

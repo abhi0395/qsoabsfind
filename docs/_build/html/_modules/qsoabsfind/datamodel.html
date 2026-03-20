@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>qsoabsfind.spec &mdash; qsoabsfind  documentation</title>
+  <title>qsoabsfind.datamodel &mdash; qsoabsfind  documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
 
@@ -66,7 +66,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">qsoabsfind.spec</li>
+      <li class="breadcrumb-item active">qsoabsfind.datamodel</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -75,9 +75,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for qsoabsfind.spec</h1><div class="highlight"><pre>
+  <h1>Source code for qsoabsfind.datamodel</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script contains a class and functions to read/write spectra fits files.</span>
+<span class="sd">This module contains data model classes for reading and handling QSO spectra</span>
+<span class="sd">and absorber catalog FITS files.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -85,14 +86,14 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span><span class="p">,</span> <span class="n">get_all_extnames</span>
 
 <div class="viewcode-block" id="QSOSpecRead">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.QSOSpecRead">[docs]</a>
 <span class="k">class</span> <span class="nc">QSOSpecRead</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to read and handle QSO spectra from a FITS file containing FLUX, ERROR, WAVELENGTH, and METADATA extensions.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="QSOSpecRead.__init__">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.__init__">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.QSOSpecRead.__init__">[docs]</a>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the QSOSpecRead class.</span>
@@ -118,7 +119,7 @@
 
 
 <div class="viewcode-block" id="QSOSpecRead.read_fits">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.read_fits">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.QSOSpecRead.read_fits">[docs]</a>
     <span class="k">def</span> <span class="nf">read_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reads the FITS file and measures the time taken for the operation.</span>
@@ -132,7 +133,7 @@
 
 
 <div class="viewcode-block" id="QSOSpecRead.get_metadata">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.QSOSpecRead.get_metadata">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.QSOSpecRead.get_metadata">[docs]</a>
     <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asdict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the METADATA data with keyword handling (must be used after read_fits() option).</span>
@@ -154,7 +155,7 @@
 
 
 <div class="viewcode-block" id="AbsorberData">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.AbsorberData">[docs]</a>
 <span class="k">class</span> <span class="nc">AbsorberData</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class to read and handle Absorber table FITS file</span>
@@ -162,24 +163,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="AbsorberData.__init__">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.AbsorberData.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the AbsorberData class.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            filepath (str): Path to the FITS file containing Absorber catalog.</span>
+<span class="sd">            autoload (bool): if True, class itself will load the data (default=False),</span>
 <span class="sd">            verbose (bool): if want to print time info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">filepath</span> <span class="o">=</span> <span class="n">filepath</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span><span class="o">=</span><span class="kc">True</span>
 
         <span class="c1"># Get all extension names</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">extnames</span> <span class="o">=</span> <span class="n">get_all_extnames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extnames</span> <span class="o">=</span> <span class="n">get_all_extnames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_catalog</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="AbsorberData.read_catalog">
-<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.spec.AbsorberData.read_catalog">[docs]</a>
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.datamodel.AbsorberData.read_catalog">[docs]</a>
     <span class="k">def</span> <span class="nf">read_catalog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read catalog from the file&quot;&quot;&quot;</span>
 
@@ -233,7 +239,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

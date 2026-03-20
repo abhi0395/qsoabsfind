@@ -54,13 +54,15 @@
 <li class="toctree-l2"><a class="reference internal" href="#search-window-definitions">Search Window Definitions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#user-defined-wavelength-boundaries-in-quasar-rest-frame">User-defined wavelength boundaries (in quasar rest-frame):</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#default-search-window-logic-used-for-each-metal-doublet">Default search window logic used for each metal doublet:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#mg-ii-2796-2803-a">Mg II (2796, 2803 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#c-iv-1548-1550-a">C IV (1548, 1550 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#o-vi-1032-1038-a">O VI (1032, 1038 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#n-v-1238-1242-a">N V (1238, 1242 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#si-iv-1394-1403-a">Si IV (1394, 1403 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#al-iii-1854-1862-a">Al III (1854, 1862 Å)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#fe-ii-2586-2600-a">Fe II (2586, 2600 Å)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mg-ii-2796-2803-ang">Mg II (2796, 2803 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#c-iv-1548-1550-ang">C IV (1548, 1550 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#o-vi-1032-1038-ang">O VI (1032, 1038 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#n-v-1238-1242-ang">N V (1238, 1242 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#si-iv-1394-1403-ang">Si IV (1394, 1403 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#al-iii-1854-1862-ang">Al III (1854, 1862 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fe-ii-2586-2600-ang">Fe II (2586, 2600 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ca-ii-3934-3969-ang">Ca II (3934, 3969 Ang)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#na-i-5891-5897-ang">Na I (5891, 5897 Ang)</a></li>
 </ul>
 </li>
 </ul>
@@ -144,10 +146,10 @@
 <section id="default-search-window-logic-used-for-each-metal-doublet">
 <h3>Default search window logic used for each metal doublet:<a class="headerlink" href="#default-search-window-logic-used-for-each-metal-doublet" title="Link to this heading"></a></h3>
 </section>
-<section id="mg-ii-2796-2803-a">
-<h3>Mg II (2796, 2803 Å)<a class="headerlink" href="#mg-ii-2796-2803-a" title="Link to this heading"></a></h3>
+<section id="mg-ii-2796-2803-ang">
+<h3>Mg II (2796, 2803 Ang)<a class="headerlink" href="#mg-ii-2796-2803-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -155,10 +157,10 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="c-iv-1548-1550-a">
-<h3>C IV (1548, 1550 Å)<a class="headerlink" href="#c-iv-1548-1550-a" title="Link to this heading"></a></h3>
+<section id="c-iv-1548-1550-ang">
+<h3>C IV (1548, 1550 Ang)<a class="headerlink" href="#c-iv-1548-1550-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Outside Si II forest (&gt;1310 Å), red side - C IV (1549.5 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - Outside Si II forest (&gt;1310 Ang), red side - C IV (1549.5 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -166,10 +168,10 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="o-vi-1032-1038-a">
-<h3>O VI (1032, 1038 Å)<a class="headerlink" href="#o-vi-1032-1038-a" title="Link to this heading"></a></h3>
+<section id="o-vi-1032-1038-ang">
+<h3>O VI (1032, 1038 Ang)<a class="headerlink" href="#o-vi-1032-1038-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side -  500 Å (arbitrary low), red side - O VI (1033.82 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side -  500 Ang (arbitrary low), red side - O VI (1033.82 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -177,10 +179,10 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="n-v-1238-1242-a">
-<h3>N V (1238, 1242 Å)<a class="headerlink" href="#n-v-1238-1242-a" title="Link to this heading"></a></h3>
+<section id="n-v-1238-1242-ang">
+<h3>N V (1238, 1242 Ang)<a class="headerlink" href="#n-v-1238-1242-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Lyβ (1025.72 Å), red side - N V (1240.8 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - Lyβ (1025.72 Ang), red side - N V (1240.8 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -188,10 +190,10 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="si-iv-1394-1403-a">
-<h3>Si IV (1394, 1403 Å)<a class="headerlink" href="#si-iv-1394-1403-a" title="Link to this heading"></a></h3>
+<section id="si-iv-1394-1403-ang">
+<h3>Si IV (1394, 1403 Ang)<a class="headerlink" href="#si-iv-1394-1403-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - Lyα (1215.67 Å), red side - Si IV (1399.8 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - Lyα (1215.67 Ang), red side - Si IV (1399.8 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -199,10 +201,10 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{SiIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="al-iii-1854-1862-a">
-<h3>Al III (1854, 1862 Å)<a class="headerlink" href="#al-iii-1854-1862-a" title="Link to this heading"></a></h3>
+<section id="al-iii-1854-1862-ang">
+<h3>Al III (1854, 1862 Ang)<a class="headerlink" href="#al-iii-1854-1862-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Al III (1857.4 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Ang), red side - Al III (1857.4 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -210,16 +212,38 @@
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
-<section id="fe-ii-2586-2600-a">
-<h3>Fe II (2586, 2600 Å)<a class="headerlink" href="#fe-ii-2586-2600-a" title="Link to this heading"></a></h3>
+<section id="fe-ii-2586-2600-ang">
+<h3>Fe II (2586, 2600 Ang)<a class="headerlink" href="#fe-ii-2586-2600-ang" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)</p></li>
+<li><p><strong>Emission lines</strong>: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)</p></li>
 <li><p><strong>Search window</strong>:</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
 <div class="math notranslate nohighlight">
 \[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
+</section>
+<section id="ca-ii-3934-3969-ang">
+<h3>Ca II (3934, 3969 Ang)<a class="headerlink" href="#ca-ii-3934-3969-ang" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Emission lines</strong>: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)</p></li>
+<li><p><strong>Search window</strong>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
+<div class="math notranslate nohighlight">
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
+</section>
+<section id="na-i-5891-5897-ang">
+<h3>Na I (5891, 5897 Ang)<a class="headerlink" href="#na-i-5891-5897-ang" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Emission lines</strong>: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)</p></li>
+<li><p><strong>Search window</strong>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}\]</div>
+<div class="math notranslate nohighlight">
+\[\lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}\]</div>
 </section>
 </section>
 </section>
@@ -236,7 +260,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

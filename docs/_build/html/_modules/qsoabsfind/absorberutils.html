@@ -84,13 +84,18 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
 <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">chi2</span>
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">elapsed</span>
 
-<span class="c1"># Constants</span>
+<span class="c1"># Constants — imported via the module object so that startup-time patches</span>
+<span class="c1"># (applied in parallel_convolution.main) propagate here automatically.</span>
 <span class="kn">from</span> <span class="nn">.constants</span> <span class="kn">import</span> <span class="n">lines</span><span class="p">,</span> <span class="n">speed_of_light</span><span class="p">,</span> <span class="n">doublet_keys</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">constants</span> <span class="k">as</span> <span class="n">_constants</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
 
 <div class="viewcode-block" id="find_valid_indices">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.find_valid_indices">[docs]</a>
@@ -325,12 +330,16 @@
 <span class="sd">    (corresponding to minimum flux) redshift from each group.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        redshifts (list or np.array): list of redshifts.</span>
-<span class="sd">        fluxes (list or np.array): corresponding fluxes near each redshift.</span>
-<span class="sd">        delta_z (float): the maximum difference between redshifts to consider them contiguous.</span>
+<span class="sd">        redshifts (list or numpy.ndarray): List of candidate absorber redshifts.</span>
+<span class="sd">        fluxes (list or numpy.ndarray): Corresponding residual fluxes near each redshift.</span>
+<span class="sd">        residual (numpy.ndarray): Full residual flux array aligned with ``lam_obs``.</span>
+<span class="sd">        lam_obs (numpy.ndarray): Observed-frame wavelength array.</span>
+<span class="sd">        line1 (float): Rest-frame wavelength of the first doublet line (Angstrom).</span>
+<span class="sd">        line2 (float): Rest-frame wavelength of the second doublet line (Angstrom).</span>
+<span class="sd">        delta_z (float): Maximum redshift difference to consider two candidates contiguous.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        best_redshifts: list of best redshifts from each group.</span>
+<span class="sd">        list: Best redshift from each contiguous group (minimum-flux weighted selection).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Ensure inputs are numpy arrays for easy manipulation</span>
@@ -443,9 +452,9 @@
 <span class="sd">        combined_final_our_z (list): List of potential absorbers identified for each spectrum.</span>
 <span class="sd">        lam_search (numpy.ndarray): Wavelength search array.</span>
 <span class="sd">        residual (numpy.ndarray): Residual values corresponding to the absorbers.</span>
-<span class="sd">        d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)</span>
-<span class="sd">        use_kernel (str, optional): Kernel type.</span>
-<span class="sd">        delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.</span>
+<span class="sd">        d_pix (float): Pixel separation tolerance in wavelength (default 0.6 Angstrom).</span>
+<span class="sd">        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV).</span>
+<span class="sd">        delta_z (float): Maximum redshift difference to consider two candidates contiguous.</span>
 <span class="sd">        window (int): window size for redshift estimate (default 9)</span>
 <span class="sd">        gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)</span>
 
@@ -500,7 +509,7 @@
                              <span class="n">lower_del_lam</span><span class="p">,</span> <span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">upper_del_lam</span><span class="p">,</span>
                              <span class="n">sn1</span><span class="p">,</span> <span class="n">sn_line1</span><span class="p">,</span> <span class="n">sn2</span><span class="p">,</span> <span class="n">sn_line2</span><span class="p">,</span>
                              <span class="n">vel1</span><span class="p">,</span> <span class="n">vel2</span><span class="p">,</span> <span class="n">min_dr</span><span class="p">,</span> <span class="n">dr</span><span class="p">,</span> <span class="n">max_dr</span><span class="p">,</span>
-                             <span class="n">ew1_snr</span><span class="p">,</span> <span class="n">ew2_snr</span><span class="p">,</span> <span class="n">delta_chi2</span><span class="p">,</span> <span class="n">conf_level</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">120</span><span class="p">):</span>
+                             <span class="n">ew1_snr</span><span class="p">,</span> <span class="n">ew2_snr</span><span class="p">,</span> <span class="n">delta_chi2</span><span class="p">,</span> <span class="n">conf_level</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check absorber selection criteria, print details, and count satisfied conditions.</span>
 
 <span class="sd">    Evaluates whether a candidate absorber passes various selection criteria based on</span>
@@ -537,7 +546,7 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        bool: True if the absorber passes the selection criteria, False otherwise.</span>
 
-<span class="sd">    Notes:</span>
+<span class="sd">    Note:</span>
 <span class="sd">        The function evaluates multiple selection criteria including:</span>
 <span class="sd">        - Wavelength bounds for both lines</span>
 <span class="sd">        - S/N thresholds for continuum and line centers</span>
@@ -586,13 +595,12 @@
     <span class="n">false_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">conds</span><span class="p">)</span> <span class="o">-</span> <span class="n">true_count</span>
     <span class="n">result</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">conds</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: QSO_INDEX = </span><span class="si">{</span><span class="n">qso_id</span><span class="si">}</span><span class="s2">, Condition checks for Z_ABS = </span><span class="si">{</span><span class="n">zabs</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="n">detail</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">conds</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: Summary: </span><span class="si">{</span><span class="n">true_count</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">conds</span><span class="p">)</span><span class="si">}</span><span class="s2"> conditions satisfied, </span><span class="si">{</span><span class="n">false_count</span><span class="si">}</span><span class="s2"> failed.&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INFO: Final result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=========&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;QSO_INDEX = </span><span class="si">%s</span><span class="s2">, Condition checks for Z_ABS = </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">qso_id</span><span class="p">,</span> <span class="n">zabs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">status</span><span class="p">,</span> <span class="n">detail</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">conds</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">detail</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Summary: </span><span class="si">%s</span><span class="s2"> / </span><span class="si">%s</span><span class="s2"> conditions satisfied, </span><span class="si">%s</span><span class="s2"> failed.&quot;</span><span class="p">,</span> <span class="n">true_count</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">conds</span><span class="p">),</span> <span class="n">false_count</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Final result: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
 
@@ -823,7 +831,7 @@
 
 <div class="viewcode-block" id="return_search_window_wavelength_range">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.return_search_window_wavelength_range">[docs]</a>
-<span class="k">def</span> <span class="nf">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return default red and blue end rest-frame quasar emission wavelength range</span>
@@ -839,23 +847,23 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">start_rest_wave</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">end_rest_wave</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using user-defined wavelength search window&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;using user-defined wavelength search window&#39;</span><span class="p">)</span>
         <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">start_rest_wave</span>
         <span class="n">lam_red</span> <span class="o">=</span> <span class="n">end_rest_wave</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: using default wavelength search window&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;using default wavelength search window&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">absorber</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="s1">&#39;FeII&#39;</span><span class="p">]:</span>
             <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
             <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;MgII_2799&#39;</span><span class="p">]</span>
 
         <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
-            <span class="n">lam_blue</span> <span class="o">=</span> <span class="mf">1310.0</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">LAM_CIV_MIN</span>
             <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
 
         <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;OVI&#39;</span><span class="p">:</span>
-            <span class="c1"># assuming 3600 to be starting wavelength</span>
-            <span class="c1"># and maximum redshift of quasar to be 6 in SDSS/DESI like spectra</span>
-            <span class="n">lam_blue</span> <span class="o">=</span> <span class="mi">3600</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="mf">6.2</span><span class="p">)</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">SMALL_WAVE</span>
             <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;OVI_1033&#39;</span><span class="p">]</span>
 
         <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;NV&#39;</span><span class="p">:</span>
@@ -870,6 +878,14 @@
             <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;CIV_1549&#39;</span><span class="p">]</span>
             <span class="n">lam_red</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;AlIII_1857&#39;</span><span class="p">]</span>
 
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;NaI&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">LARGE_WAVE</span>
+
+        <span class="k">elif</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CaII&#39;</span><span class="p">:</span>
+            <span class="n">lam_blue</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="s1">&#39;Lya&#39;</span><span class="p">]</span>
+            <span class="n">lam_red</span> <span class="o">=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">LARGE_WAVE</span>
+
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported absorber, it must be from </span><span class="si">{</span><span class="n">doublet_keys</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -878,7 +894,7 @@
 
 <div class="viewcode-block" id="get_search_limits">
 <a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.get_search_limits">[docs]</a>
-<span class="k">def</span> <span class="nf">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.</span>
 
@@ -899,9 +915,10 @@
     <span class="c1"># Convert velocity offset to redshift offset</span>
     <span class="n">dz</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">dv</span><span class="p">)</span> <span class="o">/</span> <span class="n">speed_of_light</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span><span class="p">)</span>
 
-    <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="p">)</span>
+    <span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span> <span class="o">=</span> <span class="n">return_search_window_wavelength_range</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: wavelength search window in quasar-rest frame: </span><span class="si">{</span><span class="n">lam_blue</span><span class="p">,</span><span class="w"> </span><span class="n">lam_red</span><span class="si">}</span><span class="s1"> Angstroms&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;wavelength search window in quasar-rest frame: </span><span class="si">%s</span><span class="s1"> Angstroms&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">lam_blue</span><span class="p">,</span> <span class="n">lam_red</span><span class="p">))</span>
 
     <span class="n">lam_blue_obs</span> <span class="o">=</span> <span class="n">lam_blue</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">+</span> <span class="n">dz</span><span class="p">)</span>
     <span class="n">lam_red_obs</span> <span class="o">=</span> <span class="n">lam_red</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span> <span class="o">-</span> <span class="n">dz</span><span class="p">)</span>
@@ -938,7 +955,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">elapsed</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
-    <span class="n">lam_start</span><span class="p">,</span> <span class="n">lam_end</span> <span class="o">=</span> <span class="n">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="n">end_rest_wave</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">lam_edge_sep</span><span class="p">)</span>
+    <span class="n">lam_start</span><span class="p">,</span> <span class="n">lam_end</span> <span class="o">=</span> <span class="n">get_search_limits</span><span class="p">(</span><span class="n">absorber</span><span class="p">,</span> <span class="n">zqso</span><span class="p">,</span> <span class="n">min_wave</span><span class="p">,</span> <span class="n">max_wave</span><span class="p">,</span> <span class="n">start_rest_wave</span><span class="o">=</span><span class="n">start_rest_wave</span><span class="p">,</span> <span class="n">end_rest_wave</span><span class="o">=</span><span class="n">end_rest_wave</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">lam_edge_sep</span><span class="o">=</span><span class="n">lam_edge_sep</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
 
     <span class="n">imp_ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">wavelength</span> <span class="o">&gt;=</span> <span class="n">lam_start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">wavelength</span> <span class="o">&lt;=</span> <span class="n">lam_end</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">lam_search</span> <span class="o">=</span> <span class="n">wavelength</span><span class="p">[</span><span class="n">imp_ind</span><span class="p">]</span>
@@ -953,15 +970,21 @@
     <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;CIV&#39;</span><span class="p">:</span>
         <span class="n">c_z</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span>
         <span class="c1"># OI 1302 and SiII 1304 masking</span>
-        <span class="n">rmv_lam0_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">1296</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">1310</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span>
+        <span class="n">rmv_lam0_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">1296</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">LAM_CIV_MIN</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span>
         <span class="n">lam_search</span> <span class="o">=</span> <span class="n">lam_search</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
         <span class="n">error_residual</span> <span class="o">=</span> <span class="n">error_residual</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
         <span class="n">residual</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
 
-    <span class="c1"># Masking other lines (CaII, OH NaD)</span>
-    <span class="n">rmv_lam0</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">3928</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">3940</span><span class="p">)</span> <span class="o">|</span> \
-               <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">3963</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">3975</span><span class="p">)</span> <span class="o">|</span> \
-               <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">5568</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">5588</span><span class="p">)</span> <span class="o">|</span> \
+    <span class="k">if</span> <span class="n">absorber</span> <span class="o">==</span> <span class="s1">&#39;MgII&#39;</span><span class="p">:</span>
+        <span class="n">c_z</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">zqso</span>
+        <span class="c1"># Masking other lines (CaII, OH NaD)</span>
+        <span class="n">rmv_lam0_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">3928</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">3980</span> <span class="o">*</span> <span class="n">c_z</span><span class="p">)</span>
+        <span class="n">lam_search</span> <span class="o">=</span> <span class="n">lam_search</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
+        <span class="n">error_residual</span> <span class="o">=</span> <span class="n">error_residual</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
+        <span class="n">residual</span> <span class="o">=</span> <span class="n">residual</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0_1</span><span class="p">]</span>
+
+    <span class="c1"># Masking other lines (OH or atomospheric sky lines)</span>
+    <span class="n">rmv_lam0</span> <span class="o">=</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">5568</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">5588</span><span class="p">)</span> <span class="o">|</span> \
                <span class="p">(</span><span class="n">lam_search</span> <span class="o">&gt;=</span> <span class="mi">6295</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lam_search</span> <span class="o">&lt;=</span> <span class="mi">6305</span><span class="p">)</span>
 
     <span class="n">lam_search</span> <span class="o">=</span> <span class="n">lam_search</span><span class="p">[</span><span class="o">~</span><span class="n">rmv_lam0</span><span class="p">]</span>
@@ -979,7 +1002,7 @@
 <span class="k">def</span> <span class="nf">return_if_absorber_can_be_detected_in_a_spectrum</span><span class="p">(</span><span class="n">spectra</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if an absorber can be searched in a given QSO spectrum.</span>
 
-<span class="sd">    This function loads a single QSO spectrum from a FITS file,</span>
+<span class="sd">    This function loads a single QSO spectrum from a spec.QSOSpecRead object,</span>
 <span class="sd">    removes NaNs, and determines if the absorber&#39;s search window</span>
 <span class="sd">    falls within the spectrum&#39;s observed wavelength range.</span>
 
@@ -1007,7 +1030,7 @@
     <span class="n">z_qso</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;Z_QSO&#39;</span><span class="p">]</span>
     <span class="n">lam_obs</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">wavelength</span>
 
-    <span class="k">if</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">lam_obs</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">MIN_NPIXEL</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">0</span>
 
     <span class="c1"># Define the wavelength range for searching the absorber</span>
@@ -1036,18 +1059,117 @@
     <span class="k">assert</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_residual</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">unmsk_error</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> \
         <span class="s2">&quot;Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error&quot;</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Time took to find available search pixels: </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="si">:</span><span class="s1">.3f</span><span class="si">}</span><span class="s1"> [sec]&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;verbose&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Time took to find available search pixels: </span><span class="si">%.3f</span><span class="s1"> [sec]&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">lam_search</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">_constants</span><span class="o">.</span><span class="n">MIN_NPIXEL</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">0</span>
 
     <span class="k">if</span> <span class="s2">&quot;snr_cut&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">snr_median</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmedian</span><span class="p">(</span><span class="n">unmsk_residual</span> <span class="o">/</span> <span class="n">unmsk_error</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;INFO: Checking SNR in the wavelength search region (median SNR = </span><span class="si">{</span><span class="n">snr_median</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">, threshold = </span><span class="si">{</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;verbose&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Checking SNR in the wavelength search region (median SNR = </span><span class="si">%.2f</span><span class="s1">, threshold = </span><span class="si">%s</span><span class="s1">)&#39;</span><span class="p">,</span> <span class="n">snr_median</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">snr_median</span> <span class="o">&lt;</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;snr_cut&quot;</span><span class="p">]:</span>
             <span class="k">return</span> <span class="mi">0</span>
 
     <span class="k">return</span> <span class="mi">1</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_check_searchable_one</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Worker helper for find_searchable_qsos — must be module-level to be picklable.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.datamodel</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span>
+    <span class="n">fits_file</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">params</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">idx</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">return_if_absorber_can_be_detected_in_a_spectrum</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="find_searchable_qsos">
+<a class="viewcode-back" href="../../qsoabsfind.html#qsoabsfind.absorberutils.find_searchable_qsos">[docs]</a>
+<span class="k">def</span> <span class="nf">find_searchable_qsos</span><span class="p">(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">constant_file</span><span class="p">,</span> <span class="n">ncpus</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_qso</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run searchability checks for all QSO spectra in parallel.</span>
+
+<span class="sd">    For each spectrum, determines whether the given absorber can be searched</span>
+<span class="sd">    based on the wavelength coverage and pixel count thresholds defined in the</span>
+<span class="sd">    user constants file.  Overridable package constants (``SMALL_WAVE``,</span>
+<span class="sd">    ``LARGE_WAVE``, ``LAM_CIV_MIN``, ``MIN_NPIXEL``) are patched from the</span>
+<span class="sd">    user constants file before the checks run, exactly as done in the main</span>
+<span class="sd">    convolution pipeline.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fits_file (str): Path to the FITS file containing normalised QSO spectra.</span>
+<span class="sd">        absorber (str): Absorber name (e.g. ``&#39;MgII&#39;``, ``&#39;CIV&#39;``).</span>
+<span class="sd">        constant_file (str): Path to the user constants ``.py`` file.</span>
+<span class="sd">        ncpus (int): Number of parallel worker processes (default 4).</span>
+<span class="sd">        n_qso (int or str, optional): Number of spectra to check, or a range</span>
+<span class="sd">            string such as ``&#39;1-1000&#39;`` or ``&#39;1-1000:10&#39;``.  If ``None``, all</span>
+<span class="sd">            spectra in the file are checked.</span>
+<span class="sd">        verbose (bool): If ``True``, pass verbose flag to the per-spectrum</span>
+<span class="sd">            check (default ``False``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        astropy.table.Table: Table with two columns:</span>
+
+<span class="sd">        - ``QSO_INDEX`` (int): Spectrum index in the FITS file.</span>
+<span class="sd">        - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in</span>
+<span class="sd">          that spectrum, ``False`` otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">multiprocessing</span>
+    <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+    <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+    <span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">load_constants</span>
+    <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">read_nqso_from_header</span><span class="p">,</span> <span class="n">parse_qso_sequence</span>
+
+    <span class="c1"># Load and apply user constants (same override logic as in main pipeline)</span>
+    <span class="n">const_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">constant_file</span><span class="p">)</span>
+    <span class="n">user_constants</span> <span class="o">=</span> <span class="n">load_constants</span><span class="p">(</span><span class="n">const_path</span><span class="p">)</span>
+
+    <span class="n">_overridable</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;SMALL_WAVE&#39;</span><span class="p">,</span> <span class="s1">&#39;LARGE_WAVE&#39;</span><span class="p">,</span> <span class="s1">&#39;LAM_CIV_MIN&#39;</span><span class="p">,</span> <span class="s1">&#39;MIN_NPIXEL&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Physical constant resolution (user file overrides shown with *):&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_name</span> <span class="ow">in</span> <span class="n">_overridable</span><span class="p">:</span>
+        <span class="n">_user_val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">user_constants</span><span class="p">,</span> <span class="n">_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">_pkg_val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_constants</span><span class="p">,</span> <span class="n">_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_user_val</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_user_val</span> <span class="o">!=</span> <span class="n">_pkg_val</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: </span><span class="si">%-15s</span><span class="s1"> = </span><span class="si">%s</span><span class="s1">  (overrides package default: </span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">_name</span><span class="p">,</span> <span class="n">_user_val</span><span class="p">,</span> <span class="n">_pkg_val</span><span class="p">))</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">_constants</span><span class="p">,</span> <span class="n">_name</span><span class="p">,</span> <span class="n">_user_val</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: </span><span class="si">%-15s</span><span class="s1"> = </span><span class="si">%s</span><span class="s1">  (package default)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">_name</span><span class="p">,</span> <span class="n">_pkg_val</span><span class="p">))</span>
+
+    <span class="c1"># Build per-spectrum kwargs from the user constants search parameters</span>
+    <span class="n">search_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">user_constants</span><span class="o">.</span><span class="n">search_parameters</span><span class="p">)</span>
+    <span class="n">search_params</span><span class="p">[</span><span class="s1">&#39;verbose&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">verbose</span>
+
+    <span class="c1"># Resolve QSO index range</span>
+    <span class="k">if</span> <span class="n">n_qso</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_qso</span> <span class="o">=</span> <span class="n">read_nqso_from_header</span><span class="p">(</span><span class="n">fits_file</span><span class="p">)</span>
+    <span class="n">spec_indices</span> <span class="o">=</span> <span class="n">parse_qso_sequence</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n_qso</span><span class="p">))</span>
+
+    <span class="n">params_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">fits_file</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">search_params</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">spec_indices</span><span class="p">]</span>
+    <span class="n">n_jobs</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">ncpus</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: Checking searchability of </span><span class="si">%d</span><span class="s1"> spectra for </span><span class="si">%s</span><span class="s1"> absorber using </span><span class="si">%d</span><span class="s1"> CPUs&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">spec_indices</span><span class="p">),</span> <span class="n">absorber</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">))</span>
+
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">pool</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">_check_searchable_one</span><span class="p">,</span> <span class="n">params_list</span><span class="p">),</span>
+                <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">params_list</span><span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">absorber</span><span class="si">}</span><span class="s1"> searchability check&#39;</span><span class="p">,</span>
+                <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;spec&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">qso_indices</span><span class="p">,</span> <span class="n">flags</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">results</span><span class="p">)</span> <span class="k">if</span> <span class="n">results</span> <span class="k">else</span> <span class="p">([],</span> <span class="p">[])</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">Table</span><span class="p">()</span>
+    <span class="n">out</span><span class="p">[</span><span class="s1">&#39;QSO_INDEX&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">qso_indices</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s1">&#39;IS_GOOD&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">bool</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">flags</span><span class="p">]</span>
+
+    <span class="n">n_good</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;IS_GOOD&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;INFO: </span><span class="si">%d</span><span class="s1"> / </span><span class="si">%d</span><span class="s1"> QSOs have a searchable </span><span class="si">%s</span><span class="s1"> window&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n_good</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">absorber</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
 
 </pre></div>
 
@@ -1059,7 +1181,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

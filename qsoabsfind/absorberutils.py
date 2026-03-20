@@ -235,12 +235,16 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
     (corresponding to minimum flux) redshift from each group.
 
     Args:
-        redshifts (list or np.array): list of redshifts.
-        fluxes (list or np.array): corresponding fluxes near each redshift.
-        delta_z (float): the maximum difference between redshifts to consider them contiguous.
+        redshifts (list or numpy.ndarray): List of candidate absorber redshifts.
+        fluxes (list or numpy.ndarray): Corresponding residual fluxes near each redshift.
+        residual (numpy.ndarray): Full residual flux array aligned with ``lam_obs``.
+        lam_obs (numpy.ndarray): Observed-frame wavelength array.
+        line1 (float): Rest-frame wavelength of the first doublet line (Angstrom).
+        line2 (float): Rest-frame wavelength of the second doublet line (Angstrom).
+        delta_z (float): Maximum redshift difference to consider two candidates contiguous.
 
     Returns:
-        best_redshifts: list of best redshifts from each group.
+        list: Best redshift from each contiguous group (minimum-flux weighted selection).
     """
 
     # Ensure inputs are numpy arrays for easy manipulation
@@ -347,9 +351,9 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         combined_final_our_z (list): List of potential absorbers identified for each spectrum.
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
-        d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
-        use_kernel (str, optional): Kernel type.
-        delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.
+        d_pix (float): Pixel separation tolerance in wavelength (default 0.6 Angstrom).
+        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV).
+        delta_z (float): Maximum redshift difference to consider two candidates contiguous.
         window (int): window size for redshift estimate (default 9)
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
 
@@ -438,7 +442,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
     Returns:
         bool: True if the absorber passes the selection criteria, False otherwise.
 
-    Notes:
+    Note:
         The function evaluates multiple selection criteria including:
         - Wavelength bounds for both lines
         - S/N thresholds for continuum and line centers

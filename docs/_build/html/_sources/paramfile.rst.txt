@@ -1,8 +1,8 @@
 Parameter File
-=======
+==============
 
 Constant File (Mandatory)
-------------------------
+-------------------------
 
 The user-defined **constants file** must follow the same structure as the `qsoabsfind.constants <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/data/desi/desi_constants.py>`_ file; otherwise, the code will fail. If you want to use the default search parameters, you can run the tool without specifying the `constant-file` option.
 

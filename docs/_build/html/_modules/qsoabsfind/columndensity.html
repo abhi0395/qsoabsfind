@@ -337,23 +337,25 @@
 <span class="sd">    the total column density for a single absorption system using the doublet method.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        args (tuple): Packed arguments containing:</span>
-<span class="sd">            - flux (array-like): Normalized flux spectrum.</span>
-<span class="sd">            - error (array-like): Normalized Flux uncertainty array.</span>
-<span class="sd">            - wavelength (array-like): Observed wavelength array.</span>
-<span class="sd">            - tt_row (object): Table row or object containing absorber properties.</span>
-<span class="sd">            - f1 (float): Oscillator strength of line 1.</span>
-<span class="sd">            - f2 (float): Oscillator strength of line 2.</span>
-<span class="sd">            - l1 (float): Rest wavelength of line 1.</span>
-<span class="sd">            - l2 (float): Rest wavelength of line 2.</span>
-<span class="sd">            - continuum_error_frac (float): Fractional continuum placement uncertainty.</span>
-<span class="sd">            - dv (float): Velocity range for integration in km/s.</span>
-<span class="sd">            - logwave (bool): Whether wavelength array is in log spacing.</span>
+<span class="sd">        args (tuple): Packed arguments in the following order:</span>
+
+<span class="sd">            * **flux** (*numpy.ndarray*) — Continuum-normalised flux spectrum.</span>
+<span class="sd">            * **error** (*numpy.ndarray*) — Flux uncertainty array.</span>
+<span class="sd">            * **wavelength** (*numpy.ndarray*) — Observed wavelength array (Angstrom).</span>
+<span class="sd">            * **tt_row** (*astropy.table.Row*) — Table row containing absorber properties</span>
+<span class="sd">              (must include ``Z_ABS`` and EW columns).</span>
+<span class="sd">            * **f1** (*float*) — Oscillator strength of the first line.</span>
+<span class="sd">            * **f2** (*float*) — Oscillator strength of the second line.</span>
+<span class="sd">            * **l1** (*tuple*) — ``(key, rest_wavelength)`` for the first line.</span>
+<span class="sd">            * **l2** (*tuple*) — ``(key, rest_wavelength)`` for the second line.</span>
+<span class="sd">            * **continuum_error_frac** (*float*) — Fractional continuum placement uncertainty.</span>
+<span class="sd">            * **dv** (*float*) — Velocity range for integration (km/s).</span>
+<span class="sd">            * **logwave** (*bool*) — Whether the wavelength array is log-spaced.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        dict: Dictionary containing column density measurements and uncertainties,</span>
-<span class="sd">            typically including keys like &#39;log10N&#39;, &#39;sig_log10N&#39;, &#39;saturation&#39;, &#39;fn&#39;</span>
-<span class="sd">            flags are diagnostic information from the calculation.</span>
+<span class="sd">        dict: Column density measurements and uncertainties. Keys match the output</span>
+<span class="sd">        of :func:`total_column_density`: ``N``, ``N_err``, ``logN``, ``err_logN``,</span>
+<span class="sd">        ``flag``, and saturation diagnostics.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">continuum_error_frac</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">logwave</span> <span class="o">=</span> <span class="n">args</span>
     <span class="k">return</span> <span class="n">total_column_density</span><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">tt_row</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span>
@@ -379,10 +381,11 @@
 <span class="sd">        nproc (int): number of cpus for multiprocessing</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        appends an extra HDU: COLUMN_DENSITY in the absorber catalog output filename</span>
+<span class="sd">        None: Appends a ``COLUMN_DENSITY`` BinTableHDU to the absorber catalog</span>
+<span class="sd">        FITS file specified by ``output``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="kn">from</span> <span class="nn">.spec</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span>
+    <span class="kn">from</span> <span class="nn">.datamodel</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="n">tt</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s2">&quot;ABSORBER&quot;</span><span class="p">)</span>
@@ -432,7 +435,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

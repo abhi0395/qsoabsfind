@@ -85,7 +85,7 @@
 </div>
 <section id="qsoabsfind-quasar-absorber-finder">
 <h1>qsoabsfind: Quasar Absorber Finder<a class="headerlink" href="#qsoabsfind-quasar-absorber-finder" title="Link to this heading"></a></h1>
-<p><cite>qsoabsfind</cite> is a Python module designed to detect absorbers with doublet properties in <strong>SDSS</strong> and <strong>DESI</strong> like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.</p>
+<p><cite>qsoabsfind</cite> is a Python module designed to detect absorbers with doublet properties (absorbers with two close lines) in like low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.</p>
 <p>The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.</p>
 </section>
 <section id="supported-metal-doublet-systems">
@@ -98,8 +98,8 @@
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Absorber</p></th>
-<th class="head"><p>Line 1 (Å)</p></th>
-<th class="head"><p>Line 2 (Å)</p></th>
+<th class="head"><p>Line 1 (Ang)</p></th>
+<th class="head"><p>Line 2 (Ang)</p></th>
 </tr>
 </thead>
 <tbody>
@@ -131,6 +131,14 @@
 <td><p>2796.35</p></td>
 <td><p>2803.52</p></td>
 </tr>
+<tr class="row-odd"><td><p>Ca II (Ca⁺)</p></td>
+<td><p>3934.78</p></td>
+<td><p>3969.59</p></td>
+</tr>
+<tr class="row-even"><td><p>Na I (Na)</p></td>
+<td><p>5891.58</p></td>
+<td><p>5897.57</p></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -157,6 +165,94 @@
 <li><p>CGM/IGM absorber statistics</p></li>
 <li><p>Survey-scale quasar spectral analysis</p></li>
 </ul>
+</section>
+<section id="running-with-a-yaml-config-file">
+<h1>Running with a YAML config file<a class="headerlink" href="#running-with-a-yaml-config-file" title="Link to this heading"></a></h1>
+<p>Instead of typing all arguments on the command line you can store them in a
+YAML file and pass it with <code class="docutils literal notranslate"><span class="pre">--config</span></code>. CLI flags always override YAML values.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>qsoabsfind<span class="w"> </span>--config<span class="w"> </span>example_config.yaml
+
+<span class="c1"># Override individual values without editing the file:</span>
+qsoabsfind<span class="w"> </span>--config<span class="w"> </span>example_config.yaml<span class="w"> </span>--absorber<span class="w"> </span>CIV<span class="w"> </span>--verbose
+</pre></div>
+</div>
+<p>A fully annotated template is provided in <code class="docutils literal notranslate"><span class="pre">data/example_config.yaml</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>YAML keys use underscores, not dashes (e.g. <code class="docutils literal notranslate"><span class="pre">input_fits_file</span></code> for
+<code class="docutils literal notranslate"><span class="pre">--input-fits-file</span></code>). Set optional keys to <code class="docutils literal notranslate"><span class="pre">null</span></code> to let argparse
+use its built-in default.</p>
+</div>
+</section>
+<section id="reading-output-catalogs">
+<h1>Reading output catalogs<a class="headerlink" href="#reading-output-catalogs" title="Link to this heading"></a></h1>
+<p>After running the absorber search, you can load the output FITS catalog using the <code class="docutils literal notranslate"><span class="pre">AbsorberData</span></code> class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">qsoabsfind.datamodel</span> <span class="kn">import</span> <span class="n">AbsorberData</span>
+
+<span class="n">catalog</span> <span class="o">=</span> <span class="n">AbsorberData</span><span class="p">(</span><span class="s1">&#39;test_MgII.fits&#39;</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">catalog</span><span class="o">.</span><span class="n">catalog</span><span class="p">)</span>        <span class="c1"># absorber table (ABSORBER HDU)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">catalog</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>       <span class="c1"># QSO metadata (METADATA HDU)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">catalog</span><span class="o">.</span><span class="n">column_density</span><span class="p">)</span> <span class="c1"># column densities if present, else None</span>
+</pre></div>
+</div>
+</section>
+<section id="plotting-a-random-absorber">
+<h1>Plotting a random absorber<a class="headerlink" href="#plotting-a-random-absorber" title="Link to this heading"></a></h1>
+<p>Once you have loaded the spectra and the output catalog, you can visualise a
+randomly selected absorber using <a class="reference internal" href="qsoabsfind.html#qsoabsfind.utils.plot_absorber" title="qsoabsfind.utils.plot_absorber"><code class="xref py py-func docutils literal notranslate"><span class="pre">qsoabsfind.utils.plot_absorber()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">qsoabsfind.datamodel</span> <span class="kn">import</span> <span class="n">QSOSpecRead</span><span class="p">,</span> <span class="n">AbsorberData</span>
+<span class="kn">from</span> <span class="nn">qsoabsfind.utils</span> <span class="kn">import</span> <span class="n">plot_absorber</span>
+
+<span class="c1"># Load the output absorber catalog</span>
+<span class="n">catalog</span> <span class="o">=</span> <span class="n">AbsorberData</span><span class="p">(</span><span class="s1">&#39;/path/to/your/absorber.fits&#39;</span><span class="p">,</span> <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Pick a random absorber from the catalog</span>
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">()</span>
+<span class="n">idx</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">integers</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">catalog</span><span class="o">.</span><span class="n">catalog</span><span class="p">))</span>
+<span class="n">row</span> <span class="o">=</span> <span class="n">catalog</span><span class="o">.</span><span class="n">catalog</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+<span class="c1"># Load the corresponding QSO spectrum</span>
+<span class="n">spectra</span> <span class="o">=</span> <span class="n">QSOSpecRead</span><span class="p">(</span><span class="s1">&#39;/path/to/your/spectra.fits&#39;</span><span class="p">,</span>
+                      <span class="n">index</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;INDEX_SPEC&#39;</span><span class="p">]),</span>
+                      <span class="n">autoload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Plot the absorber (full spectrum + zoomed-in doublet view)</span>
+<span class="n">plot_absorber</span><span class="p">(</span><span class="n">spectra</span><span class="p">,</span> <span class="n">absorber</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span> <span class="n">zabs</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+              <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;MgII absorber at z=</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Z_ABS&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Pass <code class="docutils literal notranslate"><span class="pre">show_error=True</span></code> to overlay the error spectrum, or
+<code class="docutils literal notranslate"><span class="pre">plot_filename='absorber.png'</span></code> to save the figure to disk instead of
+displaying it interactively.</p>
+</section>
+<section id="pre-filtering-searchable-qsos">
+<h1>Pre-filtering searchable QSOs<a class="headerlink" href="#pre-filtering-searchable-qsos" title="Link to this heading"></a></h1>
+<p>Before running the full absorber search you can quickly flag which spectra
+have a usable wavelength window for the absorber of interest.
+<code class="docutils literal notranslate"><span class="pre">qsoabsfind.absorberutils.find_searchable_qsos</span></code> performs this check
+in parallel over the whole file and returns a two-column
+<code class="docutils literal notranslate"><span class="pre">astropy.table.Table</span></code> (<code class="docutils literal notranslate"><span class="pre">QSO_INDEX</span></code>, <code class="docutils literal notranslate"><span class="pre">IS_GOOD</span></code>) that can be used to
+build a parent sample:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">qsoabsfind.absorberutils</span> <span class="kn">import</span> <span class="n">find_searchable_qsos</span>
+
+<span class="n">parent</span> <span class="o">=</span> <span class="n">find_searchable_qsos</span><span class="p">(</span>
+    <span class="n">fits_file</span><span class="o">=</span><span class="s1">&#39;spectra.fits&#39;</span><span class="p">,</span>
+    <span class="n">absorber</span><span class="o">=</span><span class="s1">&#39;MgII&#39;</span><span class="p">,</span>
+    <span class="n">constant_file</span><span class="o">=</span><span class="s1">&#39;my_constants.py&#39;</span><span class="p">,</span>
+    <span class="n">ncpus</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>        <span class="c1"># parallel workers</span>
+    <span class="n">n_qso</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># None = all spectra; or &#39;1-5000&#39;, &#39;500&#39;, &#39;1-5000:2&#39;</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># keep only searchable QSOs</span>
+<span class="n">good</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">parent</span><span class="p">[</span><span class="s1">&#39;IS_GOOD&#39;</span><span class="p">]]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">good</span><span class="p">)</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span><span class="si">}</span><span class="s2"> QSOs have a searchable MgII window&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The function applies the same overridable-constants logic as the
+main pipeline, so the filtering is fully consistent with the absorber search.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
@@ -230,6 +326,10 @@
 <section id="contribution">
 <h1>Contribution<a class="headerlink" href="#contribution" title="Link to this heading"></a></h1>
 <p>Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to <a class="reference external" href="mailto:abhijeetanand2011&#37;&#52;&#48;gmail&#46;com">abhijeetanand2011<span>&#64;</span>gmail<span>&#46;</span>com</a> or, preferably, open a GitHub issue on the code <a class="reference external" href="https://github.com/abhi0395/qsoabsfind">repo</a>.</p>
+</section>
+<section id="acknowledgements">
+<h1>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Link to this heading"></a></h1>
+<p>The first crude version of the code was developed and written by me during my PhD with lots of suggestions from my PhD supervisors <a class="reference external" href="https://www.mpa-garching.mpg.de/person/44092">Prof. Dr. Guinevere Kauffmann</a> and <a class="reference external" href="https://nelson.tng-project.org">Dr. Dylan Nelson</a>. Over the years, it has evolved from a specialized script into the generic, community-ready framework it is today. I would like to extend my thanks to the VS Code AI agents, which were instrumental in refining the codebase. They provided invaluable assistance in documenting functions, optimizing logic, and expanding unit test coverage. They helped ensure the code is both robust and maintainable. The project logo was created from a absorber example generated by me, with assistance from ChatGPT-5.</p>
 <div class="line-block">
 <div class="line">Thanks,</div>
 <div class="line">Abhijeet Anand</div>
@@ -256,7 +356,7 @@
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

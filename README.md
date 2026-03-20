@@ -125,7 +125,7 @@ python -m unittest discover -s tests
 ### 4. Quick installation test
 ```bash
 python -c "import qsoabsfind; print(qsoabsfind.__version__)"
-python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
+python -c "from qsoabsfind.parallel_convolution import parallel_convolution_search; print('Installation successful!')"
 ```
 
 Description

@@ -153,18 +153,18 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         error (numpy.array): error on residuals
         lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).
         unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)
-        ker_width_pix (int or list): List of kernel widths in pixels, default=5
+        ker_width_pixels (int or list): Kernel width(s) in pixels. Default is 5.
         coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
         mult_resi (float): Factor to shift the residual up or down. Default is 1.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
-        pm_pixel (int): Pixel parameter for local noise estimation (default 200).
-        sn_line1 (float): Signal-to-noise ratio for thresholding for line1 (default 3).
-        sn_line2 (float): Signal-to-noise ratio for thresholding for line2 (default 3).
-        use_covariance (bool): if want to use full covariance of scipy curvey_fit for EW error calculation (default is False)
-        logwave (bool): if wavelength on log scale (default True for SDSS)
-        verbose (bool): if want to print a lot of outputs for debugging (default False)
-        nboot (int): if provided, will perform bootstrapping fitting (default None)
-        conf_level (float): confidence level of absorber for chi2 statistics (default 0.95)
+        pm_pixel (int): Pixel parameter for local noise estimation. Default is 200.
+        sn_line1 (float): Signal-to-noise ratio threshold for line 1. Default is 3.
+        sn_line2 (float): Signal-to-noise ratio threshold for line 2. Default is 2.
+        use_covariance (bool): If True, use full covariance of scipy curve_fit for EW error calculation. Default is False.
+        logwave (bool): If True, wavelength is on log scale (e.g. SDSS). Default is True.
+        verbose (bool): If True, print detailed outputs for debugging. Default is True.
+        nboot (int, optional): Number of bootstrap iterations for fitting. Default is None (disabled).
+        conf_level (float): Minimum confidence level for chi2-based absorber selection. Default is 0.95.
 
     Returns:
         dict: Contains lists of various parameters related to detected absorbers.

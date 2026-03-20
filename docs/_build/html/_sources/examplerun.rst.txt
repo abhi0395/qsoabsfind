@@ -1,10 +1,10 @@
 Running examples
-============
+================
 
 Before running, please read :doc:`File formats <fileformat>`.
 
 **1. Your input spectra** (absorber search without column densities):
------------------------------------------------
+----------------------------------------------------------------------
 
 .. code-block:: bash
 
@@ -16,7 +16,7 @@ Before running, please read :doc:`File formats <fileformat>`.
                --ncpus 4
 
 **2. Your input spectra** (absorber search with column densities):
------------------------------------------------
+-------------------------------------------------------------------
 
 .. code-block:: bash
 
@@ -31,15 +31,15 @@ Before running, please read :doc:`File formats <fileformat>`.
 
 
 Ready to run examples
-------------------
+---------------------
 
 I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. You can use this file to test an example run as described below.
 
 1. Without Column Densities
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **SDSS DR16 spectra** (MgII search)
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``, which contains 100 continuum-normalized SDSS QSO spectra. These folders also have their own constants files. You can use these files to test example runs as described below.
 
@@ -53,7 +53,7 @@ I have provided an example QSO spectra file, ``data/sdss/qso_test_spectra.fits``
                --ncpus 4
 
 **DESI DR1 spectra** (CIV search):
-~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_test_spectra.fits``, which contains 100 continuum-normalized `DESI DR1 <https://data.desi.lbl.gov/doc/releases/dr1/>`_ QSO spectra. You can run absorber search on them as well.
 
@@ -67,10 +67,10 @@ Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_tes
                --ncpus 4
 
 2. With Column Densities
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 **SDSS DR16 spectra** (MgII search):
-~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Optionally, users can instruct the module to calculate **total column densities** of metal absorbers using the
 **apparent optical depth (AOD) method** (see `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).

@@ -50,12 +50,12 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
 
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
-        spec_indices (list or numpy.array): Indices of quasars in the data matrix.
+        spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
         absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
         kwargs (dict): search parameters as described in data/desi/desi_constants.py
 
     Returns:
-        dict or tuple: Detected absorber details from single-spectrum run.
+        dict: Detected absorber details from single-spectrum run.
 
     """
     return read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs)
@@ -65,7 +65,7 @@ def _run_single_job(params):
     """Unpack tuple params for imap-based iteration."""
     return run_convolution_method_absorber_finder_QSO_spectra(*params)
 
-def parallel_convolution_method_absorber_finder_QSO_spectra(
+def parallel_convolution_search(
     fits_file, spec_indices, absorber, n_jobs, warnings_file=None, **kwargs
 ):
     """
@@ -74,13 +74,18 @@ def parallel_convolution_method_absorber_finder_QSO_spectra(
 
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
-        spec_indices (list or numpy.array): Indices of quasars in the data matrix.
-        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
+        spec_indices (list or numpy.ndarray): Indices of quasars in the data matrix.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
         n_jobs (int): Number of parallel jobs to run.
-        kwargs (dict): search parameters as described in qsoabsfind.constants()
+        warnings_file (str, optional): Path to a file where worker-process warnings are written. Default is None.
+        **kwargs: Search parameters as described in qsoabsfind.constants().
 
     Returns:
-        dict: A dictionary containing combined results from all parallel runs.
+        dict: Combined results from all spectra, with only absorbers with z_abs > 0 retained.
+            Keys: ``index_spec``, ``z_abs``, ``gauss_fit``, ``gauss_fit_std``,
+            ``ew_1_mean``, ``ew_2_mean``, ``ew_total_mean``, ``ew_1_error``,
+            ``ew_2_error``, ``ew_total_error``, ``z_abs_err``, ``sn_1``, ``sn_2``,
+            ``vel_disp1``, ``vel_disp2``, ``delta_chi2``.
     """
 
     params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
@@ -279,7 +284,7 @@ def main():
         logger.info('Gaussian fitting parameter estimation will be done with %s bootstrapping iterations', nboot)
 
     # Run the convolution method in parallel
-    results = parallel_convolution_method_absorber_finder_QSO_spectra(
+    results = parallel_convolution_search(
         args.input_fits_file, spec_indices, absorber=args.absorber,
         n_jobs=n_jobs, warnings_file=warnings_file, **user_constants.search_parameters
     )

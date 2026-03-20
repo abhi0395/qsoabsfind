@@ -42,10 +42,10 @@ qsoabsfind.io module
    :undoc-members:
    :show-inheritance:
 
-qsoabsfind.spec module
-----------------------
+qsoabsfind.datamodel module
+---------------------------
 
-.. automodule:: qsoabsfind.spec
+.. automodule:: qsoabsfind.datamodel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -59,7 +59,7 @@ qsoabsfind.utils module
    :show-inheritance:
 
 qsoabsfind.columndensity module
------------------------
+-------------------------------
 
 .. automodule:: qsoabsfind.columndensity
    :members:

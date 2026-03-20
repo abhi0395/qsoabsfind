@@ -92,12 +92,13 @@
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Python 3.6 or higher</p></li>
+<li><p>Python 3.10 or higher</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scipy</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">astropy</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">numba</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">matplotlib</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tqdm</span></code> (for progress bars))</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytest</span></code> (for running tests)</p></li>
 </ul>
 </section>
@@ -155,7 +156,7 @@ pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> 
 <h2>Quick installation test<a class="headerlink" href="#quick-installation-test" title="Link to this heading"></a></h2>
 <p>Test the installation:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import qsoabsfind; print(qsoabsfind.__version__)&quot;</span>
-<span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print(&#39;Installation successful!&#39;)&quot;</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;from qsoabsfind.parallel_convolution import parallel_convolution_search; print(&#39;Installation successful!&#39;)&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -180,7 +181,7 @@ pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> 
 
   <div role="contentinfo">
     <p>&#169; Copyright 2021-2026, Abhijeet Anand.
-      <span class="lastupdated">Last updated on 2026-02-18.
+      <span class="lastupdated">Last updated on 2026-03-20.
       </span></p>
   </div>
 

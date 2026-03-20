@@ -7,7 +7,7 @@ import os
 import numpy as np
 from astropy.table import Table
 from qsoabsfind.absfinder import read_single_spectrum_and_find_absorber
-from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra
+from qsoabsfind.parallel_convolution import parallel_convolution_search
 from qsoabsfind.config import load_constants
 from qsoabsfind.columndensity import total_column_density
 from qsoabsfind.datamodel import QSOSpecRead
@@ -84,11 +84,11 @@ class TestQSOAbsFind(unittest.TestCase):
         absorber = 'MgII'
         n_jobs = 6
         # Call the function
-        sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+        sdss_results = parallel_convolution_search(
             self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters)
 
         desi_absorber='CIV'
-        desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+        desi_results = parallel_convolution_search(
             self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **self.desi_constants.search_parameters)
 
         # Validate the output
