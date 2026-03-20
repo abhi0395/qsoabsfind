@@ -88,10 +88,10 @@ cd qsoabsfind
 
 ### 2. Set Up Environment
 
-#### Option 1: Using Conda (Recommended, python>=3.9)
+#### Option 1: Using Conda (Recommended, python>=3.10)
 
 ```bash
-conda create -n qsoabsfind python=3.9
+conda create -n qsoabsfind python=3.10
 conda activate qsoabsfind
 
 # Install dependencies
