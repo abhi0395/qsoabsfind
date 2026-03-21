@@ -3,7 +3,9 @@ scipy
 astropy
 numba
 matplotlib
+tqdm
 pytest
+pyyaml
 setuptools>60
 Sphinx>6,<7
 sphinx-rtd-theme>1

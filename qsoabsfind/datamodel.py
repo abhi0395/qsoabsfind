@@ -1,5 +1,6 @@
 """
-This script contains a class and functions to read/write spectra fits files.
+This module contains data model classes for reading and handling QSO spectra
+and absorber catalog FITS files.
 """
 import time
 import os
@@ -69,19 +70,24 @@ class AbsorberData():
     containing ABSORBER, METADATA, and optionally COLUMN_DENSITY extensions.
     """
 
-    def __init__(self, filepath, verbose=True):
+    def __init__(self, filepath, autoload=False, verbose=True):
         """
         Initializes the AbsorberData class.
 
         Args:
             filepath (str): Path to the FITS file containing Absorber catalog.
+            autoload (bool): if True, class itself will load the data (default=False),
             verbose (bool): if want to print time info
         """
         self.filepath = filepath
         self.verbose = verbose
+        self.autoload=True
 
         # Get all extension names
         self.extnames = get_all_extnames(self.filepath)
+
+        if self.autoload:
+            self.read_catalog()
 
     def read_catalog(self):
         """Read catalog from the file"""

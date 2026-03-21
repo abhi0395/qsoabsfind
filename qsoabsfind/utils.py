@@ -241,13 +241,13 @@ def double_gaussian(x, amp1, mean1, sigma1, amp2, mean2, sigma2):
     given spectrum.
 
     Args:
-        x (numpy.ndarray): List of wavelength points where the user wants to fit the model.
-        amp1: Amplitude of the first Gaussian.
-        mean1: Mean (center) of the first Gaussian.
-        sigma1: Standard deviation (width) of the first Gaussian.
-        amp2: Amplitude of the second Gaussian.
-        mean2: Mean (center) of the second Gaussian.
-        sigma2: Standard deviation (width) of the second Gaussian.
+        x (numpy.ndarray): Wavelength points where the model is evaluated.
+        amp1 (float): Amplitude of the first Gaussian.
+        mean1 (float): Mean (center) of the first Gaussian.
+        sigma1 (float): Standard deviation (width) of the first Gaussian.
+        amp2 (float): Amplitude of the second Gaussian.
+        mean2 (float): Mean (center) of the second Gaussian.
+        sigma2 (float): Standard deviation (width) of the second Gaussian.
 
     Returns:
         numpy.ndarray: The function that fits the absorption feature using curve_fit.
@@ -466,12 +466,12 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
     Validate that all arrays have the same size.
 
     Args:
-        conv_arr (np.ndarray): Convolved array.
-        unmsk_residual (np.ndarray): Unmasked residual array.
-        spec_index (int): QSO index
+        conv_arr (numpy.ndarray): Convolved array.
+        unmsk_residual (numpy.ndarray): Unmasked residual array.
+        spec_index (int): QSO index.
 
     Returns:
-        assertion errors
+        int: 0 if sizes match, 1 if a size mismatch is detected.
     """
     bad_conv=0
     try:
@@ -495,7 +495,10 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
         obs_wave (np.array): observed wavelength in Angstroms
 
     Returns:
-        instrumental resolution corrected velocity dispersion in km/s
+        tuple: A tuple ``(vel1, vel2)`` where each element is a float giving the
+            instrumental-resolution-corrected velocity dispersion (km/s) for the
+            respective line. Returns ``numpy.nan`` for a line whose fitted width
+            is smaller than the instrumental resolution.
 
     Note:
         - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.

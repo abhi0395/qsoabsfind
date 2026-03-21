@@ -4,13 +4,14 @@ Installation
 Prerequisites
 -------------
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - ``numpy``
 - ``scipy``
 - ``astropy``
 - ``numba``
 - ``matplotlib``
-- ``pytest`` (for running tests)
+- ``tqdm`` (for progress bars)
+- ``pyyaml`` (for configuration file handling)
 
 Clone the Repository
 --------------------
@@ -68,7 +69,7 @@ For developers (editable mode installation):
     pip install -e .
 
 Run Unit tests
----------
+--------------
 
 Verify the installation by running tests:
 
@@ -78,14 +79,14 @@ Verify the installation by running tests:
 
 
 Quick installation test
-----------
+-----------------------
 
 Test the installation:
 
 .. code-block:: python
 
     python -c "import qsoabsfind; print(qsoabsfind.__version__)"
-    python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
+    python -c "from qsoabsfind.parallel_convolution import parallel_convolution_search; print('Installation successful!')"
 
 
 Description

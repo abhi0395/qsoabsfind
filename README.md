@@ -18,7 +18,7 @@
 
 ## qsoabsfind: Quasar Absorber Finder
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in **SDSS** and **DESI** like low-resolution quasar spectra. It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in like low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
 
 The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
@@ -34,6 +34,9 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 | Al III (Al²⁺)   | 1854.72     | 1862.79    |
 | Fe II (Fe⁺)  | 2586.65     | 2600.17     |
 | Mg II (Mg⁺)   | 2796.35    | 2803.52     |
+| CaII (Ca⁺) | 3934.78 | 3969.59 |
+| NaI (Na)   | 5891.58    | 5897.57     |
+
 
 
 Key Features
@@ -66,13 +69,14 @@ The full documentation is available at [https://qsoabsfind.readthedocs.io](https
 
 ### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - `numpy`
 - `scipy`
 - `astropy`
 - `numba`
 - `matplotlib`
-- `pytest` (for running tests)
+- `tqdm` (for progress bar)
+- `pyyaml`
 
 ### 1. Clone the Repository
 ```bash
@@ -83,10 +87,10 @@ cd qsoabsfind
 
 ### 2. Set Up Environment
 
-#### Option 1: Using Conda (Recommended, python>=3.9)
+#### Option 1: Using Conda (Recommended, python>=3.10)
 
 ```bash
-conda create -n qsoabsfind python=3.9
+conda create -n qsoabsfind python=3.10
 conda activate qsoabsfind
 
 # Install dependencies
@@ -120,7 +124,7 @@ python -m unittest discover -s tests
 ### 4. Quick installation test
 ```bash
 python -c "import qsoabsfind; print(qsoabsfind.__version__)"
-python -c "from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra; print('Installation successful!')"
+python -c "from qsoabsfind.parallel_convolution import parallel_convolution_search; print('Installation successful!')"
 ```
 
 Description
@@ -180,6 +184,93 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --dv 300
 ```
 
+**Running with a YAML config file**
+---------------------
+
+Instead of passing all arguments on the command line, you can store them in a YAML config file and pass it with `--config`. Any argument also given on the command line will override the YAML value.
+
+```sh
+qsoabsfind --config example_config.yaml
+```
+
+CLI flags always take priority, so you can override individual values without editing the file:
+
+```sh
+# override absorber and enable verbose on the fly
+qsoabsfind --config example_config.yaml --absorber CIV --verbose
+```
+
+A fully annotated template is provided at `data/example_config.yaml`.
+
+**Reading output catalogs**
+---------------------
+
+After running the absorber search, you can load the output FITS catalog using the `AbsorberData` class:
+
+```python
+from qsoabsfind.datamodel import AbsorberData
+
+catalog = AbsorberData('test_MgII.fits', autoload=True)
+
+print(catalog.catalog)        # absorber table (ABSORBER HDU)
+print(catalog.metadata)       # QSO metadata (METADATA HDU)
+print(catalog.column_density) # column densities if present, else None
+```
+
+**Plotting a random absorber**
+---------------------
+
+Once you have loaded the spectra and the output catalog, you can visualise a randomly selected absorber using `plot_absorber` from `qsoabsfind.utils`:
+
+```python
+import numpy as np
+from qsoabsfind.datamodel import QSOSpecRead, AbsorberData
+from qsoabsfind.utils import plot_absorber
+
+# Load the output absorber catalog
+catalog = AbsorberData('/path/to/your/absorber.fits', autoload=True)
+
+# Pick a random absorber from the catalog
+rng = np.random.default_rng()
+idx = rng.integers(len(catalog.catalog))
+row = catalog.catalog[idx]
+
+# Load the corresponding QSO spectrum
+spectra = QSOSpecRead('/path/to/your/spectra.fits',
+                      index=int(row['INDEX_SPEC']),
+                      autoload=True)
+
+# Plot the absorber (full spectrum + zoomed-in doublet view)
+plot_absorber(spectra, absorber='MgII', zabs=row,
+              title=f"MgII absorber at z={row['Z_ABS']:.4f}")
+```
+
+Pass `show_error=True` to overlay the error spectrum, or `plot_filename='absorber.png'` to save the figure to disk instead of displaying it interactively.
+
+**Pre-filtering searchable QSOs**
+---------------------
+
+Before running the full absorber search you can quickly flag which spectra actually have a usable wavelength window for the absorber of interest.  `qsoabsfind.absorberutils.find_searchable_qsos` which runs spectra in parallel over the whole file and returns a two-column table (`QSO_INDEX`, `IS_GOOD`) that you can use to build a parent sample:
+
+```python
+from qsoabsfind.absorberutils import find_searchable_qsos
+
+parent = find_searchable_qsos(
+    fits_file='spectra.fits',
+    absorber='MgII',
+    constant_file='my_constants.py',
+    ncpus=8,          # parallel workers
+    n_qso=None,       # None = all spectra; or '1-5000', '500', '1-5000:2' etc.
+    verbose=False,
+)
+
+# keep only searchable QSOs
+good = parent[parent['IS_GOOD']]
+print(f"{len(good)} / {len(parent)} QSOs have a searchable MgII window")
+```
+
+The function applies the same overridable-constants logic as the main pipeline, so the result is consistent with what the full search would use.
+
 Useful notes:
 -------------
 
@@ -198,7 +289,7 @@ Example catalog runs
 
 SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
-Citation & Acknowledgements
+Citation 
 ---------------------------
 
 If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
@@ -264,10 +355,15 @@ Contribution
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to **abhijeetanand2011@gmail.com** or, preferably, open a GitHub issue.
 
+Acknowledgements
+-----------
+
+The first crude version of the codebase was developed and written by me during my PhD with lots of suggestions from my PhD supervisors [Prof. Dr. Guinevere Kauffmann](https://www.mpa-garching.mpg.de/person/44092) and [Dr. Dylan Nelson](https://nelson.tng-project.org/). Over the years, it has evolved from a specialized script into the generic, community-ready framework it is today. I would like to extend my thanks to the VS Code AI agents, which were instrumental in refining the codebase. They provided invaluable assistance in documenting functions, loggers, optimizing logic, and expanding unit test coverage. They helped ensure the code is both robust and maintainable. The project logo was created from a absorber example generated by me, with assistance from ChatGPT-5.
+
 License
 -------
 
-Copyright (c) 2021-2025 Abhijeet Anand.
+Copyright (c) 2021-2026 Abhijeet Anand.
 
 **qsoabsfind** is a free software made available under the MIT License. For details, see the LICENSE file.
 

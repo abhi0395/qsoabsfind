@@ -1,3 +1,5 @@
+:orphan:
+
 qsoabsfind Module
 =================
 
@@ -5,3 +7,4 @@ qsoabsfind Module
     :members:
     :undoc-members:
     :show-inheritance:
+    :no-index:

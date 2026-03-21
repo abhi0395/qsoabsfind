@@ -6,13 +6,18 @@ called during the absorber search in QSO spectra.
 import numpy as np
 from numba import jit
 import time
+import logging
 from astropy.table import Table
 from scipy.stats import chi2
-from .config import load_constants
 from .utils import elapsed
 
-# Constants
+# Constants — imported via the module object so that startup-time patches
+# (applied in parallel_convolution.main) propagate here automatically.
 from .constants import lines, speed_of_light, doublet_keys
+from . import constants as _constants
+
+logger = logging.getLogger(__name__)
+
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
@@ -230,12 +235,16 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
     (corresponding to minimum flux) redshift from each group.
 
     Args:
-        redshifts (list or np.array): list of redshifts.
-        fluxes (list or np.array): corresponding fluxes near each redshift.
-        delta_z (float): the maximum difference between redshifts to consider them contiguous.
+        redshifts (list or numpy.ndarray): List of candidate absorber redshifts.
+        fluxes (list or numpy.ndarray): Corresponding residual fluxes near each redshift.
+        residual (numpy.ndarray): Full residual flux array aligned with ``lam_obs``.
+        lam_obs (numpy.ndarray): Observed-frame wavelength array.
+        line1 (float): Rest-frame wavelength of the first doublet line (Angstrom).
+        line2 (float): Rest-frame wavelength of the second doublet line (Angstrom).
+        delta_z (float): Maximum redshift difference to consider two candidates contiguous.
 
     Returns:
-        best_redshifts: list of best redshifts from each group.
+        list: Best redshift from each contiguous group (minimum-flux weighted selection).
     """
 
     # Ensure inputs are numpy arrays for easy manipulation
@@ -342,9 +351,9 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         combined_final_our_z (list): List of potential absorbers identified for each spectrum.
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
-        d_pix (float): pixel separation for toloerance in wavelength (default 0.6 A)
-        use_kernel (str, optional): Kernel type.
-        delta_z_threshold (float): the maximum difference between redshifts to consider them contiguous.
+        d_pix (float): Pixel separation tolerance in wavelength (default 0.6 Angstrom).
+        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV).
+        delta_z (float): Maximum redshift difference to consider two candidates contiguous.
         window (int): window size for redshift estimate (default 9)
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
 
@@ -396,7 +405,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120):
+                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -433,7 +442,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
     Returns:
         bool: True if the absorber passes the selection criteria, False otherwise.
 
-    Notes:
+    Note:
         The function evaluates multiple selection criteria including:
         - Wavelength bounds for both lines
         - S/N thresholds for continuum and line centers
@@ -482,13 +491,12 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
     false_count = len(conds) - true_count
     result = all(c[0] for c in conds)
 
-    print(f"INFO: QSO_INDEX = {qso_id}, Condition checks for Z_ABS = {zabs}:")
-    for i, (status, detail, text) in enumerate(conds, 1):
-        print(f"INFO: {text}: {detail}: {status}")
-
-    print(f"INFO: Summary: {true_count} / {len(conds)} conditions satisfied, {false_count} failed.")
-    print(f"INFO: Final result: {result}")
-    print('=========')
+    if verbose:
+        logger.debug("QSO_INDEX = %s, Condition checks for Z_ABS = %s", qso_id, zabs)
+        for status, detail, text in conds:
+            logger.debug("%s: %s: %s", text, detail, status)
+        logger.debug("Summary: %s / %s conditions satisfied, %s failed.", true_count, len(conds), false_count)
+        logger.debug("Final result: %s", result)
 
     return result
 
@@ -704,7 +712,7 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
 
     return z_corr, z_err
 
-def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None):
+def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None, verbose=False):
 
     """
     Return default red and blue end rest-frame quasar emission wavelength range
@@ -720,23 +728,23 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
     """
 
     if start_rest_wave is not None and end_rest_wave is not None:
-        print('INFO: using user-defined wavelength search window')
+        if verbose:
+            logger.info('using user-defined wavelength search window')
         lam_blue = start_rest_wave
         lam_red = end_rest_wave
     else:
-        print('INFO: using default wavelength search window')
+        if verbose:
+            logger.info('using default wavelength search window')
         if absorber in ['MgII', 'FeII']:
             lam_blue = lines['CIV_1549']
             lam_red = lines['MgII_2799']
 
         elif absorber == 'CIV':
-            lam_blue = 1310.0
+            lam_blue = _constants.LAM_CIV_MIN
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            # assuming 3600 to be starting wavelength
-            # and maximum redshift of quasar to be 6 in SDSS/DESI like spectra
-            lam_blue = 3600/(1+6.2)
+            lam_blue = _constants.SMALL_WAVE
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
@@ -751,12 +759,20 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_blue = lines['CIV_1549']
             lam_red = lines['AlIII_1857']
 
+        elif absorber == 'NaI':
+            lam_blue = lines['Lya']
+            lam_red = _constants.LARGE_WAVE
+
+        elif absorber == 'CaII':
+            lam_blue = lines['Lya']
+            lam_red = _constants.LARGE_WAVE
+
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 
     return lam_blue, lam_red
 
-def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0):
+def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, verbose=False):
     """
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
@@ -777,9 +793,10 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     # Convert velocity offset to redshift offset
     dz = (abs(dv) / speed_of_light) * (1 + zqso)
 
-    lam_blue, lam_red = return_search_window_wavelength_range(absorber, start_rest_wave, end_rest_wave)
+    lam_blue, lam_red = return_search_window_wavelength_range(absorber, start_rest_wave, end_rest_wave, verbose=verbose)
 
-    print(f'INFO: wavelength search window in quasar-rest frame: {lam_blue, lam_red} Angstroms')
+    if verbose:
+        logger.info('wavelength search window in quasar-rest frame: %s Angstroms', (lam_blue, lam_red))
 
     lam_blue_obs = lam_blue * (1 + zqso + dz)
     lam_red_obs = lam_red * (1 + zqso - dz)
@@ -813,7 +830,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     """
     start = elapsed(None, "")
 
-    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep)
+    lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep, verbose=verbose)
 
     imp_ind = np.where((wavelength >= lam_start) & (wavelength <= lam_end))[0]
     lam_search = wavelength[imp_ind]
@@ -828,15 +845,21 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     if absorber == 'CIV':
         c_z = 1 + zqso
         # OI 1302 and SiII 1304 masking
-        rmv_lam0_1 = (lam_search >= 1296 * c_z) & (lam_search <= 1310 * c_z)
+        rmv_lam0_1 = (lam_search >= 1296 * c_z) & (lam_search <= _constants.LAM_CIV_MIN * c_z)
         lam_search = lam_search[~rmv_lam0_1]
         error_residual = error_residual[~rmv_lam0_1]
         residual = residual[~rmv_lam0_1]
 
-    # Masking other lines (CaII, OH NaD)
-    rmv_lam0 = (lam_search >= 3928) & (lam_search <= 3940) | \
-               (lam_search >= 3963) & (lam_search <= 3975) | \
-               (lam_search >= 5568) & (lam_search <= 5588) | \
+    if absorber == 'MgII':
+        c_z = 1 + zqso
+        # Masking other lines (CaII, OH NaD)
+        rmv_lam0_1 = (lam_search >= 3928 * c_z) & (lam_search <= 3980 * c_z)
+        lam_search = lam_search[~rmv_lam0_1]
+        error_residual = error_residual[~rmv_lam0_1]
+        residual = residual[~rmv_lam0_1]
+
+    # Masking other lines (OH or atomospheric sky lines)
+    rmv_lam0 = (lam_search >= 5568) & (lam_search <= 5588) | \
                (lam_search >= 6295) & (lam_search <= 6305)
 
     lam_search = lam_search[~rmv_lam0]
@@ -851,7 +874,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
 def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs):
     """Check if an absorber can be searched in a given QSO spectrum.
 
-    This function loads a single QSO spectrum from a FITS file,
+    This function loads a single QSO spectrum from a spec.QSOSpecRead object,
     removes NaNs, and determines if the absorber's search window
     falls within the spectrum's observed wavelength range.
 
@@ -879,7 +902,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     z_qso = spectra.metadata['Z_QSO']
     lam_obs = spectra.wavelength
 
-    if lam_obs.size <= 10:
+    if lam_obs.size <= _constants.MIN_NPIXEL:
         return 0
 
     # Define the wavelength range for searching the absorber
@@ -908,15 +931,111 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, \
         "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    print(f'INFO: Time took to find available search pixels: {time.time()-start_time:.3f} [sec]')
+    if kwargs.get("verbose", False):
+        logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
-    if lam_search.size <= 10:
+    if lam_search.size <= _constants.MIN_NPIXEL:
         return 0
 
     if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
         snr_median = np.nanmedian(unmsk_residual / unmsk_error)
-        print(f'INFO: Checking SNR in the wavelength search region (median SNR = {snr_median:.2f}, threshold = {kwargs["snr_cut"]})')
+        if kwargs.get("verbose", False):
+            logger.info('Checking SNR in the wavelength search region (median SNR = %.2f, threshold = %s)', snr_median, kwargs["snr_cut"])
         if snr_median < kwargs["snr_cut"]:
             return 0
 
     return 1
+
+
+def _check_searchable_one(params):
+    """Worker helper for find_searchable_qsos — must be module-level to be picklable."""
+    from .datamodel import QSOSpecRead
+    fits_file, idx, absorber, kwargs = params
+    spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
+    return idx, int(return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs))
+
+
+def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None, verbose=False):
+    """Run searchability checks for all QSO spectra in parallel.
+
+    For each spectrum, determines whether the given absorber can be searched
+    based on the wavelength coverage and pixel count thresholds defined in the
+    user constants file.  Overridable package constants (``SMALL_WAVE``,
+    ``LARGE_WAVE``, ``LAM_CIV_MIN``, ``MIN_NPIXEL``) are patched from the
+    user constants file before the checks run, exactly as done in the main
+    convolution pipeline.
+
+    Args:
+        fits_file (str): Path to the FITS file containing normalised QSO spectra.
+        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``).
+        constant_file (str): Path to the user constants ``.py`` file.
+        ncpus (int): Number of parallel worker processes (default 4).
+        n_qso (int or str, optional): Number of spectra to check, or a range
+            string such as ``'1-1000'`` or ``'1-1000:10'``.  If ``None``, all
+            spectra in the file are checked.
+        verbose (bool): If ``True``, pass verbose flag to the per-spectrum
+            check (default ``False``).
+
+    Returns:
+        astropy.table.Table: Table with two columns:
+
+        - ``QSO_INDEX`` (int): Spectrum index in the FITS file.
+        - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in
+          that spectrum, ``False`` otherwise.
+    """
+    import os
+    import multiprocessing
+    from multiprocessing import Pool
+    from tqdm import tqdm
+    from .config import load_constants
+    from .utils import read_nqso_from_header, parse_qso_sequence
+
+    # Load and apply user constants (same override logic as in main pipeline)
+    const_path = os.path.abspath(constant_file)
+    user_constants = load_constants(const_path)
+
+    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
+    logger.info('Physical constant resolution (user file overrides shown with *):')
+    for _name in _overridable:
+        _user_val = getattr(user_constants, _name, None)
+        _pkg_val = getattr(_constants, _name)
+        if _user_val is not None and _user_val != _pkg_val:
+            print('INFO: %-15s = %s  (overrides package default: %s)' % (_name, _user_val, _pkg_val))
+            setattr(_constants, _name, _user_val)
+        else:
+            print('INFO: %-15s = %s  (package default)' % (_name, _pkg_val))
+
+    # Build per-spectrum kwargs from the user constants search parameters
+    search_params = dict(user_constants.search_parameters)
+    search_params['verbose'] = verbose
+
+    # Resolve QSO index range
+    if n_qso is None:
+        n_qso = read_nqso_from_header(fits_file)
+    spec_indices = parse_qso_sequence(str(n_qso))
+
+    params_list = [(fits_file, idx, absorber, search_params) for idx in spec_indices]
+    n_jobs = min(ncpus, max(1, multiprocessing.cpu_count() - 1))
+    print('INFO: Checking searchability of %d spectra for %s absorber using %d CPUs' % (
+                len(spec_indices), absorber, n_jobs))
+
+    with Pool(processes=n_jobs) as pool:
+        results = list(
+            tqdm(
+                pool.imap(_check_searchable_one, params_list),
+                total=len(params_list),
+                desc=f'{absorber} searchability check',
+                unit='spec',
+            )
+        )
+
+    qso_indices, flags = zip(*results) if results else ([], [])
+
+    out = Table()
+    out['QSO_INDEX'] = list(qso_indices)
+    out['IS_GOOD'] = [bool(v) for v in flags]
+
+    n_good = sum(out['IS_GOOD'])
+    print('INFO: %d / %d QSOs have a searchable %s window' % (n_good, len(out), absorber))
+
+    return out

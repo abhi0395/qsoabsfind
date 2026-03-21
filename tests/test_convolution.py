@@ -7,10 +7,10 @@ import os
 import numpy as np
 from astropy.table import Table
 from qsoabsfind.absfinder import read_single_spectrum_and_find_absorber
-from qsoabsfind.parallel_convolution import parallel_convolution_method_absorber_finder_QSO_spectra
+from qsoabsfind.parallel_convolution import parallel_convolution_search
 from qsoabsfind.config import load_constants
 from qsoabsfind.columndensity import total_column_density
-from qsoabsfind.spec import QSOSpecRead
+from qsoabsfind.datamodel import QSOSpecRead
 from qsoabsfind.absorberutils import return_if_absorber_can_be_detected_in_a_spectrum
 
 class TestQSOAbsFind(unittest.TestCase):
@@ -70,11 +70,13 @@ class TestQSOAbsFind(unittest.TestCase):
             self.desi_fits_file, spec_index, desi_absorber, **self.desi_constants.search_parameters)
 
         # Validate the output
-        self.assertIsInstance(sdss_result, tuple)
-        self.assertEqual(len(sdss_result), 16)  # Ensure the correct number of return values
+        self.assertIsInstance(sdss_result, dict)
+        self.assertEqual(len(sdss_result), 16)  # Ensure the correct number of keys
+        self.assertIn('z_abs', sdss_result)
 
-        self.assertIsInstance(desi_result, tuple)
-        self.assertEqual(len(desi_result), 16)  # Ensure the correct number of return values
+        self.assertIsInstance(desi_result, dict)
+        self.assertEqual(len(desi_result), 16)  # Ensure the correct number of keys
+        self.assertIn('z_abs', desi_result)
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
         # Set up the input parameters for the function
@@ -82,11 +84,11 @@ class TestQSOAbsFind(unittest.TestCase):
         absorber = 'MgII'
         n_jobs = 6
         # Call the function
-        sdss_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+        sdss_results = parallel_convolution_search(
             self.sdss_fits_file, spec_indices, absorber, n_jobs, **self.sdss_constants.search_parameters)
 
         desi_absorber='CIV'
-        desi_results = parallel_convolution_method_absorber_finder_QSO_spectra(
+        desi_results = parallel_convolution_search(
             self.desi_fits_file, spec_indices, desi_absorber, n_jobs, **self.desi_constants.search_parameters)
 
         # Validate the output

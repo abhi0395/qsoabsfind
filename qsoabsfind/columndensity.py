@@ -242,23 +242,25 @@ def compute_single_column_density(args):
     the total column density for a single absorption system using the doublet method.
 
     Args:
-        args (tuple): Packed arguments containing:
-            - flux (array-like): Normalized flux spectrum.
-            - error (array-like): Normalized Flux uncertainty array.
-            - wavelength (array-like): Observed wavelength array.
-            - tt_row (object): Table row or object containing absorber properties.
-            - f1 (float): Oscillator strength of line 1.
-            - f2 (float): Oscillator strength of line 2.
-            - l1 (float): Rest wavelength of line 1.
-            - l2 (float): Rest wavelength of line 2.
-            - continuum_error_frac (float): Fractional continuum placement uncertainty.
-            - dv (float): Velocity range for integration in km/s.
-            - logwave (bool): Whether wavelength array is in log spacing.
+        args (tuple): Packed arguments in the following order:
+
+            * **flux** (*numpy.ndarray*) — Continuum-normalised flux spectrum.
+            * **error** (*numpy.ndarray*) — Flux uncertainty array.
+            * **wavelength** (*numpy.ndarray*) — Observed wavelength array (Angstrom).
+            * **tt_row** (*astropy.table.Row*) — Table row containing absorber properties
+              (must include ``Z_ABS`` and EW columns).
+            * **f1** (*float*) — Oscillator strength of the first line.
+            * **f2** (*float*) — Oscillator strength of the second line.
+            * **l1** (*tuple*) — ``(key, rest_wavelength)`` for the first line.
+            * **l2** (*tuple*) — ``(key, rest_wavelength)`` for the second line.
+            * **continuum_error_frac** (*float*) — Fractional continuum placement uncertainty.
+            * **dv** (*float*) — Velocity range for integration (km/s).
+            * **logwave** (*bool*) — Whether the wavelength array is log-spaced.
 
     Returns:
-        dict: Dictionary containing column density measurements and uncertainties,
-            typically including keys like 'log10N', 'sig_log10N', 'saturation', 'fn'
-            flags are diagnostic information from the calculation.
+        dict: Column density measurements and uncertainties. Keys match the output
+        of :func:`total_column_density`: ``N``, ``N_err``, ``logN``, ``err_logN``,
+        ``flag``, and saturation diagnostics.
     """
     flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv, logwave = args
     return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2,
@@ -281,10 +283,11 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
         nproc (int): number of cpus for multiprocessing
 
     Returns:
-        appends an extra HDU: COLUMN_DENSITY in the absorber catalog output filename
+        None: Appends a ``COLUMN_DENSITY`` BinTableHDU to the absorber catalog
+        FITS file specified by ``output``.
     """
 
-    from .spec import QSOSpecRead
+    from .datamodel import QSOSpecRead
     start = time.time()
 
     tt = Table.read(output, hdu="ABSORBER")

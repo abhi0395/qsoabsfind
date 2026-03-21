@@ -1,5 +1,5 @@
 Absorber Search Windows
-==============
+=======================
 
 For each absorber, user can define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:
 
@@ -8,7 +8,7 @@ For each absorber, user can define an observed-frame wavelength search window ba
 - We apply wavelength offset near the edges to make sure both lines are still inside the wavelength window and edges are not very noisy.
 
 Parameter Definitions
------------
+---------------------
 
 - :math:`\lambda_{\mathrm{min}},\, \lambda_{\mathrm{max}}`: Full observed-frame wavelength coverage of the spectrum.
 - :math:`z_{\mathrm{QSO}}`: Emission redshift of the background quasar.
@@ -17,7 +17,7 @@ Parameter Definitions
 
 
 Search Window Definitions
------------
+-------------------------
 
 For each absorber, the search window in observed-frame wavelength is defined using quasar intrinsic emission-line and a velocity-based offset. The purpose is to restrict the search to physically motivated regions around the quasar where the absorber is likely to appear, while avoiding contamination from unrelated features.
 
@@ -38,7 +38,7 @@ To convert a velocity offset :math:`\Delta v` (in km/s) into a redshift offset:
 where :math:`c` is the speed of light.
 
 User-defined wavelength boundaries (in quasar rest-frame):
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The code allows users to provide the wavelength boundaries (in the quasar rest-frame) to define the absorber search window. Details are provided below.
 
@@ -58,12 +58,12 @@ The code allows users to provide the wavelength boundaries (in the quasar rest-f
 
 
 Default search window logic used for each metal doublet:
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Mg II (2796, 2803 Å)
-~~~~~~~~~~~~~~~~~~~~
+Mg II (2796, 2803 Ang)
+~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)
+- **Emission lines**: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)
 - **Search window**:
 
 .. math::
@@ -74,10 +74,10 @@ Mg II (2796, 2803 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-C IV (1548, 1550 Å)
-~~~~~~~~~~~~~~~~~~~~
+C IV (1548, 1550 Ang)
+~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Outside Si II forest (>1310 Å), red side - C IV (1549.5 Å)
+- **Emission lines**: blue side - Outside Si II forest (>1310 Ang), red side - C IV (1549.5 Ang)
 - **Search window**:
 
 .. math::
@@ -88,10 +88,10 @@ C IV (1548, 1550 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-O VI (1032, 1038 Å)
-~~~~~~~~~~~~~~~~~~~~
+O VI (1032, 1038 Ang)
+~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side -  500 Å (arbitrary low), red side - O VI (1033.82 Å)
+- **Emission lines**: blue side -  500 Ang (arbitrary low), red side - O VI (1033.82 Ang)
 - **Search window**:
 
 .. math::
@@ -102,10 +102,10 @@ O VI (1032, 1038 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{OVI}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-N V (1238, 1242 Å)
+N V (1238, 1242 Ang)
 ~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Lyβ (1025.72 Å), red side - N V (1240.8 Å)
+- **Emission lines**: blue side - Lyβ (1025.72 Ang), red side - N V (1240.8 Ang)
 - **Search window**:
 
 .. math::
@@ -116,10 +116,10 @@ N V (1238, 1242 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{NV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-Si IV (1394, 1403 Å)
-~~~~~~~~~~~~~~~~~~~~
+Si IV (1394, 1403 Ang)
+~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Lyα (1215.67 Å), red side - Si IV (1399.8 Å)
+- **Emission lines**: blue side - Lyα (1215.67 Ang), red side - Si IV (1399.8 Ang)
 - **Search window**:
 
 .. math::
@@ -130,10 +130,10 @@ Si IV (1394, 1403 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{SiIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-Al III (1854, 1862 Å)
-~~~~~~~~~~~~~~~~~~~~
+Al III (1854, 1862 Ang)
+~~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - C IV (1549.5 Å), red side - Al III (1857.4 Å)
+- **Emission lines**: blue side - C IV (1549.5 Ang), red side - Al III (1857.4 Ang)
 - **Search window**:
 
 .. math::
@@ -144,10 +144,10 @@ Al III (1854, 1862 Å)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{AlIII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
-Fe II (2586, 2600 Å)
-~~~~~~~~~~~~~~~~~~~~
+Fe II (2586, 2600 Ang)
+~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - C IV (1549.5 Å), red side - Mg II (2799.1 Å)
+- **Emission lines**: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)
 - **Search window**:
 
 .. math::
@@ -157,4 +157,33 @@ Fe II (2586, 2600 Å)
 .. math::
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+
+Ca II (3934, 3969 Ang)
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+
+
+Na I (5891, 5897 Ang)
+~~~~~~~~~~~~~~~~~~~~~
+
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 

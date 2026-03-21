@@ -11,7 +11,12 @@ setup(
         'scipy',
         'numba',
         'matplotlib',
+        'tqdm',
+        'pyyaml',
     ],
+    extras_require={
+        'dev': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
             'qsoabsfind=qsoabsfind.parallel_convolution:main',
