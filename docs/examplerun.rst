@@ -30,6 +30,28 @@ Before running, please read :doc:`File formats <fileformat>`.
                --dv 300
 
 
+Running with a YAML config file
+-------------------------------
+
+Instead of typing all arguments on the command line you can store them in a
+YAML file and pass it with ``--config``. CLI flags always override YAML values.
+
+.. code-block:: bash
+
+    qsoabsfind --config example_config.yaml
+
+    # Override individual values without editing the file:
+    qsoabsfind --config example_config.yaml --absorber CIV --verbose
+
+A fully annotated template is provided in ``data/example_config.yaml``.
+
+.. note::
+
+    YAML keys use underscores, not dashes (e.g. ``input_fits_file`` for
+    ``--input-fits-file``). Set optional keys to ``null`` to let argparse
+    use its built-in default.
+
+
 Ready to run examples
 ---------------------
 

@@ -884,7 +884,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
-        int: 1 if the absorber can be searched in the spectrum, 0 otherwise.
+        tuple: 1 if the absorber can be searched in the spectrum, 0 otherwise and snr value (if snr cut added, otherwise snr value = -1)
 
     Note:
         - Assumes input spectra are already normalized (flux / continuum).
@@ -893,6 +893,8 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     """
 
     start_time = time.time()
+
+    snr_val = -1
 
     spectra.metadata = Table(spectra.metadata)  # in case spectra.metadata is a Row
 
@@ -903,7 +905,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     lam_obs = spectra.wavelength
 
     if lam_obs.size <= _constants.MIN_NPIXEL:
-        return 0
+        return int(0), snr_val
 
     # Define the wavelength range for searching the absorber
     min_wave, max_wave = lam_obs.min(), lam_obs.max()
@@ -935,16 +937,20 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
         logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
     if lam_search.size <= _constants.MIN_NPIXEL:
-        return 0
+        return int(0), snr_val
 
     if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
-        snr_median = np.nanmedian(unmsk_residual / unmsk_error)
-        if kwargs.get("verbose", False):
-            logger.info('Checking SNR in the wavelength search region (median SNR = %.2f, threshold = %s)', snr_median, kwargs["snr_cut"])
-        if snr_median < kwargs["snr_cut"]:
-            return 0
+        if "statistics" in kwargs and kwargs["statistics"] is not None:
+            if kwargs["statistics"] == "median":
+                snr_val = np.nanmedian(unmsk_residual / unmsk_error)
+            if kwargs["statistics"] == "mean":
+                snr_val = np.nanmean(unmsk_residual / unmsk_error)
+            if kwargs.get("verbose", False):
+                logger.info('Checking SNR in the wavelength search region %s SNR = %.2f, threshold = %s)', snr_val, kwargs["snr_cut"], kwargs["statistics"])
+        if snr_val < kwargs["snr_cut"]:
+            return int(0), snr_val
 
-    return 1
+    return int(1), snr_val
 
 
 def _check_searchable_one(params):
@@ -952,7 +958,8 @@ def _check_searchable_one(params):
     from .datamodel import QSOSpecRead
     fits_file, idx, absorber, kwargs = params
     spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
-    return idx, int(return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs))
+    is_good_qso, snr_val = return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs)
+    return idx, is_good_qso, snr_val
 
 
 def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None, verbose=False):
@@ -982,6 +989,7 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
         - ``QSO_INDEX`` (int): Spectrum index in the FITS file.
         - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in
           that spectrum, ``False`` otherwise.
+        - ``SNR`` (float): SNR value in the absorber search region (if snr_cut added, otherwise snr value = -1)
     """
     import os
     import multiprocessing
@@ -1029,11 +1037,12 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
             )
         )
 
-    qso_indices, flags = zip(*results) if results else ([], [])
+    qso_indices, is_good_qso, snr_val = zip(*results) if results else ([], [], [])
 
     out = Table()
-    out['QSO_INDEX'] = list(qso_indices)
-    out['IS_GOOD'] = [bool(v) for v in flags]
+    out['QSO_INDEX'] =  np.asarray(list(qso_indices), dtype=np.int32)
+    out['IS_GOOD'] = np.asarray([bool(v) for v in is_good_qso], dtype=bool)
+    out['SNR'] = np.asarray(snr_val, dtype=np.float32)
 
     n_good = sum(out['IS_GOOD'])
     print('INFO: %d / %d QSOs have a searchable %s window' % (n_good, len(out), absorber))

@@ -143,11 +143,34 @@ Important Instructions
   -  `data/desi/qso_test_spectra.fits` : 100 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
 - These folders also have their own constants files. You can use these files to test example runs as described below.
 
-Running as bash script:
-----------------
+**Pre-filtering searchable QSOs**
+---------------------
+
+Before running the full absorber search you can quickly flag which spectra actually have a usable wavelength window for the absorber of interest.  `qsoabsfind.absorberutils.find_searchable_qsos` which runs spectra in parallel over the whole file and returns a two-column table (`QSO_INDEX`, `IS_GOOD`) that you can use to build a parent sample:
+
+```python
+from qsoabsfind.absorberutils import find_searchable_qsos
+
+parent = find_searchable_qsos(
+    fits_file='spectra.fits',
+    absorber='MgII',
+    constant_file='my_constants.py',
+    ncpus=8,          # parallel workers
+    n_qso=None,       # None = all spectra; or '1-5000', '500', '1-5000:2' etc.
+    verbose=False,
+)
+
+# keep only searchable QSOs
+good = parent[parent['IS_GOOD']]
+print(f"{len(good)} / {len(parent)} QSOs have a searchable MgII window")
+```
+
+The function applies the same overridable-constants logic as the main pipeline, so the result is consistent with what the full search would use.
+
+**Running as bash script:**
+---------------------------
 
 **SDSS DR16 Spectra (without column densities)**
----------------------
 
 ```sh
 qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
@@ -159,7 +182,6 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
 ```
 
 **DESI DR1 Spectra (without column densities)**
----------------------
 
 ```sh
 qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
@@ -171,7 +193,6 @@ qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
 ```
 
 **SDSS DR16 Spectra (with column densities)**
----------------------
 
 ```sh
 qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
@@ -184,8 +205,8 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --dv 300
 ```
 
-**Running with a YAML config file**
----------------------
+Running with a YAML config file
+-------------------------------
 
 Instead of passing all arguments on the command line, you can store them in a YAML config file and pass it with `--config`. Any argument also given on the command line will override the YAML value.
 
@@ -203,7 +224,7 @@ qsoabsfind --config example_config.yaml --absorber CIV --verbose
 A fully annotated template is provided at `data/example_config.yaml`.
 
 **Reading output catalogs**
----------------------
+---------------------------
 
 After running the absorber search, you can load the output FITS catalog using the `AbsorberData` class:
 
@@ -218,7 +239,7 @@ print(catalog.column_density) # column densities if present, else None
 ```
 
 **Plotting a random absorber**
----------------------
+------------------------------
 
 Once you have loaded the spectra and the output catalog, you can visualise a randomly selected absorber using `plot_absorber` from `qsoabsfind.utils`:
 
@@ -247,29 +268,6 @@ plot_absorber(spectra, absorber='MgII', zabs=row,
 
 Pass `show_error=True` to overlay the error spectrum, or `plot_filename='absorber.png'` to save the figure to disk instead of displaying it interactively.
 
-**Pre-filtering searchable QSOs**
----------------------
-
-Before running the full absorber search you can quickly flag which spectra actually have a usable wavelength window for the absorber of interest.  `qsoabsfind.absorberutils.find_searchable_qsos` which runs spectra in parallel over the whole file and returns a two-column table (`QSO_INDEX`, `IS_GOOD`) that you can use to build a parent sample:
-
-```python
-from qsoabsfind.absorberutils import find_searchable_qsos
-
-parent = find_searchable_qsos(
-    fits_file='spectra.fits',
-    absorber='MgII',
-    constant_file='my_constants.py',
-    ncpus=8,          # parallel workers
-    n_qso=None,       # None = all spectra; or '1-5000', '500', '1-5000:2' etc.
-    verbose=False,
-)
-
-# keep only searchable QSOs
-good = parent[parent['IS_GOOD']]
-print(f"{len(good)} / {len(parent)} QSOs have a searchable MgII window")
-```
-
-The function applies the same overridable-constants logic as the main pipeline, so the result is consistent with what the full search would use.
 
 Useful notes:
 -------------
@@ -290,7 +288,7 @@ Example catalog runs
 SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
 Citation 
----------------------------
+--------
 
 If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
 
@@ -356,7 +354,7 @@ Contribution
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to **abhijeetanand2011@gmail.com** or, preferably, open a GitHub issue.
 
 Acknowledgements
------------
+----------------
 
 The first crude version of the codebase was developed and written by me during my PhD with lots of suggestions from my PhD supervisors [Prof. Dr. Guinevere Kauffmann](https://www.mpa-garching.mpg.de/person/44092) and [Dr. Dylan Nelson](https://nelson.tng-project.org/). Over the years, it has evolved from a specialized script into the generic, community-ready framework it is today. I would like to extend my thanks to the VS Code AI agents, which were instrumental in refining the codebase. They provided invaluable assistance in documenting functions, loggers, optimizing logic, and expanding unit test coverage. They helped ensure the code is both robust and maintainable. The project logo was created from a absorber example generated by me, with assistance from ChatGPT-5.
 

@@ -51,7 +51,7 @@ class TestQSOAbsFind(unittest.TestCase):
         spec_index = np.random.randint(100)
         spec = QSOSpecRead(self.sdss_fits_file, autoload=True, index = spec_index)
         kwargs = {'verbose':False, "lam_edge_sep":25, 'start_rest_wave':None, 'end_rest_wave':None, 'dv':5000}
-        is_available = return_if_absorber_can_be_detected_in_a_spectrum(spec, "MgII", **kwargs)
+        is_available, _ = return_if_absorber_can_be_detected_in_a_spectrum(spec, "MgII", **kwargs)
         self.assertIn(is_available, [0,1])
 
     def test_convolution_method_absorber_finder_in_QSO_spectra(self):
