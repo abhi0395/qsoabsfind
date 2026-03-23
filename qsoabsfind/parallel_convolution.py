@@ -12,6 +12,7 @@ from multiprocessing import Pool
 from datetime import datetime
 import numpy as np
 from tqdm import tqdm
+from astropy.table import Table
 from .absfinder import read_single_spectrum_and_find_absorber
 from .columndensity import return_total_column_density_table
 from .io import append_table_to_fits
@@ -55,7 +56,7 @@ def _run_single_job(params):
     return run_convolution_method_absorber_finder_QSO_spectra(*params)
 
 def parallel_convolution_search(
-    fits_file, spec_indices, absorber, n_jobs, warnings_file=None, **kwargs
+    fits_file, spec_indices, absorber, n_jobs, warnings_file=None, zabs_known_map=None, **kwargs
 ):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
@@ -67,6 +68,10 @@ def parallel_convolution_search(
         absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
         n_jobs (int): Number of parallel jobs to run.
         warnings_file (str, optional): Path to a file where worker-process warnings are written. Default is None.
+        zabs_known_map (dict, optional): Mapping of spec_index (int) to a list of known absorber
+            redshifts. When provided, the convolution search is skipped for those spectra and
+            only Gaussian fitting and selection are run at the supplied redshifts. Spectra that
+            do not appear in the map are searched in the normal way. Default is None.
         **kwargs: Search parameters as described in qsoabsfind.constants().
 
     Returns:
@@ -77,7 +82,16 @@ def parallel_convolution_search(
             ``vel_disp1``, ``vel_disp2``, ``delta_chi2``.
     """
 
-    params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
+    if zabs_known_map is not None:
+        params_list = []
+        for spec_index in spec_indices:
+            spec_kwargs = dict(kwargs)
+            zk = zabs_known_map.get(int(spec_index))
+            if zk is not None:
+                spec_kwargs['zabs_known'] = zk
+            params_list.append((fits_file, spec_index, absorber, spec_kwargs))
+    else:
+        params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
     # Run jobs in parallel with live progress bar (ordered, streamed results).
     # Warnings are routed in a separate log file.
@@ -131,27 +145,43 @@ def parallel_convolution_search(
         'vel_disp1': [],
         'vel_disp2': [],
         'delta_chi2': [],
+        'unsearchable_indices': [],
     }
+    if zabs_known_map is not None:
+        combined_results['zabs_known'] = []
 
     for result in results:
-        valid_indices = np.array(result['z_abs']) > 0
+        # in known-z mode keep every row (z_abs=-1, 0, or a fitted value);
+        # in convolution mode keep only detected absorbers (z_abs > 0)
+        if 'zabs_known' in combined_results:
+            keep = np.ones(len(result['z_abs']), dtype=bool)
+        else:
+            keep = np.array(result['z_abs']) > 0
+        if np.all(np.array(result['z_abs']) == -1):
+            combined_results['unsearchable_indices'].append(int(result['index_spec'][0]))
 
-        combined_results['index_spec'].extend(np.array(result['index_spec'])[valid_indices])
-        combined_results['z_abs'].extend(np.array(result['z_abs'])[valid_indices])
-        combined_results['gauss_fit'].extend(np.array(result['gauss_fit'])[valid_indices])
-        combined_results['gauss_fit_std'].extend(np.array(result['gauss_fit_std'])[valid_indices])
-        combined_results['ew_1_mean'].extend(np.array(result['ew_1_mean'])[valid_indices])
-        combined_results['ew_2_mean'].extend(np.array(result['ew_2_mean'])[valid_indices])
-        combined_results['ew_total_mean'].extend(np.array(result['ew_total_mean'])[valid_indices])
-        combined_results['ew_1_error'].extend(np.array(result['ew_1_error'])[valid_indices])
-        combined_results['ew_2_error'].extend(np.array(result['ew_2_error'])[valid_indices])
-        combined_results['ew_total_error'].extend(np.array(result['ew_total_error'])[valid_indices])
-        combined_results['z_abs_err'].extend(np.array(result['z_abs_err'])[valid_indices])
-        combined_results['sn_1'].extend(np.array(result['sn_1'])[valid_indices])
-        combined_results['sn_2'].extend(np.array(result['sn_2'])[valid_indices])
-        combined_results['vel_disp1'].extend(np.array(result['vel_disp1'])[valid_indices])
-        combined_results['vel_disp2'].extend(np.array(result['vel_disp2'])[valid_indices])
-        combined_results['delta_chi2'].extend(np.array(result['delta_chi2'])[valid_indices])
+        combined_results['index_spec'].extend(np.array(result['index_spec'])[keep])
+        combined_results['z_abs'].extend(np.array(result['z_abs'])[keep])
+        combined_results['gauss_fit'].extend(np.array(result['gauss_fit'])[keep])
+        combined_results['gauss_fit_std'].extend(np.array(result['gauss_fit_std'])[keep])
+        combined_results['ew_1_mean'].extend(np.array(result['ew_1_mean'])[keep])
+        combined_results['ew_2_mean'].extend(np.array(result['ew_2_mean'])[keep])
+        combined_results['ew_total_mean'].extend(np.array(result['ew_total_mean'])[keep])
+        combined_results['ew_1_error'].extend(np.array(result['ew_1_error'])[keep])
+        combined_results['ew_2_error'].extend(np.array(result['ew_2_error'])[keep])
+        combined_results['ew_total_error'].extend(np.array(result['ew_total_error'])[keep])
+        combined_results['z_abs_err'].extend(np.array(result['z_abs_err'])[keep])
+        combined_results['sn_1'].extend(np.array(result['sn_1'])[keep])
+        combined_results['sn_2'].extend(np.array(result['sn_2'])[keep])
+        combined_results['vel_disp1'].extend(np.array(result['vel_disp1'])[keep])
+        combined_results['vel_disp2'].extend(np.array(result['vel_disp2'])[keep])
+        combined_results['delta_chi2'].extend(np.array(result['delta_chi2'])[keep])
+        if 'zabs_known' in combined_results:
+            zk = result.get('zabs_known')
+            if zk is not None:
+                combined_results['zabs_known'].extend(np.array(zk)[keep])
+            else:
+                combined_results['zabs_known'].extend([np.nan] * int(keep.sum()))
 
     return combined_results
 
@@ -171,6 +201,11 @@ def main():
     parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
     parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
     parser.add_argument('--verbose', action='store_true', help='Enable detailed per-spectrum/debug logging.')
+    parser.add_argument('--zabs-known-file', type=str, default=None,
+        help='Path to a FITS file with columns INDEX_SPEC and Z_ABS. When provided, the '
+             'convolution search is skipped for the listed spectra and only Gaussian fitting '
+             'is run at the supplied redshifts. Multiple rows with the same INDEX_SPEC are '
+             'treated as multiple known redshifts for that spectrum.')
 
     # --- Two-pass parse: load YAML defaults first, CLI args override them ---
     # First pass: extract --config without failing on unknown/required args
@@ -289,17 +324,42 @@ def main():
     if nboot is not None and nboot>0:
         logger.info('Gaussian fitting parameter estimation will be done with %s bootstrapping iterations', nboot)
 
+    # Load known-redshift map if the user provided a FITS file
+    zabs_known_map = None
+    if args.zabs_known_file:
+
+        zk_table = Table.read(args.zabs_known_file)
+        if 'INDEX_SPEC' not in zk_table.colnames or 'Z_ABS' not in zk_table.colnames:
+            raise ValueError(
+                f"--zabs-known-file must contain columns INDEX_SPEC and Z_ABS, "
+                f"found: {zk_table.colnames}")
+        zabs_known_map = {}
+        for row in zk_table:
+            idx = int(row['INDEX_SPEC'])
+            zabs_known_map.setdefault(idx, []).append(float(row['Z_ABS']))
+        logger.info('Loaded %d known-redshift entries for %d spectra from %s',
+                    len(zk_table), len(zabs_known_map), args.zabs_known_file)
+        spec_indices = sorted(zabs_known_map.keys())
+        logger.info('Running only on %d spectra listed in the known-redshift file', len(spec_indices))
+
     # Run the convolution method in parallel
     results = parallel_convolution_search(
         args.input_fits_file, spec_indices, absorber=args.absorber,
-        n_jobs=n_jobs, warnings_file=warnings_file, **user_constants.search_parameters
+        n_jobs=n_jobs, warnings_file=warnings_file,
+        zabs_known_map=zabs_known_map, **user_constants.search_parameters
     )
 
     # only save absorber file if there at least one absorber is detected
     if len(results["index_spec"])>0:
         # Save the results to a FITS file
-        logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
-        save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber)
+        if zabs_known_map is not None:
+            n_valid = int(np.sum(np.array(results["z_abs"]) > 0))
+            logger.info('Number of %s systems validated (z_abs > 0): %s of %s entries',
+                        args.absorber, n_valid, len(results["index_spec"]))
+        else:
+            logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
+        save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber,
+                             spec_indices=spec_indices)
     else:
         logger.info('No %s absorbers found, no file saved', args.absorber)
 

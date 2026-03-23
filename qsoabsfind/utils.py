@@ -544,8 +544,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
-        absorber (str): Type of absorber, e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII
-        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and 'GAUSS_FIT' columns, if not float.
+        absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
+        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and
+            'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.
         **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
@@ -555,14 +556,12 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
                   fontsize (int): Font size for the title and labels.
     """
 
-    # Extract common plot parameters from kwargs or set to default values
     xlabel = kwargs.pop('xlabel', 'obs wave (ang)')
     ylabel = kwargs.pop('ylabel', 'residual')
     title = kwargs.pop('title', 'QSO')
     fontsize = kwargs.pop('fontsize', 16)
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
-    # If zabs is a Table or structured array, extract redshifts and fit parameters
     if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
         redshifts = zabs['Z_ABS']
         fit_params = zabs['GAUSS_FIT']
@@ -576,17 +575,14 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
             fit_params = [fit_params]
 
     num_absorbers = len(redshifts)
+    sep = 25
 
-    sep = 25  # Set separation for zoomed plot ranges
+    l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
 
-    # Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots
     fig = plt.figure(figsize=(13.5, 8))
-    fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
-
-    # Super title for the entire figure
+    fig.subplots_adjust(hspace=0.15, wspace=0.15)
     fig.suptitle(title, fontsize=fontsize)
 
-    # Create the main plot in the first row
     ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
     ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
     if show_error:
@@ -595,20 +591,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
     ax_main.set_xlim(xmin, xmax)
     ax_main.legend(prop={'size':11})
-
-    # Determine the absorber line labels
-
-    if absorber not in doublet_keys:
-        raise ValueError(f"Unsupported absorber type: {absorber}")
-    else:
-        l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
-
-    # Plot vertical lines for the absorber lines in the main plot
     for z in redshifts:
-        x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
-        ax_main.axvline(x=x1, color='r', ls='--')
-        ax_main.axvline(x=x2, color='r', ls='--')
-
+        ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
+        ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
     ax_main.set_xlabel(xlabel, fontsize=fontsize)
     ax_main.set_ylabel(ylabel, fontsize=fontsize)
     ax_main.grid(True)
@@ -617,12 +602,11 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ax_main.tick_params(axis='both', which='major', labelsize=13)
     ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
-    # Add subplots for zoomed-in regions in the second row
     for idx, z in enumerate(redshifts):
         shift_z = 1 + z
         ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
-        mask = (lam > x1 - sep) & (lam < x2 + sep)  # Define zoom range around the lines
+        mask = (lam > x1 - sep) & (lam < x2 + sep)
         if not show_error:
             ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data', **kwargs)
         else:
@@ -630,12 +614,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         ax_zoom.axvline(x=x1, color='r', ls='--')
         ax_zoom.axvline(x=x2, color='r', ls='--')
         ax_zoom.set_xlim([x1 - sep, x2 + sep])
-
-        # Determine appropriate y-limits for the subplot based on data
         y_min, y_max = max(0, np.nanmin(residual[mask])), np.nanmax(residual[mask])
-        y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
+        y_margin = 0.2 * (y_max - y_min)
         ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
-
         ax_zoom.set_title(f'{absorber} at z={z:.3f}', fontsize=fontsize)
         ax_zoom.minorticks_on()
         ax_zoom.grid(True)
@@ -643,11 +624,8 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
         ax_zoom.tick_params(axis='both', which='major', labelsize=13)
         ax_zoom.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
-        # Add Gaussian fit
         if fit_params is not None:
             params = fit_params[idx]
-            # Adjust fit parameters for the redshift
-            # Plot the Gaussian fit
             lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
             fit_curve = double_gaussian(
                 lam_fit, params[0], shift_z * params[1], shift_z * params[2],
@@ -656,8 +634,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
             ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
         ax_zoom.legend(prop={'size':11})
 
-    # Use tight_layout to ensure there are no overlaps
-    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Reserve space for suptitle
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
 
     # Save or display the plot
     if plot_filename is not None:
@@ -676,6 +653,149 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
+
+
+def plot_absorber_known(spectra, absorber_dict, zoom=True, show_error=False,
+                        plot_filename=None, **kwargs):
+    """
+    Plot a full spectrum with all known absorber systems marked, optionally
+    followed by one zoomed panel per absorber — styled identically to
+    plot_absorber.
+
+    Args:
+        spectra (object): spectra class, output of QSOSpecRead().
+        absorber_dict (dict): Keys are absorber names (str, e.g. 'MgII'), values
+            are astropy Tables with 'Z_ABS' and 'GAUSS_FIT' columns.
+        zoom (bool): If True (default), append one zoomed panel per absorber
+            below the main spectrum panel.
+        show_error (bool): Plot error bars if True. Default False.
+        plot_filename (str): Save path, or None to display interactively.
+        **kwargs: xlabel, ylabel, title, fontsize, plus any matplotlib kwargs.
+    """
+
+    xlabel   = kwargs.pop('xlabel',   'obs wave (ang)')
+    ylabel   = kwargs.pop('ylabel',   'residual')
+    title    = kwargs.pop('title',    'QSO')
+    fontsize = kwargs.pop('fontsize', 16)
+
+    lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
+    sep = 25
+
+    _colours = ['red', 'C1', 'green', 'blue', 'purple', 'brown']
+
+    # Collect per-absorber data — same pattern as plot_absorber
+    absorber_info = []
+    for i, (name, zabs) in enumerate(absorber_dict.items()):
+        if name not in doublet_keys:
+            raise ValueError(f"Unsupported absorber type: '{name}'")
+        redshifts  = zabs['Z_ABS']
+        fit_params = zabs['GAUSS_FIT']
+        if isinstance(redshifts, float):
+            redshifts  = [redshifts]
+            fit_params = [fit_params]
+        l1, l2 = doublet_keys[name][0], doublet_keys[name][1]
+        colour  = _colours[i % len(_colours)]
+        absorber_info.append((name, l1, l2, redshifts, fit_params, colour))
+
+    num_panels = max(1, sum(len(r) for _, _, _, r, _, _ in absorber_info)) if zoom else 1
+    n_rows     = 2 if zoom else 1
+
+    fig = plt.figure(figsize=(13.5, 8))
+    fig.subplots_adjust(hspace=0.15, wspace=0.15)
+    fig.suptitle(title, fontsize=fontsize)
+
+    # ── Row 0: full spectrum ─────────────────────────────────────────────
+    ax_main = plt.subplot2grid((n_rows, num_panels), (0, 0), colspan=num_panels)
+    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
+    if show_error:
+        ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
+    ymask = ~np.isnan(residual)
+    ax_main.set_xlim(lam[ymask].min(), lam[ymask].max())
+    ax_main.set_ylim(-1, 2)
+
+    tick_h  = 0.3
+    txt_gap = 0.03
+
+    for name, l1, l2, redshifts, _, colour in absorber_info:
+        for z in redshifts:
+            if z <= 0:
+                continue
+            for wave in (lines[l1] * (1 + z), lines[l2] * (1 + z)):
+                nearest = np.argmin(np.abs(lam - wave))
+                base    = np.clip(float(residual[nearest]), -1, 1.5)
+                ax_main.vlines(wave, base, base + tick_h, color=colour, lw=1.2)
+            wave_l1 = lines[l1] * (1 + z)
+            nearest = np.argmin(np.abs(lam - wave_l1))
+            base    = np.clip(float(residual[nearest]), -1, 2)
+            ax_main.text(wave_l1, base + tick_h + txt_gap,
+                         f'{name}', color=colour, fontsize=7,
+                         rotation=90, va='bottom', ha='center')
+
+    ax_main.set_xlabel(xlabel, fontsize=fontsize)
+    ax_main.set_ylabel(ylabel, fontsize=fontsize)
+    ax_main.legend(prop={'size': 11})
+    ax_main.grid(True)
+    ax_main.minorticks_on()
+    ax_main.tick_params(axis='both', which='major', labelsize=13)
+    ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+
+    # ── Row 1: zoom panels — one per absorber per system, same as plot_absorber
+    if zoom:
+        total_cols = max(1, sum(len(r) for _, _, _, r, _, _ in absorber_info))
+        col = 0
+        for name, l1, l2, redshifts, fit_params, colour in absorber_info:
+            for idx, z in enumerate(redshifts):
+                shift_z = 1 + z
+                ax_zoom = plt.subplot2grid((n_rows, total_cols), (1, col))
+                x1, x2  = lines[l1] * shift_z, lines[l2] * shift_z
+                mask     = (lam > x1 - sep) & (lam < x2 + sep)
+                if not show_error:
+                    ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5,
+                                 label='data', **kwargs)
+                else:
+                    ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask],
+                                     marker='o', color='C0', markersize=6,
+                                     label='data', **kwargs)
+                ax_zoom.axvline(x=x1, color=colour, ls='--')
+                ax_zoom.axvline(x=x2, color=colour, ls='--')
+                ax_zoom.set_xlim([x1 - sep, x2 + sep])
+                y_min    = max(0, np.nanmin(residual[mask]))
+                y_max    = np.nanmax(residual[mask])
+                y_margin = 0.2 * (y_max - y_min)
+                ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
+                ax_zoom.set_title(f'{name} at z={z:.3f}', fontsize=fontsize)
+                ax_zoom.minorticks_on()
+                ax_zoom.grid(True)
+                ax_zoom.set_xlabel(xlabel, fontsize=fontsize)
+                ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
+                ax_zoom.tick_params(axis='both', which='major', labelsize=13)
+                ax_zoom.tick_params(axis='both', which='minor', length=2.5,
+                                    width=1, color='gray')
+                if fit_params is not None:
+                    params    = fit_params[idx]
+                    lam_fit   = np.linspace(x1 - sep, x2 + sep, 1000)
+                    fit_curve = double_gaussian(
+                        lam_fit,
+                        params[0], shift_z * params[1], shift_z * params[2],
+                        params[3], shift_z * params[4], shift_z * params[5]
+                    )
+                    ax_zoom.plot(lam_fit, fit_curve, color=colour, ls='-',
+                                 label='Gaussian Fit', **kwargs)
+                ax_zoom.legend(prop={'size': 11})
+                col += 1
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    if plot_filename is not None:
+        current_dir = os.getcwd()
+        plot_path   = (plot_filename if os.path.isabs(plot_filename)
+                       else os.path.join(current_dir, plot_filename))
+        plt.savefig(plot_path)
+        plt.close()
+        print(f"Plot saved as {plot_path}")
+    else:
+        plt.show()
+
 
 def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """

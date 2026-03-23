@@ -40,7 +40,27 @@ def read_fits_file(fits_file, index=None):
 
     return header, flux, error, wavelength, metadata
 
-def save_results_to_fits(results, input_file, output_file, headers, absorber):
+def _build_qso_info_hdu(input_file, spec_indices, results):
+    spec_arr = np.array(list(spec_indices))
+    metadata = Table.read(input_file, hdu="METADATA")
+    metadata = Table(metadata[spec_arr])
+    if 'Z' in metadata.colnames:
+        metadata.rename_column('Z', 'Z_QSO')
+    z_qso = np.array(metadata['Z_QSO'])
+    # IS_QSO_AVAILABLE is True when the search could run (z_abs != -1),
+    # regardless of whether an absorber was actually found. It is False
+    # only when the spectrum had too few pixels or the doublet fell outside
+    # the wavelength coverage (sentinel value -1).
+    unsearchable = set(results.get('unsearchable_indices', []))
+    is_available = np.array([int(idx) not in unsearchable for idx in spec_arr], dtype=bool)
+    return fits.BinTableHDU.from_columns([
+        fits.Column(name='INDEX_SPEC', format='K', array=spec_arr),
+        fits.Column(name='Z_QSO', format='D', array=z_qso),
+        fits.Column(name='IS_QSO_AVAILABLE', format='L', array=is_available),
+    ], name='QSO_INFO')
+
+
+def save_results_to_fits(results, input_file, output_file, headers, absorber, spec_indices=None):
     """
     Save the absorber results to a FITS file along with the metadata of QSOs.
 
@@ -50,6 +70,13 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         output_file (str): The path to the output FITS file.
         headers (dict): The headers to include in the FITS file.
         absorber (str): The absorber type (e.g. MgII, CIV).
+        spec_indices (list or array, optional): All spectrum indices that were processed.
+            When provided, a ``QSO_INFO`` BinTableHDU with columns ``INDEX_SPEC``,
+            ``Z_QSO``, and ``IS_QSO_AVAILABLE`` is appended. ``IS_QSO_AVAILABLE`` is
+            ``True`` whenever the search could run (even if no absorber was found) and
+            ``False`` when the spectrum was unsearchable (too few pixels or doublet outside
+            wavelength coverage). Also triggers the ``ZABS_KNOWN`` column in the
+            ``ABSORBER`` HDU when the results dict contains that key. Default is None.
 
     Returns:
         None: Writes a FITS file with an ``ABSORBER`` BinTableHDU containing
@@ -65,7 +92,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         EW_1, EW_2 = f'{l1}_EW', f'{l2}_EW'
         VDISP1, VDISP2 = f'{l1}_VDISP', f'{l2}_VDISP'
 
-    hdu = fits.BinTableHDU.from_columns([
+    absorber_cols = [
         fits.Column(name='INDEX_SPEC', format='K', array=np.array(results['index_spec'])),
         fits.Column(name='Z_ABS', format='D', array=np.array(results['z_abs'])),
         fits.Column(name='GAUSS_FIT', format='6D', array=np.array(results['gauss_fit'])),
@@ -82,7 +109,12 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
         fits.Column(name=VDISP1, format='D', unit='km s-1', array=np.array(results['vel_disp1'])),
         fits.Column(name=VDISP2, format='D', unit='km s-1', array=np.array(results['vel_disp2'])),
         fits.Column(name='DELTA_CHI2', format='D', array=np.array(results['delta_chi2'])),
-    ], name='ABSORBER')
+    ]
+    if 'zabs_known' in results:
+        absorber_cols.append(
+            fits.Column(name='ZABS_KNOWN', format='D', array=np.array(results['zabs_known']))
+        )
+    hdu = fits.BinTableHDU.from_columns(absorber_cols, name='ABSORBER')
 
     hdr = fits.Header()
     for key, header in headers.items():
@@ -96,9 +128,10 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber):
     _,_, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
 
-    hdul = fits.HDUList([primary_hdu, hdu, qso_hdu])
-
-    hdul.writeto(output_file, overwrite=True)
+    hdu_list = [primary_hdu, hdu, qso_hdu]
+    if spec_indices is not None:
+        hdu_list.append(_build_qso_info_hdu(input_file, spec_indices, results))
+    fits.HDUList(hdu_list).writeto(output_file, overwrite=True)
     print(f'INFO: ouptut file {output_file} written.')
 
 def append_table_to_fits(filename, table, hdu_name):

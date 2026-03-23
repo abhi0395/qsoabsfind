@@ -1,0 +1,307 @@
+"""
+Tests for the private helper functions extracted from absfinder.py, plus the
+zabs_known feature on convolution_method_absorber_finder_in_QSO_spectra.
+
+Each test class focuses on one helper, checking both the happy path and
+obvious failure modes.  These tests intentionally do not call the full
+convolution pipeline; they only exercise the logic that now lives in
+the individual helpers.
+"""
+
+import unittest
+import numpy as np
+
+from qsoabsfind.absfinder import (
+    _get_doublet_constants,
+    _compute_resolution,
+    _compute_fit_bounds,
+    _apply_false_positive_filters,
+    _build_result,
+    convolution_method_absorber_finder_in_QSO_spectra,
+)
+from qsoabsfind.constants import lines, doublet_keys
+
+
+class TestGetDoubletConstants(unittest.TestCase):
+
+    def test_mgii_returns_correct_wavelengths(self):
+        line1, line2, f1, f2, line_ratio, line_sep, del_z = _get_doublet_constants('MgII')
+        self.assertAlmostEqual(line1, lines['MgII_2796'])
+        self.assertAlmostEqual(line2, lines['MgII_2803'])
+
+    def test_line_ratio_greater_than_one_for_all_absorbers(self):
+        # the theoretical doublet ratio is always >1 by construction
+        for absorber in doublet_keys:
+            _, _, _, _, line_ratio, _, _ = _get_doublet_constants(absorber)
+            self.assertGreater(line_ratio, 1.0, msg=f"line_ratio <= 1 for {absorber}")
+
+    def test_del_z_equals_line_sep_over_line1(self):
+        for absorber in doublet_keys:
+            line1, line2, _, _, _, line_sep, del_z = _get_doublet_constants(absorber)
+            self.assertAlmostEqual(del_z, (line2 - line1) / line1, places=10)
+
+    def test_line_sep_is_positive(self):
+        # doublets are defined so line2 > line1
+        for absorber in doublet_keys:
+            _, _, _, _, _, line_sep, _ = _get_doublet_constants(absorber)
+            self.assertGreater(line_sep, 0, msg=f"line_sep <= 0 for {absorber}")
+
+    def test_invalid_absorber_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            _get_doublet_constants('UNKNOWN_ION')
+
+
+class TestComputeResolution(unittest.TestCase):
+
+    def setUp(self):
+        self.lam_log = np.logspace(np.log10(3800), np.log10(9200), 3000)
+        self.lam_lin = np.linspace(3800, 9200, 3000)
+        self.line1 = lines['MgII_2796']
+
+    def test_logwave_del_sigma_positive(self):
+        _, _, _, del_sigma = _compute_resolution(
+            self.lam_log, self.lam_log, self.line1, logwave=True)
+        self.assertGreater(del_sigma, 0)
+
+    def test_linwave_del_sigma_positive(self):
+        _, _, _, del_sigma = _compute_resolution(
+            self.lam_lin, self.lam_lin, self.line1, logwave=False)
+        self.assertGreater(del_sigma, 0)
+
+    def test_logwave_mean_resolution_equals_resolution(self):
+        # for log-spaced arrays, mean_resolution is just the scalar resolution
+        _, resolution, mean_resolution, _ = _compute_resolution(
+            self.lam_log, self.lam_log, self.line1, logwave=True)
+        self.assertAlmostEqual(mean_resolution, resolution)
+
+    def test_linwave_resolution_is_array(self):
+        # for linear grids, resolution is an array with one value per pixel
+        _, resolution, _, _ = _compute_resolution(
+            self.lam_lin, self.lam_lin, self.line1, logwave=False)
+        self.assertEqual(resolution.shape, self.lam_lin.shape)
+
+    def test_wave_res_positive_both_modes(self):
+        for logwave, lam in [(True, self.lam_log), (False, self.lam_lin)]:
+            wave_res, _, _, _ = _compute_resolution(lam, lam, self.line1, logwave=logwave)
+            self.assertGreater(wave_res, 0, msg=f"wave_res <= 0 for logwave={logwave}")
+
+
+class TestComputeFitBounds(unittest.TestCase):
+
+    def setUp(self):
+        self.line1 = lines['MgII_2796']
+        self.line2 = lines['MgII_2803']
+        self.line_sep = self.line2 - self.line1
+        self.d_pix = 0.6
+        self.del_sigma = 0.5
+
+    def test_returns_two_arrays_of_length_six(self):
+        bound, _, _ = _compute_fit_bounds(
+            self.line1, self.line2, self.line_sep, self.d_pix, self.del_sigma)
+        self.assertEqual(len(bound), 2)
+        self.assertEqual(bound[0].shape, (6,))
+        self.assertEqual(bound[1].shape, (6,))
+
+    def test_lower_bound_strictly_less_than_upper_bound(self):
+        bound, _, _ = _compute_fit_bounds(
+            self.line1, self.line2, self.line_sep, self.d_pix, self.del_sigma)
+        self.assertTrue(np.all(bound[0] < bound[1]))
+
+    def test_separation_tolerances(self):
+        _, lower, upper = _compute_fit_bounds(
+            self.line1, self.line2, self.line_sep, self.d_pix, self.del_sigma)
+        self.assertAlmostEqual(lower, self.line_sep - self.d_pix)
+        self.assertAlmostEqual(upper, self.line_sep + self.d_pix)
+
+    def test_small_del_sigma_does_not_produce_negative_lower_width_bound(self):
+        # del_sigma much smaller than edge should be floored to 0.1
+        bound, _, _ = _compute_fit_bounds(
+            self.line1, self.line2, self.line_sep, self.d_pix, del_sigma=0.001)
+        self.assertGreaterEqual(bound[0][2], 0.1)
+        self.assertGreaterEqual(bound[0][5], 0.1)
+
+
+class TestApplyFalsePositiveFilters(unittest.TestCase):
+
+    def setUp(self):
+        self.lam = np.linspace(4000, 9000, 5000)
+        self.flux = np.ones(5000)
+        self.error = np.full(5000, 0.05)
+
+    def _make_gauss_fit(self, z_abs, absorber):
+        key1, key2 = doublet_keys[absorber]
+        l1, l2 = lines[key1], lines[key2]
+        gauss_fit = np.zeros((len(z_abs), 6))
+        gauss_fit[:, 1] = l1 * (1 + z_abs)
+        gauss_fit[:, 4] = l2 * (1 + z_abs)
+        gauss_fit[:, 2] = gauss_fit[:, 5] = 0.5
+        return gauss_fit
+
+    def test_returns_boolean_array_with_correct_shape(self):
+        z_abs = np.array([0.5, 0.8])
+        sn1 = np.array([5.0, 4.0])
+        sn2 = np.array([3.0, 3.5])
+        gauss_fit = self._make_gauss_fit(z_abs, 'CIV')
+        sel = _apply_false_positive_filters(
+            z_abs, sn1, sn2, self.lam, self.flux, self.error, 0.6, 'CIV', True, gauss_fit)
+        self.assertIsInstance(sel, np.ndarray)
+        self.assertEqual(sel.dtype, bool)
+        self.assertEqual(sel.shape, z_abs.shape)
+
+    def test_non_mgii_path_does_not_raise(self):
+        # for absorbers other than MgII the FeII check is skipped;
+        # just confirm the function completes without error
+        z_abs = np.array([1.5])
+        sn1 = np.array([6.0])
+        sn2 = np.array([4.0])
+        gauss_fit = self._make_gauss_fit(z_abs, 'CIV')
+        try:
+            _apply_false_positive_filters(
+                z_abs, sn1, sn2, self.lam, self.flux, self.error, 0.6, 'CIV', True, gauss_fit)
+        except Exception as exc:
+            self.fail(f"_apply_false_positive_filters raised unexpectedly: {exc}")
+
+    def test_mgii_path_does_not_raise(self):
+        z_abs = np.array([0.5])
+        sn1 = np.array([5.0])
+        sn2 = np.array([3.0])
+        gauss_fit = self._make_gauss_fit(z_abs, 'MgII')
+        try:
+            _apply_false_positive_filters(
+                z_abs, sn1, sn2, self.lam, self.flux, self.error, 0.6, 'MgII', True, gauss_fit)
+        except Exception as exc:
+            self.fail(f"_apply_false_positive_filters raised unexpectedly for MgII: {exc}")
+
+
+class TestBuildResult(unittest.TestCase):
+
+    def test_output_is_dict_with_sixteen_keys(self):
+        result = _build_result(
+            [0], [0.5], [[0]*6], [[0]*6], [1.0], [0.5], [1.5],
+            [0.1], [0.1], [0.2], [0.01], [5.0], [3.0], [30.0], [30.0], [10.0])
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 16)
+
+    def test_all_expected_keys_present(self):
+        expected = {'index_spec', 'z_abs', 'gauss_fit', 'gauss_fit_std',
+                    'ew_1_mean', 'ew_2_mean', 'ew_total_mean',
+                    'ew_1_error', 'ew_2_error', 'ew_total_error',
+                    'z_abs_err', 'sn_1', 'sn_2', 'vel_disp1', 'vel_disp2', 'delta_chi2'}
+        result = _build_result(
+            [0], [0], [[0]*6], [[0]*6], [0], [0], [0],
+            [0], [0], [0], [0], [0], [0], [0], [0], [0])
+        self.assertEqual(set(result.keys()), expected)
+
+    def test_values_are_passed_through_unchanged(self):
+        z = [1.23]
+        result = _build_result(
+            [7], z, [[0]*6], [[0]*6], [0], [0], [0],
+            [0], [0], [0], [0], [0], [0], [0], [0], [0])
+        self.assertEqual(result['index_spec'], [7])
+        self.assertEqual(result['z_abs'], z)
+
+
+class TestZabsKnown(unittest.TestCase):
+    # These tests go through convolution_method_absorber_finder_in_QSO_spectra
+    # with zabs_known set, so the convolution search is bypassed completely.
+    # To keep them fast, the "spectra" are featureless continuum so the
+    # validator will reject all candidates; we just need to confirm the
+    # routing logic (early exit, wavelength range filtering, correct path taken).
+
+    def _flat_spectrum(self, z_centre, absorber='MgII', n=3000):
+        line1, line2, *_ = _get_doublet_constants(absorber)
+        lam_obs = np.linspace(line1 * (1 + z_centre) - 200,
+                              line2 * (1 + z_centre) + 200, n).astype('float64')
+        flux = np.ones(n, dtype='float64')
+        error = np.full(n, 0.05, dtype='float64')
+        return lam_obs, flux, error
+
+    def test_float_input_runs_without_error(self):
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=0, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 17)
+        self.assertIn('zabs_known', result)
+
+    def test_list_input_runs_without_error(self):
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=0, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=[z])
+        self.assertIsInstance(result, dict)
+
+    def test_redshift_outside_range_returns_empty(self):
+        # build a spectrum centred on z=0.5 and ask for z=2.0 instead
+        lam_obs, flux, error = self._flat_spectrum(0.5)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=1, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=2.0)
+        self.assertEqual(result['z_abs'], [-1])
+
+    def test_mixed_list_filters_out_of_range_entries(self):
+        # one redshift in range, one not; the out-of-range one should be
+        # silently dropped (logged) and the pipeline should run on the other
+        z_good = 0.7
+        z_bad = 5.0
+        lam_obs, flux, error = self._flat_spectrum(z_good)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=2, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=[z_good, z_bad])
+        # result should be a valid dict regardless of whether a detection was made
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 17)
+        self.assertIn('zabs_known', result)
+
+    def test_all_out_of_range_returns_empty_result(self):
+        lam_obs, flux, error = self._flat_spectrum(0.5)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=3, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=[5.0, 6.0])
+        self.assertEqual(result['z_abs'], [-1, -1])
+        self.assertEqual(result['zabs_known'], [5.0, 6.0])
+
+    def test_too_few_pixels_returns_empty_result(self):
+        # fewer than MIN_NPIXEL pixels; should hit the early exit
+        lam_obs = np.linspace(4000, 4050, 50, dtype='float64')
+        flux = np.ones(50, dtype='float64')
+        error = np.full(50, 0.05, dtype='float64')
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=4, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=0.5)
+        self.assertEqual(result['z_abs'], [-1])
+
+    def test_normal_search_still_works_without_zabs_known(self):
+        # passing zabs_known=None should not change existing behaviour
+        z = 0.7
+        line1, line2, *_ = _get_doublet_constants('MgII')
+        lam_obs = np.linspace(line1 * (1 + z) - 200, line2 * (1 + z) + 200,
+                               3000, dtype='float64')
+        flux = np.ones(3000, dtype='float64')
+        error = np.full(3000, 0.05, dtype='float64')
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=5, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=lam_obs, unmsk_residual=flux,
+            logwave=False, verbose=False, zabs_known=None)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 16)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -33,9 +33,11 @@ def load_yaml_config(yaml_file):
     """
     Load CLI argument defaults from a YAML configuration file.
 
-    The YAML keys must match the argparse ``dest`` names (underscores, not
-    dashes).  Values in the file are used as defaults; any argument
-    explicitly passed on the command line will override them.
+    YAML keys may use either hyphens (``zabs-known-file``) or underscores
+    (``zabs_known_file``) — both forms are normalised to underscores so they
+    match the argparse ``dest`` names.  Values in the file are used as
+    defaults; any argument explicitly passed on the command line will
+    override them.
 
     Args:
         yaml_file (str): Path to the YAML configuration file.
@@ -68,5 +70,6 @@ def load_yaml_config(yaml_file):
             f"Config file must be a YAML mapping (key: value pairs): {yaml_file}"
         )
 
-    # Drop null values so they do not override argparse-level defaults
-    return {k: v for k, v in config.items() if v is not None}
+    # Normalise hyphenated keys to underscores so they match argparse dest names,
+    # then drop null values so they do not override argparse-level defaults.
+    return {k.replace('-', '_'): v for k, v in config.items() if v is not None}

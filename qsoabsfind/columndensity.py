@@ -302,18 +302,30 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
 
     nabs = len(tt)
 
+    # Rows where Z_ABS <= 0 are sentinel rows (not searchable or validation failed).
+    # Column density cannot be computed for them; fill with -1 to keep length aligned
+    # with the ABSORBER HDU.
+    sentinel = Table({'LOG10N': [-1.0], 'SIG_LOG10N': [-1.0], 'SATURATION': [-1], 'fN': [-1]})
+
+    valid_mask = np.array(tt['Z_ABS']) > 0
+
     args_list = [
         (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, continuum_error_frac, dv, logwave)
-        for i in range(nabs)
+        for i in range(nabs) if valid_mask[i]
     ]
 
     print(f"INFO: Starting column density calculation with {nproc} processes")
 
-    with Pool(nproc) as pool:
-        results = pool.map(compute_single_column_density, args_list)
+    if args_list:
+        with Pool(nproc) as pool:
+            valid_results = pool.map(compute_single_column_density, args_list)
+    else:
+        valid_results = []
 
-    # Combine into single table
-    N_table = vstack(results)
+    # Reassemble in original row order, inserting sentinels for skipped rows
+    valid_iter = iter(valid_results)
+    ordered = [next(valid_iter) if v else sentinel for v in valid_mask]
+    N_table = vstack(ordered)
 
     for col in N_table.colnames:
         if "10N" in col:
