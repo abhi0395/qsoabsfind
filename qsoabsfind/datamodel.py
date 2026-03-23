@@ -108,9 +108,10 @@ class AbsorberData():
 
         # Assign specific extensions as attributes
         self.catalog = all_data.get('ABSORBER', None)
-        self.absorber = self.catalog  # Alias for backward compatibility
         self.metadata = all_data.get('METADATA', None)
         self.column_density = all_data.get('COLUMN_DENSITY', None)  # May be None
+        self.qso_info = all_data.get('QSO_INFO', None)  # May be None
+
 
         # Store header from last read
         self.header = hdr
@@ -129,4 +130,8 @@ class AbsorberData():
                 print(f"  COLUMN_DENSITY: {len(self.column_density)} rows")
             else:
                 print(f"  COLUMN_DENSITY: Not present (optional)")
+            if self.qso_info is not None:
+                print(f"  QSO_INFO: {len(self.qso_info)} rows")
+            else:
+                print(f"  QSO_INFO: Not present (optional)")
             elapsed(start_time, f"INFO: Time taken to read catalog from {self.filepath}")

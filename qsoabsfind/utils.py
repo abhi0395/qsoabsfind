@@ -598,7 +598,10 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ax_main.set_ylabel(ylabel, fontsize=fontsize)
     ax_main.grid(True)
     ax_main.minorticks_on()
-    ax_main.set_ylim(-1, 2)
+    ylo = -1
+    yhi = np.nanpercentile(residual[ymask], 99)
+    ymargin = 0.5 * (yhi - ylo)
+    ax_main.set_ylim(ylo, yhi + ymargin)
     ax_main.tick_params(axis='both', which='major', labelsize=13)
     ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
@@ -711,25 +714,29 @@ def plot_absorber_known(spectra, absorber_dict, zoom=True, show_error=False,
         ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
     ymask = ~np.isnan(residual)
     ax_main.set_xlim(lam[ymask].min(), lam[ymask].max())
-    ax_main.set_ylim(-1, 2)
+    ylo = -1
+    yhi = np.nanpercentile(residual[ymask], 99)
+    ymargin = 0.5 * (yhi - ylo)
+    ax_main.set_ylim(ylo, yhi + ymargin)
 
-    tick_h  = 0.3
-    txt_gap = 0.03
+    tick_base = 0.75   # axes fraction (bottom=0, top=1)
+    tick_h    = 0.10   # axes fraction
+    txt_gap   = 0.01   # axes fraction above tick top
+    trans     = ax_main.get_xaxis_transform()  # x: data, y: axes fraction
 
     for name, l1, l2, redshifts, _, colour in absorber_info:
         for z in redshifts:
             if z <= 0:
                 continue
             for wave in (lines[l1] * (1 + z), lines[l2] * (1 + z)):
-                nearest = np.argmin(np.abs(lam - wave))
-                base    = np.clip(float(residual[nearest]), -1, 1.5)
-                ax_main.vlines(wave, base, base + tick_h, color=colour, lw=1.2)
+                ax_main.vlines(wave, tick_base, tick_base + tick_h,
+                               color=colour, lw=1.2, transform=trans)
             wave_l1 = lines[l1] * (1 + z)
-            nearest = np.argmin(np.abs(lam - wave_l1))
-            base    = np.clip(float(residual[nearest]), -1, 2)
-            ax_main.text(wave_l1, base + tick_h + txt_gap,
+
+            ax_main.text(wave_l1, tick_base + tick_h + txt_gap,
                          f'{name}', color=colour, fontsize=7,
-                         rotation=90, va='bottom', ha='center')
+                         rotation=90, va='bottom', ha='center',
+                         transform=trans)
 
     ax_main.set_xlabel(xlabel, fontsize=fontsize)
     ax_main.set_ylabel(ylabel, fontsize=fontsize)

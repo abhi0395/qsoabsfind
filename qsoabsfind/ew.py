@@ -101,8 +101,8 @@ def calculate_ew_errors(popt, perr):
             - EW2_error (float): Error in the equivalent width of the second Gaussian.
             - EW_total_error (float): Total error in the equivalent width of both Gaussians.
     """
-    amp1, mean1, sigma1, amp2, mean2, sigma2 = popt
-    amp1_err, mean1_err, sigma1_err, amp2_err, mean2_err, sigma2_err = perr
+    amp1, _, sigma1, amp2, _, sigma2 = popt
+    amp1_err, _, sigma1_err, amp2_err, _, sigma2_err = perr
 
     EW1 = amp1 * np.sqrt(np.pi * 2 * sigma1 ** 2)
     EW2 = amp2 * np.sqrt(np.pi * 2 * sigma2 ** 2)
@@ -131,7 +131,7 @@ def full_covariance_ew_errors(popt, pcov):
             - EW_total_error (float): Total error in the equivalent width of both Gaussians.
     """
     # Extract optimized parameters
-    amp1, mean1, sigma1, amp2, mean2, sigma2 = popt
+    amp1, _, sigma1, amp2, _, sigma2 = popt
 
     # Calculate the partial derivatives of EW1 and EW2 with respect to the parameters
     dEW1_damp1 = np.sqrt(2 * np.pi) * sigma1
@@ -279,6 +279,133 @@ def quick_significance_test(flux_norm, fitted_model, error,
 
     return delta_chi2
 
+def _extract_rest_frame_spectrum(wavelength, flux, error, z, ix0, ix1):
+    """Slice spectrum into the rest frame defined by redshift *z* between ix0 and ix1."""
+    rest_lam = wavelength / (1 + z)
+    ind = np.where((rest_lam >= ix0) & (rest_lam <= ix1))[0]
+    return rest_lam[ind], flux[ind], error[ind]
+
+
+def _z_from_rest_fit(params, std, z_k, lc1, lc2):
+    """Estimate redshift and error from rest-frame double-Gaussian fit parameters."""
+    scale = 1 + z_k
+    return redshift_estimate(
+        params[1] * scale, params[4] * scale,
+        std[1]   * scale, std[4]   * scale,
+        lc1, lc2,
+    )
+
+
+def _fit_single_absorber(index, z_init, wavelength, flux, error,
+                         bound, ix0, ix1, line_centre1, line_centre2,
+                         amp_ratio, num_iter, window, use_covariance, nboot, nparm):
+    """Run the full multi-step fitting pipeline for one absorber system.
+
+    Returns:
+        tuple: (z, z_err, params, std, pcov,
+                ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err, delta_chi2)
+    """
+    zeros_p = np.zeros(nparm)
+    zeros_c = np.zeros((nparm, nparm))
+
+    np.random.seed(int(z_init * 1e6) % 2**32)
+
+    # ========== FIRST REDSHIFT REFINEMENT ==========
+    z1 = find_z_from_minimum(wavelength, flux, line_centre1, z_init, window=window)
+    z2 = find_z_from_minimum(wavelength, flux, line_centre2, z_init, window=window)
+    z_k = (line_centre1 * z1 + line_centre2 * z2) / (line_centre1 + line_centre2)
+
+    min_pixels = 2 * nparm  # need enough points to constrain the 6-parameter double Gaussian
+
+    lam_fit, nmf_resi, error_flux = _extract_rest_frame_spectrum(
+        wavelength, flux, error, z_k, ix0, ix1)
+
+    if nmf_resi.size < min_pixels or np.all(np.isnan(nmf_resi)):
+        # Too few pixels or all NaN: return original redshift, everything else zeroed
+        return (z_init, 0.0, zeros_p.copy(), zeros_p.copy(), zeros_c.copy(),
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+    # ========== INITIAL FIT IN REST FRAME ==========
+    amp_first  = max(0.05, 1 - np.nanmin(nmf_resi))
+    amp_second = min(0.95, amp_ratio * amp_first)
+    uniform = np.random.uniform
+    if bound is not None:
+        sigma1 = uniform(bound[0][2], bound[1][2])
+        sigma2 = uniform(bound[0][5], bound[1][5])
+    else:
+        sigma1 = sigma2 = uniform(0.2, 5)
+    init_cond = [amp_first, line_centre1, sigma1, amp_second, line_centre2, sigma2]
+
+    params, std, ew1, ew2, ew_total, _ = double_curve_fit(
+        index, double_gaussian, lam_fit, nmf_resi,
+        error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
+
+    # ========== FIT IN OBSERVED FRAME FOR REDSHIFT ==========
+    obs_init = [amp_first,
+                params[1] * (1 + z_k), params[2] * (1 + z_k),
+                amp_second,
+                params[4] * (1 + z_k), params[5] * (1 + z_k)]
+    obs_params, obs_std, _, _, _, _ = double_curve_fit(
+        index, double_gaussian, lam_fit * (1 + z_k), nmf_resi,
+        error_fit=error_flux, bounds=None, init_cond=obs_init, maxefv=num_iter)
+
+    z_k, z_err = redshift_estimate(
+        obs_params[1], obs_params[4],
+        obs_std[1],    obs_std[4],
+        line_centre1, line_centre2)
+
+    # ========== SECOND REDSHIFT REFINEMENT ==========
+    z1 = find_z_from_minimum(wavelength, flux, line_centre1, z_k, window=window)
+    z2 = find_z_from_minimum(wavelength, flux, line_centre2, z_k, window=window)
+    z_k = 0.5 * (z1 + z2)
+
+    # ========== SECOND FIT WITH REFINED REDSHIFT ==========
+    lam_fit, nmf_resi, error_flux = _extract_rest_frame_spectrum(
+        wavelength, flux, error, z_k, ix0, ix1)
+
+    params, std, ew1, ew2, ew_total, pcov = double_curve_fit(
+        index, double_gaussian, lam_fit, nmf_resi,
+        error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
+
+    z_k, z_err = _z_from_rest_fit(params, std, z_k, line_centre1, line_centre2)
+
+    # ========== FINAL FIT WITH BEST REDSHIFT ==========
+    lam_fit, nmf_resi, error_flux = _extract_rest_frame_spectrum(
+        wavelength, flux, error, z_k, ix0, ix1)
+
+    params, std, ew1, ew2, ew_total, pcov = double_curve_fit(
+        index, double_gaussian, lam_fit, nmf_resi,
+        error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=2 * num_iter)
+
+    # ========== CALCULATE SIGNIFICANCE ==========
+    fitted_model = double_gaussian(lam_fit, *params)
+    dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
+                                    fitted_params=params, wavelength_rest=lam_fit, n_pixels=2)
+
+    # ========== BOOTSTRAPPING OR ERROR CALCULATION ==========
+    if nboot is not None and nboot > 0:
+        print('INFO: bootstrapping...')
+        params, std, ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err = bootstrap_fitting_and_ew(
+            index, nboot, z_k, wavelength, flux, error,
+            ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter)
+        fitted_model = double_gaussian(lam_fit, *params)
+        dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
+                                        fitted_params=params, wavelength_rest=lam_fit, n_pixels=2)
+    elif use_covariance:
+        ew1_err, ew2_err, ew_total_err = full_covariance_ew_errors(params, pcov)
+    else:
+        ew1_err, ew2_err, ew_total_err = calculate_ew_errors(params, std)
+
+    # ========== CHECK FOR NaN VALUES ==========
+    if np.isnan(ew1) or np.isnan(ew2) or np.isnan(ew_total):
+        # Keep the refined z but zero out all EW results
+        return (z_k, 0.0, zeros_p.copy(), zeros_p.copy(), zeros_c.copy(),
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+    return (z_k, z_err, params, std, pcov,
+            ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err, dchi2)
+
+
 def measure_absorber_properties_double_gaussian(
     index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix,
     num_iter=500, window=5, use_covariance=False, nboot=None):
@@ -314,35 +441,28 @@ def measure_absorber_properties_double_gaussian(
             - EW_total_error (numpy.ndarray): Total error in the equivalent width of both lines.
             - delta_chi2 (numpy.ndarray): Delta chi-squared values for significance testing.
     """
-    # Initialize arrays
     z_abs_array = np.array(absorber_redshift)
-    size_array = z_abs_array.size
+    size_array  = z_abs_array.size
 
-    # Initialize all output arrays
     nparm = 6  # 6 parameter double Gaussian
-    fitting_param_for_spectrum = np.zeros((size_array, nparm))
+    fitting_param_for_spectrum     = np.zeros((size_array, nparm))
     fitting_param_std_for_spectrum = np.zeros((size_array, nparm))
-    fitting_param_pcov_for_spectrum = np.zeros((size_array, nparm, nparm))
-    EW_first_line = np.zeros(size_array, dtype='float32')
-    EW_second_line = np.zeros(size_array, dtype='float32')
-    EW_first_line_error = np.zeros(size_array, dtype='float32')
+    EW_first_line        = np.zeros(size_array, dtype='float32')
+    EW_second_line       = np.zeros(size_array, dtype='float32')
+    EW_first_line_error  = np.zeros(size_array, dtype='float32')
     EW_second_line_error = np.zeros(size_array, dtype='float32')
-    EW_total = np.zeros(size_array, dtype='float32')
-    EW_total_error = np.zeros(size_array, dtype='float32')
-    z_abs_err = np.zeros(size_array, dtype='float32')
+    EW_total             = np.zeros(size_array, dtype='float32')
+    EW_total_error       = np.zeros(size_array, dtype='float32')
+    z_abs_err  = np.zeros(size_array, dtype='float32')
     delta_chi2 = np.zeros(size_array, dtype='float32')
 
-    # Get line properties for this kernel
     line_centre1, line_centre2 = return_line_centers(use_kernel)
-    amp_ratio = oscillator_parameters[f'{use_kernel}_f2'] / oscillator_parameters[f'{use_kernel}_f1']
+    amp_ratio = (oscillator_parameters[f'{use_kernel}_f2']
+                 / oscillator_parameters[f'{use_kernel}_f1'])
 
-    # Define wavelength range for Gaussian fitting
-    # Assuming maximum line width of d_pix * 15
-    sigma = d_pix * 15
-    ix0 = line_centre1 - sigma
-    ix1 = line_centre2 + sigma
+    ix0 = line_centre1 - d_pix * 15
+    ix1 = line_centre2 + d_pix * 15
 
-    # Return empty arrays if no absorbers
     if size_array == 0:
         return (
             z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
@@ -351,180 +471,15 @@ def measure_absorber_properties_double_gaussian(
             delta_chi2
         )
 
-    # Process each absorber
     for k in range(size_array):
-        # Set random seed for reproducibility
-        np.random.seed(int(absorber_redshift[k] * 1e6) % 2**32)
-
-        # ========== FIRST REDSHIFT REFINEMENT ==========
-        z1 = find_z_from_minimum(wavelength, flux, line_centre1, absorber_redshift[k], window=window)
-        z2 = find_z_from_minimum(wavelength, flux, line_centre2, absorber_redshift[k], window=window)
-        absorber_redshift[k] = (line_centre1 * z1 + line_centre2 * z2) / (line_centre1 + line_centre2)
-
-        # Extract spectrum in rest frame
-        absorber_rest_lam = wavelength / (1 + absorber_redshift[k])
-        lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-        lam_fit = absorber_rest_lam[lam_ind]
-        nmf_resi = flux[lam_ind]
-        error_flux = error[lam_ind]
-
-        uniform = np.random.uniform
-
-        # Check if we have valid data
-        if nmf_resi.size > 0 and not np.all(np.isnan(nmf_resi)):
-            # ========== INITIAL FIT IN REST FRAME ==========
-            # Set initial conditions
-            amp_first_nmf = max(0.05, 1 - np.nanmin(nmf_resi))
-            amp_second_nmf = min(0.95, amp_ratio * amp_first_nmf)
-            line_first = line_centre1
-            if bound is not None:
-                sigma1 = uniform(bound[0][2], bound[1][2])
-                sigma2 = uniform(bound[0][5], bound[1][5])
-            else:
-                sigma1 = sigma2 = uniform(0.2, 5)
-            line_second = line_centre2
-            init_cond = [amp_first_nmf, line_first, sigma1, amp_second_nmf, line_second, sigma2]
-
-            # First fit in rest frame
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], \
-            EW_first_line[k], EW_second_line[k], EW_total[k], _ = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi,
-                error_fit=error_flux, bounds=bound,
-                init_cond=init_cond, maxefv=num_iter
-            )
-
-            # ========== FIT IN OBSERVED FRAME FOR REDSHIFT ==========
-            # Convert to observed frame
-            fitted_l1 = fitting_param_for_spectrum[k][1] * (1 + absorber_redshift[k])
-            fitted_l2 = fitting_param_for_spectrum[k][4] * (1 + absorber_redshift[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1] * (1 + absorber_redshift[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4] * (1 + absorber_redshift[k])
-
-            obs_sig1 = fitting_param_for_spectrum[k][2] * (1 + absorber_redshift[k])
-            obs_sig2 = fitting_param_for_spectrum[k][5] * (1 + absorber_redshift[k])
-            obs_init_cond = [amp_first_nmf, fitted_l1, obs_sig1, amp_second_nmf, fitted_l2, obs_sig2]
-
-            # Fit in observed frame
-            obs_fitting_param_for_spectrum, obs_fitting_param_std_for_spectrum, _, _, _, _ = double_curve_fit(
-                index, double_gaussian, lam_fit * (1 + absorber_redshift[k]), nmf_resi,
-                error_fit=error_flux, bounds=None,
-                init_cond=obs_init_cond, maxefv=num_iter
-            )
-
-            fitted_l1 = obs_fitting_param_for_spectrum[1]
-            fitted_l2 = obs_fitting_param_for_spectrum[4]
-            std_fitted_l1 = obs_fitting_param_std_for_spectrum[1]
-            std_fitted_l2 = obs_fitting_param_std_for_spectrum[4]
-
-            # Update redshift estimate
-            z_abs_array[k], z_abs_err[k] = redshift_estimate(
-                fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2,
-                line_centre1, line_centre2
-            )
-
-            # ========== SECOND REDSHIFT REFINEMENT ==========
-            z1 = find_z_from_minimum(wavelength, flux, line_centre1, z_abs_array[k], window=window)
-            z2 = find_z_from_minimum(wavelength, flux, line_centre2, z_abs_array[k], window=window)
-            z_abs_array[k] = 0.5 * (z1 + z2)
-
-            # ========== SECOND FIT WITH REFINED REDSHIFT ==========
-            # Re-extract spectrum with new redshift
-            absorber_rest_lam = wavelength / (1 + z_abs_array[k])
-            lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-            lam_fit = absorber_rest_lam[lam_ind]
-            nmf_resi = flux[lam_ind]
-            error_flux = error[lam_ind]
-
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], \
-            EW_first_line[k], EW_second_line[k], EW_total[k], \
-            fitting_param_pcov_for_spectrum[k] = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi,
-                error_fit=error_flux, bounds=bound,
-                init_cond=init_cond, maxefv=num_iter
-            )
-
-            # Update redshift estimate again
-            fitted_l1 = fitting_param_for_spectrum[k][1] * (1 + z_abs_array[k])
-            fitted_l2 = fitting_param_for_spectrum[k][4] * (1 + z_abs_array[k])
-            std_fitted_l1 = fitting_param_std_for_spectrum[k][1] * (1 + z_abs_array[k])
-            std_fitted_l2 = fitting_param_std_for_spectrum[k][4] * (1 + z_abs_array[k])
-
-            z_abs_array[k], z_abs_err[k] = redshift_estimate(
-                fitted_l1, fitted_l2, std_fitted_l1, std_fitted_l2,
-                line_centre1, line_centre2
-            )
-
-            # ========== FINAL FIT WITH BEST REDSHIFT ==========
-            # Final extraction with best redshift
-            absorber_rest_lam = wavelength / (1 + z_abs_array[k])
-            lam_ind = np.where((absorber_rest_lam >= ix0) & (absorber_rest_lam <= ix1))[0]
-            lam_fit = absorber_rest_lam[lam_ind]
-            nmf_resi = flux[lam_ind]
-            error_flux = error[lam_ind]
-
-            fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], \
-            EW_first_line[k], EW_second_line[k], EW_total[k], \
-            fitting_param_pcov_for_spectrum[k] = double_curve_fit(
-                index, double_gaussian, lam_fit, nmf_resi,
-                error_fit=error_flux, bounds=bound,
-                init_cond=init_cond, maxefv=2 * num_iter
-            )
-
-            # ========== CALCULATE SIGNIFICANCE ==========
-            fitted_model = double_gaussian(lam_fit, *fitting_param_for_spectrum[k])
-            delta_chi2[k] = quick_significance_test(nmf_resi, fitted_model, error_flux,
-                                  fitted_params=fitting_param_for_spectrum[k], wavelength_rest=lam_fit,
-                                  n_pixels=2)
-
-            # ========== BOOTSTRAPPING OR ERROR CALCULATION ==========
-            if nboot is not None and nboot > 0 and nmf_resi.size > 0:
-                print(f'INFO: bootstrapping...')
-                fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], \
-                EW_first_line[k], EW_second_line[k], EW_total[k], \
-                EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = bootstrap_fitting_and_ew(
-                    index, nboot, z_abs_array[k], wavelength, flux, error,
-                    ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter
-                )
-                fitted_model = double_gaussian(lam_fit, *fitting_param_for_spectrum[k])
-                delta_chi2[k] = quick_significance_test(nmf_resi, fitted_model, error_flux,
-                                  fitted_params=fitting_param_for_spectrum[k], wavelength_rest=lam_fit,
-                                  n_pixels=2)
-            else:
-                # Calculate EW errors
-                if not use_covariance:
-                    EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = \
-                        calculate_ew_errors(fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k])
-                else:
-                    EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k] = \
-                        full_covariance_ew_errors(fitting_param_for_spectrum[k], fitting_param_pcov_for_spectrum[k])
-
-            # ========== CHECK FOR NaN VALUES ==========
-            if np.all(np.isnan(EW_first_line[k])) or \
-               np.all(np.isnan(EW_second_line[k])) or \
-               np.all(np.isnan(EW_total[k])):
-                # Reset all values if NaN
-                fitting_param_for_spectrum[k] = np.zeros(nparm)
-                fitting_param_std_for_spectrum[k] = np.zeros(nparm)
-                EW_first_line[k] = 0
-                EW_second_line[k] = 0
-                EW_total[k] = 0
-                EW_first_line_error[k] = 0
-                EW_second_line_error[k] = 0
-                EW_total_error[k] = 0
-                z_abs_err[k] = 0
-                delta_chi2[k] = 0
-        else:
-            # No valid data - set everything to zero
-            EW_first_line[k] = 0
-            EW_second_line[k] = 0
-            EW_total[k] = 0
-            EW_first_line_error[k] = 0
-            EW_second_line_error[k] = 0
-            EW_total_error[k] = 0
-            fitting_param_for_spectrum[k] = np.zeros(nparm)
-            fitting_param_std_for_spectrum[k] = np.zeros(nparm)
-            z_abs_err[k] = 0
-            delta_chi2[k] = 0
+        (z_abs_array[k], z_abs_err[k],
+         fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], _,
+         EW_first_line[k], EW_second_line[k], EW_total[k],
+         EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k],
+         delta_chi2[k]) = _fit_single_absorber(
+            index, absorber_redshift[k], wavelength, flux, error,
+            bound, ix0, ix1, line_centre1, line_centre2,
+            amp_ratio, num_iter, window, use_covariance, nboot, nparm)
 
     return (
         z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
