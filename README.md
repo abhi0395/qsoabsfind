@@ -53,6 +53,7 @@ Key Features
 - **Parallel processing**: Supports fast and efficient computation across large datasets using Python's `multiprocessing` module.
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
+- **Visualization**: Plot the full spectrum with all detected absorber systems marked, plus zoomed panels around each detection, using `plot_multiple_metal_systems`.
 
 
 **qsoabsfind** is suitable for
@@ -286,6 +287,40 @@ plot_absorber(spectra, absorber='MgII', zabs=row,
 
 Pass `show_error=True` to overlay the error spectrum, or `plot_filename='absorber.png'` to save the figure to disk instead of displaying it interactively.
 
+**Plotting all absorbers across multiple systems**
+--------------------------------------------------
+
+To visualise every detected system in a given spectrum, use
+`qsoabsfind.utils.plot_multiple_metal_systems`. It plots the full
+spectrum with all systems annotated, followed by a zoomed panel for each
+individual detection. It assumes that both catalogs are one to one mapped
+to the same input spectra (e.g. both catalogs were generated from the same
+input file) and uses the `INDEX_SPEC` column to match absorbers across
+different systems:
+
+```python
+from qsoabsfind.io import QSOSpecRead
+from qsoabsfind.utils import plot_multiple_metal_systems
+from astropy.io import fits
+from astropy.table import Table
+
+# Load spectrum
+spectra = QSOSpecRead('spectra.fits', qso_index=0)
+
+# Load catalogs for two absorbers
+with fits.open('output_MgII.fits') as hdul:
+    mgii = Table(hdul['ABSORBER'].data)
+with fits.open('output_CIV.fits') as hdul:
+    civ = Table(hdul['ABSORBER'].data)
+
+# Plot full spectrum + zoomed panels for every detected system
+plot_multiple_metal_systems(
+    spectra,
+    absorber_dict={'MgII': mgii, 'CIV': civ},
+    zoom=True,
+    plot_filename='absorbers.pdf',   # or None to display interactively
+)
+```
 
 Useful notes:
 -------------

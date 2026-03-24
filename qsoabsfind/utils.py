@@ -659,7 +659,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         plt.show()
 
 
-def plot_absorber_known(spectra, absorber_dict, zoom=True, show_error=False,
+def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=False,
                         plot_filename=None, **kwargs):
     """
     Plot a full spectrum with all known absorber systems marked, optionally
