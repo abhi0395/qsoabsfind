@@ -381,7 +381,7 @@ def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residua
     return (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -413,6 +413,11 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             convolution search is skipped entirely and the code goes straight to Gaussian fitting and
             selection for each supplied redshift.  Redshifts whose observed doublet falls outside the
             wavelength coverage of the spectrum are skipped with an info log message. Default is None.
+        max_dv_known (float or None): Maximum allowed velocity offset (km/s) between the fitted
+            redshift and the seed redshift when ``zabs_known`` is provided. Candidates whose
+            fitted centre drifted further than this are rejected (``z_abs`` set to 0). When
+            ``None`` (default), the value is read from ``_constants.ZABS_KNOWN_MAX_DV`` so it
+            can be set once in the user constants file without touching call sites.
 
     Returns:
         dict: Contains lists of various parameters related to detected absorbers.
@@ -591,6 +596,20 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         # known-z mode: keep all rows as-is (z_abs=0 for failed, fitted z for passed).
         # False-positive filters are not applied here since the redshifts were user-supplied.
         # Append any out-of-range entries at the end with z_abs=-1.
+
+        # Apply max_dv_known cut: reject any detection whose fitted centre drifted too far
+        # from the supplied seed redshift — such systems are almost certainly a different feature.
+        _max_dv = max_dv_known if max_dv_known is not None else _constants.ZABS_KNOWN_MAX_DV
+        for m in range(len(pure_z_abs)):
+            if pure_z_abs[m] > 0:
+                dv = abs(pure_z_abs[m] - zabs_known_input[m]) / (1 + zabs_known_input[m]) * speed_of_light
+                if dv > _max_dv:
+                    if verbose:
+                        logger.info(
+                            "spec %s: rejecting %s at z_fit=%.4f (seed z=%.4f, dv=%.0f km/s > %.0f km/s limit)",
+                            spec_index, absorber, pure_z_abs[m], zabs_known_input[m], dv, _max_dv)
+                    pure_z_abs[m] = 0.0
+
         if verbose:
             logger.debug("final candidates: %s", pure_z_abs)
         if out_of_range:

@@ -173,6 +173,7 @@ FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier
 GAUSS_FIT_NUM_ITER = 500         # maximum curve_fit iterations for double-Gaussian fitting
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
+ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
 
 # ==============================
 # Notes:

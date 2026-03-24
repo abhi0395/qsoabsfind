@@ -147,8 +147,7 @@ qsoabsfind --help
 | `--n-qso` | no | all | Spectra to process: `500`, `1-1000`, or `1-1000:10` |
 | `--headers` | no | - | Extra FITS header keywords in `KEY=VALUE` format, space-separated |
 | `--ncpus` | no | `4` | Number of parallel worker processes |
-| `--coldens` | no | off | Compute column densities via AODM (adds `COLUMN_DENSITY` HDU) |
-| `--dv` | no | `300` | Velocity half-width (km/s) for optical depth integration; used with `--coldens` |
+| `--coldens-dv` | no | - | Compute column densities via AODM and set the velocity half-width (km/s); e.g. `300` (adds `COLUMN_DENSITY` HDU) |
 | `--verbose` | no | off | Enable detailed per-spectrum debug logging |
 | `--zabs-known-file` | no | - | FITS file with `INDEX_SPEC` and `Z_ABS`; skips convolution, runs Gaussian fitting only |
 
@@ -218,9 +217,8 @@ qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
            --output test_MgII.fits \
            --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
            --ncpus 4 \
-           --constant-file data/sdss/sdss_constants.py
-           --coldens
-           --dv 300
+           --constant-file data/sdss/sdss_constants.py \
+           --coldens-dv 300
 ```
 
 Running with a YAML config file

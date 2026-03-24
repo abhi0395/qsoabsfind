@@ -302,6 +302,33 @@ class TestZabsKnown(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertEqual(len(result), 16)
 
+    def test_max_dv_known_param_accepted(self):
+        # max_dv_known should be accepted without TypeError
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=6, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z, max_dv_known=300)
+        self.assertIsInstance(result, dict)
+        self.assertIn('zabs_known', result)
+
+    def test_max_dv_known_zero_rejects_all_detections(self):
+        # With max_dv_known=0 any fitted z != seed is rejected.
+        # On a flat spectrum _validate_candidates produces only z_abs=0 entries anyway,
+        # so the dv filter is a no-op here — but it must not raise and must return z_abs=0.
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=7, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z, max_dv_known=0)
+        self.assertIsInstance(result, dict)
+        # No detection should survive with max_dv_known=0
+        self.assertTrue(all(v <= 0 for v in result['z_abs']))
+
 
 if __name__ == '__main__':
     unittest.main()

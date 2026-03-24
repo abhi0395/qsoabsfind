@@ -25,9 +25,8 @@ Before running, please read :doc:`File formats <fileformat>`.
                --absorber $your_absorber \
                --output $output \
                --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
-               --ncpus 4
-               --coldens
-               --dv 300
+               --ncpus 4 \
+               --coldens-dv 300
 
 
 Running with a YAML config file
@@ -108,9 +107,8 @@ Here, ``--dv 300`` means the integration will be performed over +/-300 km/s from
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --ncpus 4
-               --coldens
-               --dv 300
+               --ncpus 4 \
+               --coldens-dv 300
 
 CLI Arguments
 -------------
@@ -154,16 +152,12 @@ CLI Arguments
 
    Number of parallel worker processes. Default: ``4``.
 
-.. option:: --coldens
+.. option:: --coldens-dv <float>
 
-   If set, also computes total column densities for each detected absorber using the apparent
-   optical depth method (AODM; Savage & Sembach 1991). Adds a ``COLUMN_DENSITY`` HDU to the
-   output file.
-
-.. option:: --dv <float>
-
-   Velocity half-width in km/s used for optical depth integration around each line centre.
-   Only relevant when ``--coldens`` is used. Default: ``300``.
+   If provided, also computes total column densities for each detected absorber using the apparent
+   optical depth method (AODM; Savage & Sembach 1991). The value sets the +/- velocity range (km/s)
+   for optical-depth integration around each line centre (e.g. ``300``). Adds a ``COLUMN_DENSITY``
+   HDU to the output file.
 
 .. option:: --verbose
 
@@ -175,6 +169,9 @@ CLI Arguments
    search is skipped and Gaussian fitting is run at the provided redshifts only. Multiple rows
    with the same ``INDEX_SPEC`` are treated as multiple known redshifts for that spectrum. Adds
    a ``ZABS_KNOWN`` column in the ``ABSORBER`` HDU.
+
+   The ``max_dv_known`` key in the constants file controls how far (in km/s) the fitted redshift
+   is allowed to drift from the seed before the detection is rejected (default: 500 km/s).
 
 
 Useful notes

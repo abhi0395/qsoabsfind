@@ -198,8 +198,11 @@ def main():
     parser.add_argument('--output', type=str, required=False, help='Path to the output FITS file to save absorber catalog.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
     parser.add_argument('--ncpus', type=int, required=False, default=4, help='Number of CPUs for parallel processing.')
-    parser.add_argument('--coldens', default=False, required=False, action="store_true", help='If provided, code will also calculate total column densities using apparent optical depth method')
-    parser.add_argument('--dv', type=float, required=False, default=300, help='if --coldens is provided, +/- |dv| range (in km/s) will be used to calculate optical depth around each line, default: 300 km/s')
+    parser.add_argument('--coldens-dv', type=float, required=False, default=None,
+        help='If provided, also compute total column densities using the apparent optical depth method '
+             '(AODM; Savage & Sembach 1991). The value sets the +/- velocity range (km/s) for '
+             'optical-depth integration around each line centre (e.g. 300). '
+             'Adds a COLUMN_DENSITY HDU to the output file.')
     parser.add_argument('--verbose', action='store_true', help='Enable detailed per-spectrum/debug logging.')
     parser.add_argument('--zabs-known-file', type=str, default=None,
         help='Path to a FITS file with columns INDEX_SPEC and Z_ABS. When provided, the '
@@ -261,7 +264,7 @@ def main():
     # absorberutils and absfinder) will automatically see the updated values — no function
     # signature changes needed.
     from . import constants as _pkg_constants
-    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
+    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL', 'ZABS_KNOWN_MAX_DV')
     logger.info('Physical constant resolution (user file overrides shown with *):')
     for _name in _overridable:
         _user_val = getattr(user_constants, _name, None)
@@ -284,7 +287,7 @@ def main():
 
     headers = update_header(args, user_constants)
 
-    if args.coldens:
+    if args.coldens_dv is not None:
         logger.info('Will also calculate column densities using apparent optical depth method (AODM)')
         headers.update({
                 'N_METHOD': {
@@ -292,7 +295,7 @@ def main():
                     'comment': 'Column Density Method: apparent optical depth'
                 },
                 'DELTA_V': {
-                    'value': args.dv,
+                    'value': args.coldens_dv,
                     'comment': '+/- velocity (km/s) to calculate optical depth'
                 }
             })
@@ -363,9 +366,9 @@ def main():
     else:
         logger.info('No %s absorbers found, no file saved', args.absorber)
 
-    if args.coldens:
+    if args.coldens_dv is not None:
         logwave = user_constants.search_parameters["logwave"]
-        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.dv, logwave, n_jobs)
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.coldens_dv, logwave, n_jobs)
         append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing
