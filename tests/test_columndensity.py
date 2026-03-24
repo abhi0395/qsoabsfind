@@ -18,7 +18,7 @@ from qsoabsfind.columndensity import (
 
 # Shared MgII parameters used across tests
 _F1, _F2 = 0.6123, 0.3054          # oscillator strengths
-_L1, _L2 = 2796.35, 2803.52        # rest-frame wavelengths (Å)
+_L1, _L2 = 2796.35, 2803.52        # rest-frame wavelengths (Ang)
 _LAMBDA1 = ("MGII_2796", _L1)
 _LAMBDA2 = ("MGII_2803", _L2)
 

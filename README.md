@@ -18,14 +18,14 @@
 
 ## qsoabsfind: Quasar Absorber Finder
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in like low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
+`qsoabsfind` is a Python module designed to detect absorbers with doublet properties (absorbers with two close lines) in low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
 
 The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
 
 
 ### Supported Metal Doublets Systems
 
-| Absorber | Line 1 (Å)  | Line 2 (Å) |
+| Absorber | Line 1 (Ang)  | Line 2 (Ang) |
 |----------|--------|------------|
 | O VI (O⁵⁺)    | 1031.93    | 1037.62     |
 | N V (N⁴⁺)    | 1238.82    | 1242.80     |
@@ -42,11 +42,13 @@ The module also calculates rest-frame equivalent widths (EWs), FWHM and line cen
 Key Features
 --------
 - **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
-- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``data/${survey}`` folder.
+- **9 built-in doublet systems**: Automatic search-window calculation and line properties are pre-configured for MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, and NaI.
+- **Extensible to any doublet**: The pipeline is generic — supply a custom constants file (see `data/${survey}` folder) with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds, and the pipeline will search for it. *(Custom systems are functional but not as thoroughly tested as the built-ins.)*
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
 - **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Known-redshift validation**: When a prior absorber catalog (e.g. from another survey or absorber finder or catalog built from `qsoabsfind`) is available, `--zabs-known-file` skips the convolution search for the given absorbers and runs Gaussian fitting and selection only at the supplied redshifts, enabling fast validation of known systems.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)).
 - **Parallel processing**: Supports fast and efficient computation across large datasets using Python's `multiprocessing` module.
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
@@ -133,6 +135,21 @@ Description
 ```sh
 qsoabsfind --help
 ```
+
+| Argument | Required | Default | Description |
+|---|---|---|---|
+| `--input-fits-file` | yes | - | Input FITS file with continuum-normalised QSO spectra |
+| `--absorber` | yes | - | Doublet to search: `MgII`, `CIV`, `OVI`, `NV`, `SiIV`, `AlIII`, `FeII`, `CaII`, `NaI` |
+| `--constant-file` | yes | - | Search-parameter constants `.py` file (see `constants.py`) |
+| `--output` | yes | - | Output FITS catalog path |
+| `--config` | no | - | YAML config file; keys use underscores; CLI flags override (see `data/example_config.yaml`) |
+| `--n-qso` | no | all | Spectra to process: `500`, `1-1000`, or `1-1000:10` |
+| `--headers` | no | - | Extra FITS header keywords in `KEY=VALUE` format, space-separated |
+| `--ncpus` | no | `4` | Number of parallel worker processes |
+| `--coldens` | no | off | Compute column densities via AODM (adds `COLUMN_DENSITY` HDU) |
+| `--dv` | no | `300` | Velocity half-width (km/s) for optical depth integration; used with `--coldens` |
+| `--verbose` | no | off | Enable detailed per-spectrum debug logging |
+| `--zabs-known-file` | no | - | FITS file with `INDEX_SPEC` and `Z_ABS`; skips convolution, runs Gaussian fitting only |
 
 Important Instructions
 -------------
@@ -234,8 +251,9 @@ from qsoabsfind.datamodel import AbsorberData
 catalog = AbsorberData('test_MgII.fits', autoload=True)
 
 print(catalog.catalog)        # absorber table (ABSORBER HDU)
-print(catalog.metadata)       # QSO metadata (METADATA HDU)
-print(catalog.column_density) # column densities if present, else None
+print(catalog.metadata)       # QSO metadata for detected absorbers (METADATA HDU)
+print(catalog.qso_info)       # all processed spectra with IS_QSO_AVAILABLE flag (QSO_INFO HDU)
+print(catalog.column_density) # column densities if --coldens was used, else None
 ```
 
 **Plotting a random absorber**

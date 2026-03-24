@@ -58,11 +58,13 @@ Key Features
 ------------
 
 - **Automated Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the `Search Window Documentation <https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html>`_. Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
-- **Flexible Search Parameters:** Supports user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``Parameters File``.
+- **9 built-in doublet systems**: Automatic search-window calculation and line properties are pre-configured for MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, and NaI.
+- **Extensible to any doublet**: The pipeline is generic — supply a custom constants file with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds (see ``Parameters File``), and the pipeline will search for it. Custom systems are functional but not as thoroughly tested as the built-ins.
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Known-redshift validation**: When a prior absorber catalog (e.g. from another survey or absorber finder or catalog built from ``qsoabsfind``) is available, ``--zabs-known-file`` skips the convolution search for the given absorbers and runs Gaussian fitting and selection only at the supplied redshifts, enabling fast validation of known systems.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
 - **Parallel processing**: Supports efficient computation across large datasets using Python's ``multiprocessing`` module.
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
@@ -139,8 +141,9 @@ After running the absorber search, you can load the output FITS catalog using th
       catalog = AbsorberData('test_MgII.fits', autoload=True)
 
       print(catalog.catalog)        # absorber table (ABSORBER HDU)
-      print(catalog.metadata)       # QSO metadata (METADATA HDU)
-      print(catalog.column_density) # column densities if present, else None
+      print(catalog.metadata)       # QSO metadata for detected absorbers (METADATA HDU)
+      print(catalog.qso_info)       # all processed spectra with IS_QSO_AVAILABLE flag (QSO_INFO HDU)
+      print(catalog.column_density) # column densities if --coldens was used, else None
 
 
 Plotting a random absorber

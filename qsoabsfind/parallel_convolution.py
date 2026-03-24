@@ -41,7 +41,7 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
-        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI). Default is 'MgII'.
         kwargs (dict): search parameters as described in data/desi/desi_constants.py
 
     Returns:
@@ -65,7 +65,7 @@ def parallel_convolution_search(
     Args:
         fits_file (str): Path to the FITS file containing Normalized QSO spectra.
         spec_indices (list or numpy.ndarray): Indices of quasars in the data matrix.
-        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         n_jobs (int): Number of parallel jobs to run.
         warnings_file (str, optional): Path to a file where worker-process warnings are written. Default is None.
         zabs_known_map (dict, optional): Mapping of spec_index (int) to a list of known absorber
@@ -193,7 +193,7 @@ def main():
     parser.add_argument('--config', type=str, default=None, help='Path to a YAML config file. All keys must match CLI argument names (underscores). CLI flags always override YAML values.')
     parser.add_argument('--input-fits-file', type=str, required=False, help='Path to the input FITS file, containing residual spectra.')
     parser.add_argument('--n-qso', type=str, required=False, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '100', '1-1000', '1-1000:10'). If not provided, code will run all the spectra")
-    parser.add_argument('--absorber', type=str, required=False, help='Absorber name for searching doublets (options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII).')
+    parser.add_argument('--absorber', type=str, required=False, help='Absorber name for searching doublets (options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).')
     parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as described in the documentation.')
     parser.add_argument('--output', type=str, required=False, help='Path to the output FITS file to save absorber catalog.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')

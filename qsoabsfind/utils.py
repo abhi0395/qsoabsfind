@@ -14,6 +14,7 @@ from importlib.metadata import version, PackageNotFoundError
 
 # Constants
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys, amplitude_dict
+from . import constants as _constants
 
 def get_package_versions():
     """
@@ -208,7 +209,7 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
 
     A_main = amplitude_dict[absorber]
     A_main, A_secondary = compute_doublet_amplitudes(A_main, f1, f2)
-    ct = 10
+    ct = _constants.CONV_KERNEL_EXTENT
     # extract lambdas for the doublet
     lambda1, lambda2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
 

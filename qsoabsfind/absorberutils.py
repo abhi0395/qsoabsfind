@@ -41,7 +41,7 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
     """
     new_our_z = []
     new_res_arr = []
-    npix = 3 # number of pixels around a line minima
+    npix = _constants.CANDIDATE_VALIDATION_NPIX  # number of pixels around a line minima
     del_lam = line2 - line1
     line_centre = 0.5 * (line1 + line2)
 
@@ -144,7 +144,7 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
                Returns (mean_sn1, mean_sn2).
     """
     if sig1 is None or sig2 is None:
-        dpix = 5
+        dpix = _constants.SNR_DEFAULT_DPIX
         if log:
             delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
             delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
@@ -152,7 +152,7 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
             delta1 = dpix * (lam_rest[1]-lam_rest[0])
             delta2 = delta1
     else:
-        nsig = 3 # for gaussian more than 99.7 percentile data is within 4sigma
+        nsig = _constants.SNR_NSIG  # for gaussian more than 99.7 percentile data is within 4sigma
         delta1, delta2 = nsig * sig1, nsig * sig2
 
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
@@ -252,8 +252,8 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
     fluxes = np.array(fluxes)
     redshifts = []
     for z in all_redshifts:
-        z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=9)
-        z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=9)
+        z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=_constants.REDSHIFT_REFINE_WINDOW)
+        z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=_constants.REDSHIFT_REFINE_WINDOW)
         new_z = (line1 * z1 + line2 * z2) / (line1 + line2)
         redshifts.append(new_z)
 
@@ -292,7 +292,7 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
 
     return best_redshifts
 
-def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=False):
+def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_constants.REDSHIFT_REFINE_WINDOW, log=False):
     """Estimate absorber redshift from the minimum flux near the expected line center.
 
     Given an initial redshift guess, this function identifies a symmetric window
@@ -341,7 +341,7 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=
     else:
         return z_guess  # fallback
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=9, gamma=4):
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=_constants.REDSHIFT_REFINE_WINDOW, gamma=_constants.MEDIAN_WEIGHT_GAMMA):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
@@ -373,7 +373,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     combined_final_our_z = new_z
 
     z_ind = []  # Final list of median redshifts for each spectrum
-    ct = 2
+    ct = _constants.CANDIDATE_DEDUP_CT
     if len(combined_final_our_z) > 1:
         abs_list = np.array(combined_final_our_z)
 
@@ -405,7 +405,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120, verbose=False):
+                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=_constants.MAX_VEL_DISPERSION, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -623,7 +623,7 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         abs_z (list or numpy.ndarray): List of absorber redshifts.
         sn1_all (list or numpy.ndarray): List of SNR values for the first line.
         sn2_all (list or numpy.ndarray): List of SNR values for the second line.
-        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
+        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         fitted_params (list of arrays): corresponding gaussian fitting parameters for those redshifts
 
     Returns:
@@ -719,7 +719,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
     that will be used to define the search windohe given absorber.
 
     Args:
-        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
+        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI.)
         start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
         end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
 
@@ -777,7 +777,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
     Args:
-        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
+        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI.)
         zqso (float): Quasar emission redshift
         min_wave (float): minimum Observed wavelength
         max_wave (float): maximum Observed wavelength
@@ -816,7 +816,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         residual (numpy.ndarray): The residual array of the QSO spectrum.
         err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
         zqso (float): The redshift of the QSO.
-        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII)
+        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI)
         min_wave (float): minimum observed wavelength edge (in Ang)
         max_wave (float): maximum observed wavelength edge (in Ang)
         start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)

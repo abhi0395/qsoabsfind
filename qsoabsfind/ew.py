@@ -12,6 +12,7 @@ from .absorberutils import find_z_from_minimum
 
 # Constants
 from .constants import lines, oscillator_parameters, doublet_keys
+from . import constants as _constants
 
 def return_line_centers(use_kernel):
     """
@@ -408,7 +409,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
 def measure_absorber_properties_double_gaussian(
     index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix,
-    num_iter=500, window=5, use_covariance=False, nboot=None):
+    num_iter=_constants.GAUSS_FIT_NUM_ITER, window=_constants.EW_FIT_WINDOW, use_covariance=False, nboot=None):
     """
     Measures the properties of each potential absorber by fitting a double
     Gaussian to the absorption feature and measuring the equivalent width (EW)
@@ -460,8 +461,8 @@ def measure_absorber_properties_double_gaussian(
     amp_ratio = (oscillator_parameters[f'{use_kernel}_f2']
                  / oscillator_parameters[f'{use_kernel}_f1'])
 
-    ix0 = line_centre1 - d_pix * 15
-    ix1 = line_centre2 + d_pix * 15
+    ix0 = line_centre1 - d_pix * _constants.FIT_WINDOW_HALF_WIDTH
+    ix1 = line_centre2 + d_pix * _constants.FIT_WINDOW_HALF_WIDTH
 
     if size_array == 0:
         return (

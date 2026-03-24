@@ -44,7 +44,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          The file must include extensions for FLUX, ERROR, WAVELENGTH
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
-        absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
+        absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         kwargs (dict): search parameters as taken in convolution_method..()
             An optional key ``zabs_known`` (float or list) may be provided.
             When present, the absorber search window is skipped and the code
@@ -215,8 +215,9 @@ def _compute_fit_bounds(line1, line2, line_sep, d_pix, del_sigma):
     # Build the six-parameter Gaussian fitting bounds and the acceptable
     # range for the observed line separation.  bd_ct and x_sep set how far
     # each centre and width is allowed to deviate from the theoretical value.
-    bd_ct, x_sep = 1.0, 30
-    edge = 0.1
+    bd_ct = _constants.GAUSS_FIT_BD_CT
+    x_sep = _constants.GAUSS_FIT_X_SEP
+    edge  = _constants.GAUSS_FIT_EDGE
     bound = (
         np.array([2e-2, line1 - bd_ct * d_pix, max(0.1, del_sigma - edge),
                   2e-2, line2 - bd_ct * d_pix, max(0.1, del_sigma - edge)]),
@@ -390,7 +391,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
 
     Args:
         spec_index (int): Index of quasar in the spectra 2D array.
-        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, NaI). Default is 'MgII'.
+        absorber (str): Absorber name for searching doublets (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI). Default is 'MgII'.
         lam_obs (numpy.array): observed wavelength array.
         residual (numpy.array): residual (i.e. flux/continuum) array
         error (numpy.array): error on residuals

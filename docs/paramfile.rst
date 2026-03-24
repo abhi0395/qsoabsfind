@@ -68,3 +68,12 @@ A minimal example for the ``constants.py``
     and measuring the standard deviation from unity.
     """
 
+.. note::
+
+   The pipeline is not limited to the 9 built-in doublets. Any doublet system can be
+   targeted by providing a constants file that defines the rest-frame wavelengths,
+   oscillator strengths, and search window for the two transitions, following the
+   structure shown above. The built-in systems (MgII, CIV, OVI, NV, SiIV, AlIII,
+   FeII, CaII, NaI) benefit from thorough testing; custom systems are functional
+   but have not been as extensively validated.
+

@@ -99,7 +99,7 @@ Optionally, users can instruct the module to calculate **total column densities*
 
 To enable this feature, use the ``--coldens`` flag. You can also specify the velocity range using ``--dv``, which defines the maximum velocity (in km/s) on each side of the line center for integrating the optical depth.
 
-Here, ``--dv 300`` means the integration will be performed over ±300 km/s from each line center. You can adjust this value depending on the expected velocity width of the absorption lines.
+Here, ``--dv 300`` means the integration will be performed over +/-300 km/s from each line center. You can adjust this value depending on the expected velocity width of the absorption lines.
 
 .. code-block:: bash
 
@@ -112,15 +112,69 @@ Here, ``--dv 300`` means the integration will be performed over ±300 km/s from 
                --coldens
                --dv 300
 
-Description
-------------
+CLI Arguments
+-------------
 
-- ``--input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
-- ``--constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
-- ``--output``: Output filename to save absorber catalog
-- ``--absorber``: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
-- ``--coldens``: To enable AODM based column density estimation
-- ``--dv``: Velocity width (in *km/s*) for flux integration around each line center
+*Required* (may be supplied via ``--config`` instead of the command line):
+
+.. option:: --input-fits-file <path>
+
+   Path to the input FITS file containing continuum-normalised QSO spectra.
+
+.. option:: --absorber <name>
+
+   Doublet to search for. Choices: ``MgII``, ``CIV``, ``OVI``, ``NV``, ``SiIV``, ``AlIII``, ``FeII``, ``CaII``, ``NaI``.
+
+.. option:: --constant-file <path>
+
+   Path to the search-parameter constants ``.py`` file. See ``data/sdss/sdss_constants.py`` for the required format.
+
+.. option:: --output <path>
+
+   Output FITS catalog file path.
+
+*Optional:*
+
+.. option:: --config <path>
+
+   Path to a YAML config file. Keys use underscores (e.g. ``input_fits_file``). CLI flags always
+   override YAML values. A fully annotated template is provided at ``data/example_config.yaml``.
+
+.. option:: --n-qso <value>
+
+   Which spectra to process. Accepts a single integer (``500``), a range (``1-1000``), or a
+   stepped range (``1-1000:10``). Default: all spectra in the file.
+
+.. option:: --headers <NAME=VALUE> [<NAME=VALUE> ...]
+
+   One or more ``KEY=VALUE`` pairs written as keywords to the output FITS PRIMARY HDU
+   (e.g. ``SURVEY=SDSS AUTHOR=YOUR_NAME``).
+
+.. option:: --ncpus <int>
+
+   Number of parallel worker processes. Default: ``4``.
+
+.. option:: --coldens
+
+   If set, also computes total column densities for each detected absorber using the apparent
+   optical depth method (AODM; Savage & Sembach 1991). Adds a ``COLUMN_DENSITY`` HDU to the
+   output file.
+
+.. option:: --dv <float>
+
+   Velocity half-width in km/s used for optical depth integration around each line centre.
+   Only relevant when ``--coldens`` is used. Default: ``300``.
+
+.. option:: --verbose
+
+   Enable detailed per-spectrum and debug logging to the terminal and log file.
+
+.. option:: --zabs-known-file <path>
+
+   Path to a FITS file with columns ``INDEX_SPEC`` and ``Z_ABS``. When supplied, the convolution
+   search is skipped and Gaussian fitting is run at the provided redshifts only. Multiple rows
+   with the same ``INDEX_SPEC`` are treated as multiple known redshifts for that spectrum. Adds
+   a ``ZABS_KNOWN`` column in the ``ABSORBER`` HDU.
 
 
 Useful notes

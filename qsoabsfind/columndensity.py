@@ -17,6 +17,7 @@ from .absorberutils import calculate_doublet_ratio
 
 # Constants
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
+from . import constants as _constants
 
 def ss1991_correction(delta_logN):
     """
@@ -55,7 +56,7 @@ def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac):
     Returns:
         tuple: apparent optical depth array and corresponding error arrays
     """
-    F_lambda = np.clip(F_lambda, 0.005, 1)  # Avoid log(0) issues
+    F_lambda = np.clip(F_lambda, _constants.AODM_FLUX_CLIP_MIN, 1)  # Avoid log(0) issues
     tau = -np.log(F_lambda)
     sigma_tau_cont = np.log(1 + continuum_error_frac * np.exp(tau))
     sigma_F_lambda_inflated = np.sqrt(sigma_F_lambda**2 + sigma_tau_cont**2)
@@ -116,7 +117,7 @@ def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum
     velocity_filter = (dv_absorber >= -velocity_range) & (dv_absorber <= velocity_range)
     F_lam = F_lambda[velocity_filter]
     err_F_lam = error[velocity_filter]
-    sel = (~np.isnan(F_lam)) & (F_lam >0.005) & (F_lam < 1 + err_F_lam)
+    sel = (~np.isnan(F_lam)) & (F_lam > _constants.AODM_FLUX_CLIP_MIN) & (F_lam < 1 + err_F_lam)
     F_lam = F_lam[sel]
     delta_dv_i = v_array[velocity_filter][sel]
     err_F_lam = err_F_lam[sel]
