@@ -363,13 +363,13 @@ def main():
             logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
         save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber,
                              spec_indices=spec_indices)
+
+        if args.coldens_dv is not None:
+            logwave = user_constants.search_parameters["logwave"]
+            col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.coldens_dv, logwave, n_jobs)
+            append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
     else:
         logger.info('No %s absorbers found, no file saved', args.absorber)
-
-    if args.coldens_dv is not None:
-        logwave = user_constants.search_parameters["logwave"]
-        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.coldens_dv, logwave, n_jobs)
-        append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
 
     # End timing
     end_time = time.time()
