@@ -23,7 +23,8 @@ from .absorberutils import (
     check_absorber_selection
 )
 from .ew import (
-    measure_absorber_properties_double_gaussian
+    measure_absorber_properties_double_gaussian,
+    trapezoidal_ew,
 )
 from .datamodel import QSOSpecRead
 
@@ -277,7 +278,8 @@ def _run_convolution_and_find_candidates(absorber, mult_resi, unmsk_residual, re
 def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error, bound,
                          absorber, d_pix, f1, f2, resolution, line_ratio,
                          lower_del_lam, upper_del_lam, sn_line1, sn_line2,
-                         logwave, use_covariance, nboot, conf_level, verbose):
+                         logwave, use_covariance, nboot, conf_level, verbose,
+                         trapz_ew_sigma=None):
     # For each candidate redshift, re-run the double-Gaussian fit, compute SNR,
     # velocity dispersion and doublet ratio, then keep only those that pass
     # check_absorber_selection.  All output arrays are indexed the same way as
@@ -327,12 +329,32 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
                 vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5],
                                             resolution, z_new, lam_obs)
-                if EW_first_temp_mean[0] > 0 and EW_second_temp_mean[0] > 0:
-                    dr, dr_error = calculate_doublet_ratio(EW_first_temp_mean[0], EW_second_temp_mean[0],
-                                                           EW_first_error_temp[0], EW_second_error_temp[0], f1, f2)
+                # Use trapezoidal EWs if requested, otherwise fall back to Gaussian analytic EWs.
+                # The same EW values are used consistently for doublet ratio, ew_snr cuts
+                # (inside check_absorber_selection) and the stored catalog values.
+                if trapz_ew_sigma is not None:
+                    _tr = trapezoidal_ew(lam_obs, residual, error, z_new,
+                                        c0, c1, sig1, sig2, n_sigma=trapz_ew_sigma)
+                    ew1_val      = _tr['ew1']      if np.isfinite(_tr['ew1'])      else 0.0
+                    ew2_val      = _tr['ew2']      if np.isfinite(_tr['ew2'])      else 0.0
+                    ew_total_val = _tr['ew_total'] if np.isfinite(_tr['ew_total']) else 0.0
+                    ew1_err_val  = _tr['ew1_err']  if np.isfinite(_tr['ew1_err'])  else 0.0
+                    ew2_err_val  = _tr['ew2_err']  if np.isfinite(_tr['ew2_err'])  else 0.0
+                    ew_total_err_val = _tr['ew_total_err'] if np.isfinite(_tr['ew_total_err']) else 0.0
+                else:
+                    ew1_val      = EW_first_temp_mean[0]
+                    ew2_val      = EW_second_temp_mean[0]
+                    ew_total_val = EW_total_temp_mean[0]
+                    ew1_err_val  = EW_first_error_temp[0]
+                    ew2_err_val  = EW_second_error_temp[0]
+                    ew_total_err_val = EW_total_error_temp[0]
+
+                if ew1_val > 0 and ew2_val > 0:
+                    dr, dr_error = calculate_doublet_ratio(ew1_val, ew2_val,
+                                                           ew1_err_val, ew2_err_val, f1, f2)
                     min_dr, max_dr = 1 - dr_error, line_ratio + dr_error
-                    ew1_snr = EW_first_temp_mean[0] / EW_first_error_temp[0]
-                    ew2_snr = EW_second_temp_mean[0] / EW_second_error_temp[0]
+                    ew1_snr = ew1_val / ew1_err_val if ew1_err_val > 0 else 0.0
+                    ew2_snr = ew2_val / ew2_err_val if ew2_err_val > 0 else 0.0
                 else:
                     dr, min_dr, max_dr = 0, 0, -1
                     ew1_snr, ew2_snr = 0, 0
@@ -345,12 +367,12 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                     pure_z_abs[m] = z_new
                     pure_gauss_fit[m] = fit_param_temp[0]
                     pure_gauss_fit_std[m] = fit_param_std_temp[0]
-                    pure_ew_first_line_mean[m] = EW_first_temp_mean[0]
-                    pure_ew_second_line_mean[m] = EW_second_temp_mean[0]
-                    pure_ew_total_mean[m] = EW_total_temp_mean[0]
-                    pure_ew_first_line_error[m] = EW_first_error_temp[0]
-                    pure_ew_second_line_error[m] = EW_second_error_temp[0]
-                    pure_ew_total_error[m] = EW_total_error_temp[0]
+                    pure_ew_first_line_mean[m] = ew1_val
+                    pure_ew_second_line_mean[m] = ew2_val
+                    pure_ew_total_mean[m] = ew_total_val
+                    pure_ew_first_line_error[m] = ew1_err_val
+                    pure_ew_second_line_error[m] = ew2_err_val
+                    pure_ew_total_error[m] = ew_total_err_val
                     redshift_err[m] = z_new_error
                     sn1_all[m] = sn1
                     sn2_all[m] = sn2
@@ -381,7 +403,7 @@ def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residua
     return (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -409,6 +431,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         verbose (bool): If True, print detailed outputs for debugging. Default is True.
         nboot (int, optional): Number of bootstrap iterations for fitting. Default is None (disabled).
         conf_level (float): Minimum confidence level for chi2-based absorber selection. Default is 0.95.
+        trapz_ew_sigma (float or None): If provided, equivalent widths are measured using the
+            trapezoidal integration method with a window of ``+/- trapz_ew_sigma * sigma`` around
+            each fitted line centre.  The same EW values are used for the doublet-ratio check,
+            the ``ew_snr`` criterion inside ``check_absorber_selection``, and the stored catalog
+            columns.  Gaussian fit parameters and their errors are always retained regardless of
+            this setting.  Default is None (use Gaussian analytic EW).
         zabs_known (float or list, optional): Known absorber redshift(s) to validate. When given the
             convolution search is skipped entirely and the code goes straight to Gaussian fitting and
             selection for each supplied redshift.  Redshifts whose observed doublet falls outside the
@@ -541,7 +569,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
      redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2_array) = _validate_candidates(
         spec_index, combined_final_our_z, lam_obs, residual, error, bound, absorber,
         d_pix, f1, f2, resolution, line_ratio, lower_del_lam, upper_del_lam,
-        sn_line1, sn_line2, logwave, use_covariance, nboot, conf_level, verbose)
+        sn_line1, sn_line2, logwave, use_covariance, nboot, conf_level, verbose,
+        trapz_ew_sigma=trapz_ew_sigma)
 
     if zabs_known_input is None:
         # convolution mode: discard failed candidates and remove false positives

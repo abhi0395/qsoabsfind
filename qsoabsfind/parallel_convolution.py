@@ -209,6 +209,13 @@ def main():
              'convolution search is skipped for the listed spectra and only Gaussian fitting '
              'is run at the supplied redshifts. Multiple rows with the same INDEX_SPEC are '
              'treated as multiple known redshifts for that spectrum.')
+    parser.add_argument('--trapz-ew-sigma', type=float, default=None,
+        help='If provided, equivalent widths in the output catalog are measured using '
+             'trapezoidal integration over a window of +/- TRAPZ_EW_SIGMA * sigma around '
+             'each line centre (sigma from the Gaussian fit). These EWs are used '
+             'consistently for both the stored catalog columns and the absorber selection '
+             'criteria (ew_snr, doublet ratio). Gaussian fit parameters are always retained. '
+             'Default: use Gaussian analytic EW.')
 
     # --- Two-pass parse: load YAML defaults first, CLI args override them ---
     # First pass: extract --config without failing on unknown/required args
@@ -326,6 +333,12 @@ def main():
 
     if nboot is not None and nboot>0:
         logger.info('Gaussian fitting parameter estimation will be done with %s bootstrapping iterations', nboot)
+
+    if args.trapz_ew_sigma is not None:
+        user_constants.search_parameters['trapz_ew_sigma'] = args.trapz_ew_sigma
+        logger.info('Trapezoidal EW method enabled with n_sigma = %s', args.trapz_ew_sigma)
+    elif 'trapz_ew_sigma' not in user_constants.search_parameters:
+        user_constants.search_parameters['trapz_ew_sigma'] = None
 
     # Load known-redshift map if the user provided a FITS file
     zabs_known_map = None

@@ -124,5 +124,43 @@ class TestQSOAbsFind(unittest.TestCase):
         else:
             self.skipTest("Skipping column density test: no SDSS absorbers detected")
 
+    def test_trapz_ew_sigma_via_read_single_spectrum(self):
+        """trapz_ew_sigma flows through read_single_spectrum_and_find_absorber without error."""
+        spec_index = np.random.randint(100)
+        params = dict(self.sdss_constants.search_parameters)
+        params['trapz_ew_sigma'] = 3.0
+        result = read_single_spectrum_and_find_absorber(
+            self.sdss_fits_file, spec_index, 'MgII', **params)
+        self.assertIsInstance(result, dict)
+        # Result must contain all standard EW keys
+        for key in ('ew_1_mean', 'ew_2_mean', 'ew_total_mean',
+                    'ew_1_error', 'ew_2_error', 'ew_total_error'):
+            self.assertIn(key, result)
+
+    def test_trapz_ew_sigma_result_has_same_keys_as_default(self):
+        """The output dict key set must be identical regardless of EW mode."""
+        spec_index = np.random.randint(100)
+        params_trapz = dict(self.sdss_constants.search_parameters)
+        params_trapz['trapz_ew_sigma'] = 3.0
+        params_default = dict(self.sdss_constants.search_parameters)
+        result_trapz   = read_single_spectrum_and_find_absorber(
+            self.sdss_fits_file, spec_index, 'MgII', **params_trapz)
+        result_default = read_single_spectrum_and_find_absorber(
+            self.sdss_fits_file, spec_index, 'MgII', **params_default)
+        self.assertEqual(set(result_trapz.keys()), set(result_default.keys()))
+
+    def test_trapz_ew_sigma_parallel_search_accepted(self):
+        """parallel_convolution_search must accept trapz_ew_sigma as a kwarg."""
+        spec_indices = np.random.randint(0, 100, size=2)
+        params = dict(self.sdss_constants.search_parameters)
+        params['trapz_ew_sigma'] = 3.0
+        try:
+            result = parallel_convolution_search(
+                self.sdss_fits_file, spec_indices, 'MgII', n_jobs=2, **params)
+        except TypeError as exc:
+            self.fail(f'parallel_convolution_search raised TypeError with trapz_ew_sigma: {exc}')
+        self.assertIsInstance(result, dict)
+        self.assertIn('z_abs', result)
+
 if __name__ == '__main__':
     unittest.main()

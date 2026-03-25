@@ -330,5 +330,92 @@ class TestZabsKnown(unittest.TestCase):
         self.assertTrue(all(v <= 0 for v in result['z_abs']))
 
 
+class TestTrapzEWSigma(unittest.TestCase):
+    """Tests for the trapz_ew_sigma parameter of convolution_method_absorber_finder_in_QSO_spectra."""
+
+    def _flat_spectrum(self, z_centre, absorber='MgII', n=3000):
+        line1, line2, *_ = _get_doublet_constants(absorber)
+        lam_obs = np.linspace(line1 * (1 + z_centre) - 200,
+                              line2 * (1 + z_centre) + 200, n).astype('float64')
+        flux = np.ones(n, dtype='float64')
+        error = np.full(n, 0.05, dtype='float64')
+        return lam_obs, flux, error
+
+    def test_trapz_ew_sigma_param_accepted(self):
+        """trapz_ew_sigma keyword must be accepted without TypeError."""
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        try:
+            result = convolution_method_absorber_finder_in_QSO_spectra(
+                spec_index=20, absorber='MgII',
+                lam_obs=lam_obs, residual=flux, error=error,
+                lam_search=None, unmsk_residual=None,
+                logwave=False, verbose=False,
+                zabs_known=z, trapz_ew_sigma=3.0)
+        except TypeError as exc:
+            self.fail(f'trapz_ew_sigma raised TypeError: {exc}')
+        self.assertIsInstance(result, dict)
+
+    def test_trapz_ew_sigma_output_has_same_keys_as_default(self):
+        """Result dict has the same key set regardless of EW mode."""
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result_trapz = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=21, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z, trapz_ew_sigma=3.0)
+        result_gauss = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=22, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z, trapz_ew_sigma=None)
+        self.assertEqual(set(result_trapz.keys()), set(result_gauss.keys()))
+
+    def test_trapz_ew_sigma_none_matches_default_output(self):
+        """Explicitly passing trapz_ew_sigma=None must be equivalent to omitting the kwarg."""
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result_none = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=23, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z, trapz_ew_sigma=None)
+        result_omit = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=24, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False, zabs_known=z)
+        self.assertEqual(result_none['z_abs'],     result_omit['z_abs'])
+        self.assertEqual(result_none['ew_1_mean'], result_omit['ew_1_mean'])
+
+    def test_trapz_ew_sigma_combined_with_zabs_known(self):
+        """trapz_ew_sigma and zabs_known can be used together without error."""
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        result = convolution_method_absorber_finder_in_QSO_spectra(
+            spec_index=25, absorber='MgII',
+            lam_obs=lam_obs, residual=flux, error=error,
+            lam_search=None, unmsk_residual=None,
+            logwave=False, verbose=False,
+            zabs_known=z, trapz_ew_sigma=2.0)
+        self.assertIsInstance(result, dict)
+        self.assertIn('zabs_known', result)
+
+    def test_different_nsigma_values_accepted(self):
+        """Any positive float should be accepted as trapz_ew_sigma."""
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        for nsig in (1.0, 2.0, 3.0, 5.0):
+            with self.subTest(trapz_ew_sigma=nsig):
+                result = convolution_method_absorber_finder_in_QSO_spectra(
+                    spec_index=26, absorber='MgII',
+                    lam_obs=lam_obs, residual=flux, error=error,
+                    lam_search=None, unmsk_residual=None,
+                    logwave=False, verbose=False,
+                    zabs_known=z, trapz_ew_sigma=nsig)
+                self.assertIsInstance(result, dict)
+
+
 if __name__ == '__main__':
     unittest.main()

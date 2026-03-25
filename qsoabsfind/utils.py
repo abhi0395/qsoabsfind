@@ -836,3 +836,135 @@ def read_nqso_from_header(file_path, hdu_name='METADATA'):
 
         except KeyError:
             raise ValueError(f"No '{hdu_name}' HDU found in {file_path}.")
+
+
+def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
+                                line1, line2, sigma1, sigma2,
+                                n_sigma=3, show_error=True,
+                                plot_filename=None, **kwargs):
+    """
+    Plot zoomed panels around each of the two absorption lines showing the
+    pixels included in the trapezoidal EW integration.
+
+    For each line the panel shows:
+
+    * The normalised flux (and optionally ±1σ error bars).
+    * A shaded column marking the integration window
+      ``[line_centre ± n_sigma × sigma]``.
+    * A filled area between the flux and the continuum (y = 1) inside the
+      window, visualising the absorption being integrated.
+    * A dashed continuum line at y = 1.
+    * A vertical dotted line at the rest-frame line centre.
+
+    Args:
+        wavelength (numpy.ndarray): Observed wavelength array (Å).
+        residual (numpy.ndarray): Normalised flux array.
+        error (numpy.ndarray): Per-pixel 1-sigma flux error array.
+        z (float): Absorber redshift used to convert to the rest frame.
+        line1 (float): Rest-frame wavelength of the first line (Å).
+        line2 (float): Rest-frame wavelength of the second line (Å).
+        sigma1 (float): Gaussian width (1-sigma) of the first line (Å, rest
+            frame) used to define the integration window.
+        sigma2 (float): Gaussian width (1-sigma) of the second line (Å, rest
+            frame) used to define the integration window.
+        n_sigma (float): Half-width of each integration window in units of
+            sigma.  Default is 3, matching ``trapezoidal_ew``.
+        show_error (bool): If ``True`` (default), plot error bars / error
+            envelope on each panel.
+        plot_filename (str or None): If given, save the figure to this path
+            instead of calling ``plt.show()``.
+        **kwargs: Extra keyword arguments forwarded to the flux ``plot`` call
+            (e.g. ``color``, ``lw``).  The following keys are also consumed
+            here and not forwarded: ``fontsize``, ``title``.
+    """
+    fontsize = kwargs.pop('fontsize', 15)
+    title    = kwargs.pop('title', f'Trapezoidal EW windows  (z = {z:.4f})')
+
+    rest_lam = wavelength / (1.0 + z)
+
+    line_info = [
+        (line1, sigma1, 'C0', f'Line 1  λ={line1:.2f} Å'),
+        (line2, sigma2, 'C1', f'Line 2  λ={line2:.2f} Å'),
+    ]
+
+    # Extra context shown around each window (in rest-frame Å)
+    context_pad = max(6 * sigma1, 6 * sigma2, 5.0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    fig.suptitle(title, fontsize=fontsize)
+
+    for ax, (lc, sig, colour, label) in zip(axes, line_info):
+        w_lo = lc - n_sigma * sig
+        w_hi = lc + n_sigma * sig
+
+        # Zoom range: window + padding
+        x_lo = w_lo - context_pad
+        x_hi = w_hi + context_pad
+        mask_zoom = (rest_lam >= x_lo) & (rest_lam <= x_hi)
+
+        lam_z   = rest_lam[mask_zoom]
+        flux_z  = residual[mask_zoom]
+        err_z   = error[mask_zoom]
+
+        if lam_z.size == 0:
+            ax.set_title(f'{label}\n(no data in range)', fontsize=fontsize - 2)
+            continue
+
+        # Shaded integration window (full height)
+        win_label = f'Integration window\n±{n_sigma}σ = [{w_lo:.2f}, {w_hi:.2f}] Å'
+        ax.axvspan(w_lo, w_hi, alpha=0.15, color=colour, label=win_label)
+
+        # Flux
+        if show_error:
+            ax.errorbar(lam_z, flux_z, yerr=err_z,
+                        fmt='o', ms=4, lw=1.2, color=colour,
+                        ecolor='gray', elinewidth=0.8, capsize=2,
+                        label='flux ± error', **kwargs)
+        else:
+            ax.plot(lam_z, flux_z, '-o', ms=4, lw=1.2,
+                    color=colour, label='flux', **kwargs)
+
+        # Filled absorption area inside the window
+        mask_win = (rest_lam >= w_lo) & (rest_lam <= w_hi)
+        lam_w  = rest_lam[mask_win]
+        flux_w = residual[mask_win]
+        if lam_w.size >= 2:
+            ax.fill_between(lam_w, flux_w, 1.0,
+                            where=(flux_w < 1.0),
+                            interpolate=True,
+                            color=colour, alpha=0.45,
+                            label='absorbed area')
+
+        # Continuum and line centre
+        ax.axhline(1.0, color='k', ls='--', lw=1.0, label='continuum')
+        ax.axvline(lc,  color='k', ls=':',  lw=1.2, label=f'line centre {lc:.2f} Å')
+
+        # Axes limits and decoration
+        ax.set_xlim(x_lo, x_hi)
+        finite = flux_z[np.isfinite(flux_z)]
+        if finite.size:
+            ylo = min(0.0, finite.min()) - 0.05
+            yhi = max(1.2, finite.max() + 0.05)
+        else:
+            ylo, yhi = -0.05, 1.25
+        ax.set_ylim(ylo, yhi)
+
+        ax.set_title(label, fontsize=fontsize - 1)
+        ax.set_xlabel('rest wavelength (Å)', fontsize=fontsize - 1)
+        ax.set_ylabel('normalised flux', fontsize=fontsize - 1)
+        ax.legend(fontsize=9, loc='lower right')
+        ax.grid(True, alpha=0.4)
+        ax.minorticks_on()
+        ax.tick_params(axis='both', which='major', labelsize=11)
+        ax.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
+
+    if plot_filename is not None:
+        plot_path = (plot_filename if os.path.isabs(plot_filename)
+                     else os.path.join(os.getcwd(), plot_filename))
+        plt.savefig(plot_path)
+        plt.close()
+        print(f"Plot saved as {plot_path}")
+    else:
+        plt.show()

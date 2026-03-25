@@ -488,3 +488,78 @@ def measure_absorber_properties_double_gaussian(
         EW_first_line_error, EW_second_line_error, EW_total_error,
         delta_chi2
     )
+
+
+def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2, n_sigma=3):
+    """
+    Measure the rest-frame equivalent width (EW) and its 1-sigma uncertainty
+    for two absorption lines using the trapezoidal integration method.
+
+    The integration window for each line is
+    ``[line_centre - n_sigma * sigma, line_centre + n_sigma * sigma]``
+    evaluated in the rest frame.  Per-pixel errors are propagated analytically
+    through the trapezoidal-rule weights.
+
+    Args:
+        wavelength (numpy.ndarray): Observed wavelength array (Å).
+        residual (numpy.ndarray): Normalised flux array.  Values should be
+            close to 1 in the continuum and dip below 1 in absorption.
+        error (numpy.ndarray): Per-pixel 1-sigma flux error array.
+        z (float): Absorber redshift used to convert to the rest frame.
+        line1 (float): Rest-frame wavelength of the first line (Å).
+        line2 (float): Rest-frame wavelength of the second line (Å).
+        sigma1 (float): Gaussian width (1-sigma) of the first line (Å, rest
+            frame) used to define the integration window.
+        sigma2 (float): Gaussian width (1-sigma) of the second line (Å, rest
+            frame) used to define the integration window.
+        n_sigma (float): Half-width of each integration window expressed in
+            units of the corresponding sigma.  Default is 3.
+
+    Returns:
+        tuple: ``(ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err)``
+
+            - *ew1*, *ew2* – rest-frame EW of line 1 and line 2 (Å).
+            - *ew_total* – sum of the two EWs (Å).
+            - *ew1_err*, *ew2_err*, *ew_total_err* – corresponding 1-sigma
+              uncertainties (Å).
+
+            A value of ``NaN`` is returned for any quantity whose integration
+            window contains fewer than two pixels.
+    """
+    rest_lam = wavelength / (1.0 + z)
+
+    def _trapz_ew_and_err(lam, flux, err):
+        """Integrate (1 - flux) over *lam* and propagate *err* via trapezoid weights."""
+        if lam.size < 2:
+            return np.nan, np.nan
+
+        absorption = 1.0 - flux
+        ew = np.trapz(absorption, lam)
+
+        # Trapezoidal-rule weights: each pixel's contribution to the integral
+        dlam = np.diff(lam)
+        weights = np.empty(lam.size)
+        weights[0] = dlam[0] / 2.0
+        weights[-1] = dlam[-1] / 2.0
+        weights[1:-1] = (dlam[:-1] + dlam[1:]) / 2.0
+
+        ew_err = np.sqrt(np.sum((weights * err) ** 2))
+        return ew, ew_err
+
+    mask1 = (rest_lam >= line1 - n_sigma * sigma1) & (rest_lam <= line1 + n_sigma * sigma1)
+    mask2 = (rest_lam >= line2 - n_sigma * sigma2) & (rest_lam <= line2 + n_sigma * sigma2)
+
+    ew1, ew1_err = _trapz_ew_and_err(rest_lam[mask1], residual[mask1], error[mask1])
+    ew2, ew2_err = _trapz_ew_and_err(rest_lam[mask2], residual[mask2], error[mask2])
+
+    both_nan = np.isnan(ew1) and np.isnan(ew2)
+    if both_nan:
+        ew_total, ew_total_err = np.nan, np.nan
+    else:
+        ew_total = np.nansum([ew1, ew2])
+        ew_total_err = np.sqrt(np.nansum([
+            0.0 if np.isnan(ew1_err) else ew1_err ** 2,
+            0.0 if np.isnan(ew2_err) else ew2_err ** 2,
+        ]))
+
+    return {'ew1': ew1, 'ew2': ew2, 'ew_total': ew_total, 'ew1_err': ew1_err, 'ew2_err': ew2_err, 'ew_total_err': ew_total_err}
