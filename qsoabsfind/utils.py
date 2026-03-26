@@ -924,7 +924,7 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
     context_pad = max(2 * sigma1, 2 * sigma2, 2)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-    fig.suptitle(title, fontsize=fontsize)
+    fig.suptitle(title, fontsize=fontsize, y=0.98)
 
     legend_handles = []   # collect handles for the shared legend (first panel only)
 
@@ -948,7 +948,7 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
         if i == 0:
             legend_handles.append(h_win)
         if windows_overlap:
-            h_mid = ax.axvline(midpoint, color='gray', ls='-.', lw=1.0, label='midpoint clip')
+            h_mid = ax.axvline(midpoint, color='gray', ls='-.', lw=1.0, label='midpoint clip (blended)')
             if i == 0:
                 legend_handles.append(h_mid)
 
@@ -1004,13 +1004,13 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
         ax.tick_params(axis='both', which='major', labelsize=11)
         ax.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
-    # Single shared legend to the right of the second subplot, stacked vertically
+    # Single shared legend centred to the right of the second subplot
     if legend_handles:
-        axes[-1].legend(handles=legend_handles, fontsize=9,
-                        loc='upper left', bbox_to_anchor=(1.02, 1.0),
+        axes[-1].legend(handles=legend_handles, fontsize=10,
+                        loc='center left', bbox_to_anchor=(1.02, 0.5),
                         borderaxespad=0, framealpha=0.8)
 
-    plt.tight_layout(rect=[0, 0, 0.85, 0.93])
+    plt.tight_layout(rect=[0, 0, 0.85, 0.96])
 
     if plot_filename is not None:
         plot_path = (plot_filename if os.path.isabs(plot_filename)

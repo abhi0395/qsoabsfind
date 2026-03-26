@@ -33,7 +33,8 @@ search_parameters = {
     'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
     'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default
     'nboot':None, # if provided the number, will perform bootstrapping for EW error calculation
-    'continuum_error_frac':0.05 # Fixed fractional error due to continuum normalization (5%) used AODM column density measurements
+    'continuum_error_frac':0.05, # Fixed fractional error due to continuum normalization (5%) used AODM column density measurements
+    'trapz_ew_sigma':3 # n*sigma window for trapezoidal EW measurement around Gaussian-fit line centres
 }
 
 # ==============================
