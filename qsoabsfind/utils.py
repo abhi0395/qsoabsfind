@@ -4,6 +4,10 @@ This script contains some utility functions.
 
 import time
 import numpy as np
+try:
+    from numpy import trapezoid as _trapezoid
+except ImportError:          # NumPy < 2.0
+    from numpy import trapz as _trapezoid
 from scipy import signal
 import matplotlib.pyplot as plt
 import os
@@ -903,7 +907,7 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
     def _quick_ew(lam, flux):
         if lam.size < 2:
             return np.nan
-        return np.trapz(1.0 - flux, lam)
+        return _trapezoid(1.0 - flux, lam)
 
     _mask1 = (rest_lam >= w1_lo) & (rest_lam <= w1_hi)
     _mask2 = (rest_lam >= w2_lo) & (rest_lam <= w2_hi)

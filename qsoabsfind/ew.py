@@ -4,6 +4,10 @@ with a double gaussian and measure equivalent widths.
 """
 
 import numpy as np
+try:
+    from numpy import trapezoid as _trapezoid
+except ImportError:          # NumPy < 2.0
+    from numpy import trapz as _trapezoid
 from numba import njit
 from scipy.optimize import curve_fit
 from .utils import double_gaussian
@@ -536,7 +540,7 @@ def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2,
             return np.nan, np.nan
 
         absorption = 1.0 - flux
-        ew = np.trapz(absorption, lam)
+        ew = _trapezoid(absorption, lam)
 
         # Trapezoidal-rule weights: each pixel's contribution to the integral
         dlam = np.diff(lam)
