@@ -145,11 +145,11 @@ CLI Arguments
 
 .. option:: --absorber <name>
 
-   Doublet to search for. Choices: ``MgII``, ``CIV``, ``OVI``, ``NV``, ``SiIV``, ``AlIII``, ``FeII``, ``CaII``, ``NaI``.
+   Doublet to search for. In-built choices: ``MgII``, ``CIV``, ``OVI``, ``NV``, ``SiIV``, ``AlIII``, ``FeII``, ``CaII``, ``NaI``. User can also provide a custom absorber with the required constants. See :doc:`Parameter File <paramfile>` for more details.
 
 .. option:: --constant-file <path>
 
-   Path to the search-parameter constants ``.py`` file. See ``data/sdss/sdss_constants.py`` for the required format.
+   Path to the search-parameter constants ``.py`` file. See :doc:`Parameter File <paramfile>` for more details.
 
 .. option:: --output <path>
 
@@ -159,8 +159,8 @@ CLI Arguments
 
 .. option:: --config <path>
 
-   Path to a YAML config file. Keys use underscores (e.g. ``input_fits_file``). CLI flags always
-   override YAML values. A fully annotated template is provided at ``data/example_config.yaml``.
+   Path to a YAML config file. CLI flags always
+   override YAML values. A minimally annotated template is provided in :doc:`Parameter File <paramfile>`.
 
 .. option:: --n-qso <value>
 
