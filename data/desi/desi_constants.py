@@ -48,7 +48,7 @@ search_parameters = {
   Fixed fractional error due to continuum normalization (5%)
   Used in estimating the uncertainty on column density
   arising from continuum placement uncertainties.
-  Currently set empirically — a more optimal estimate can be obtained
+  Currently set empirically -- a more optimal estimate can be obtained
   by stacking continuum-normalized residual spectra in the observed frame
   and measuring the standard deviation from unity.
 """
