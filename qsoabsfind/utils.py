@@ -208,10 +208,15 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     Returns:
         numpy.ndarray: The convolved residual array.
     """
-    if absorber not in amplitude_dict:
-        raise ValueError(f"Unsupported absorber type. Available types are: {list(amplitude_dict.keys())}")
-
-    A_main = amplitude_dict[absorber]
+    if absorber not in doublet_keys:
+        raise ValueError(
+            f"Absorber '{absorber}' not found in doublet_keys. "
+            f"Built-in absorbers: {list(doublet_keys.keys())}. "
+            "To use a custom doublet, register it in your constants file "
+            "(see the paramfile docs for the required format)."
+        )
+    # Fall back to 0.5 for custom absorbers not listed in amplitude_dict.
+    A_main = amplitude_dict.get(absorber, 0.5)
     A_main, A_secondary = compute_doublet_amplitudes(A_main, f1, f2)
     ct = _constants.CONV_KERNEL_EXTENT
     # extract lambdas for the doublet

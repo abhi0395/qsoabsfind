@@ -256,7 +256,12 @@ def main():
     user_constants = load_constants(const_path)
 
     if args.absorber not in doublet_keys:
-        raise ValueError(f"ERROR: Unsupported absorber, it must be from {doublet_keys.keys()}")
+        raise ValueError(
+            f"Absorber '{args.absorber}' not found in doublet_keys. "
+            f"Built-in absorbers: {list(doublet_keys.keys())}. "
+            "To use a custom doublet, add it to your constants file "
+            "(see docs/paramfile.rst for the required format)."
+        )
 
     logger.info('User provided arguments and constants loaded')
     for key, value in vars(args).items():

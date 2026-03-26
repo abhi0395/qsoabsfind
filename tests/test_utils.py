@@ -118,7 +118,7 @@ class TestConvolutionFun(unittest.TestCase):
 
     def test_unsupported_absorber_raises(self):
         with self.assertRaises(ValueError):
-            convolution_fun('Unobtainium', self.residual, 3.0, True, 0.0001, None, 0.5, 0.25)
+            convolution_fun('MnII', self.residual, 3.0, True, 0.0001, None, 0.5, 0.25)
 
 
 class TestValidateSizes(unittest.TestCase):

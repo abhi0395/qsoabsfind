@@ -84,7 +84,12 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         corresponding QSO metadata.
     """
     if absorber not in doublet_keys:
-        raise ValueError(f"Unsupported absorber, must be in {doublet_keys.keys()}")
+        raise ValueError(
+            f"Absorber '{absorber}' not found in doublet_keys. "
+            f"Built-in absorbers: {list(doublet_keys.keys())}. "
+            "To use a custom doublet, add it to your constants file "
+            "(see docs/paramfile.rst for the required format)."
+        )
     else:
         EW_TOTAL = f'{absorber.upper()}_EW_TOTAL'
         l1, l2 = doublet_keys[absorber][0].upper(), doublet_keys[absorber][1].upper()

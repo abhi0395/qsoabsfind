@@ -178,9 +178,15 @@ def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_m
 
 def _get_doublet_constants(absorber):
     # Look up rest wavelengths, oscillator strengths and derived quantities for the doublet.
-    # Raises ValueError immediately if the absorber is not in the supported list.
+    # doublet_keys is patched at startup from the user constants file, so custom absorbers
+    # registered there are fully supported without any code changes.
     if absorber not in doublet_keys:
-        raise ValueError(f"No support for {absorber}, only supports {doublet_keys.keys()}")
+        raise ValueError(
+            f"Absorber '{absorber}' not found in doublet_keys. "
+            f"Built-in absorbers: {list(doublet_keys.keys())}. "
+            "To use a custom doublet, add it to your constants file "
+            "(see docs/paramfile.rst for the required format)."
+        )
     line1 = lines[doublet_keys[absorber][0]]
     line2 = lines[doublet_keys[absorber][1]]
     f1 = oscillator_parameters[f'{absorber}_f1']
