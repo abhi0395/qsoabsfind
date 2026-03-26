@@ -4,7 +4,7 @@ using Apparent Optical Depth Method (AODM) of Savage & Sembach 1991
 
 Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.
 
-We adopt the inverse-variance weighted column density for doublets with DR > 2 − DR_error. For systems with DR <= 2 − DR_error.
+We adopt the inverse-variance weighted column density for doublets with DR > 2 - DR_error. For systems with DR <= 2 - DR_error.
 We also apply the Savage & Sembach (1991) correction to the weaker line when both transitions are measured.
 Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.
 """
@@ -245,18 +245,18 @@ def compute_single_column_density(args):
     Args:
         args (tuple): Packed arguments in the following order:
 
-            * **flux** (*numpy.ndarray*) — Continuum-normalised flux spectrum.
-            * **error** (*numpy.ndarray*) — Flux uncertainty array.
-            * **wavelength** (*numpy.ndarray*) — Observed wavelength array (Angstrom).
-            * **tt_row** (*astropy.table.Row*) — Table row containing absorber properties
+            * **flux** (*numpy.ndarray*) -- Continuum-normalised flux spectrum.
+            * **error** (*numpy.ndarray*) -- Flux uncertainty array.
+            * **wavelength** (*numpy.ndarray*) -- Observed wavelength array (Angstrom).
+            * **tt_row** (*astropy.table.Row*) -- Table row containing absorber properties
               (must include ``Z_ABS`` and EW columns).
-            * **f1** (*float*) — Oscillator strength of the first line.
-            * **f2** (*float*) — Oscillator strength of the second line.
-            * **l1** (*tuple*) — ``(key, rest_wavelength)`` for the first line.
-            * **l2** (*tuple*) — ``(key, rest_wavelength)`` for the second line.
-            * **continuum_error_frac** (*float*) — Fractional continuum placement uncertainty.
-            * **dv** (*float*) — Velocity range for integration (km/s).
-            * **logwave** (*bool*) — Whether the wavelength array is log-spaced.
+            * **f1** (*float*) -- Oscillator strength of the first line.
+            * **f2** (*float*) -- Oscillator strength of the second line.
+            * **l1** (*tuple*) -- ``(key, rest_wavelength)`` for the first line.
+            * **l2** (*tuple*) -- ``(key, rest_wavelength)`` for the second line.
+            * **continuum_error_frac** (*float*) -- Fractional continuum placement uncertainty.
+            * **dv** (*float*) -- Velocity range for integration (km/s).
+            * **logwave** (*bool*) -- Whether the wavelength array is log-spaced.
 
     Returns:
         dict: Column density measurements and uncertainties. Keys match the output

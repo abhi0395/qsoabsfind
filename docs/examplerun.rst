@@ -29,6 +29,30 @@ Before running, please read :doc:`File formats <fileformat>`.
                --coldens-dv 300
 
 
+**3. Your input spectra** (absorber search with trapezoidal EW measurement):
+----------------------------------------------------------------------------
+
+By default EWs are measured from the double-Gaussian model fit.  Use
+``--trapz-ew-sigma`` to switch to direct trapezoidal integration instead:
+each line's rest-frame EW is computed by integrating :math:`(1-f_\lambda)` over
+a symmetric window of :math:`\pm n\sigma` centred on the Gaussian-fit line
+centre.  The value you supply is *n* (typically ``3``).
+
+For close doublets such as C IV (separation ~ 2.6 Ang), the two integration
+windows are automatically clipped at the doublet midpoint so that each line's
+integral is independent.
+
+.. code-block:: bash
+
+    qsoabsfind --input-fits-file $input \
+               --constant-file $your_constant \
+               --absorber $your_absorber \
+               --output $output \
+               --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
+               --ncpus 4 \
+               --trapz-ew-sigma 3
+
+
 Running with a YAML config file
 -------------------------------
 
@@ -158,6 +182,15 @@ CLI Arguments
    optical depth method (AODM; Savage & Sembach 1991). The value sets the +/- velocity range (km/s)
    for optical-depth integration around each line centre (e.g. ``300``). Adds a ``COLUMN_DENSITY``
    HDU to the output file.
+
+.. option:: --trapz-ew-sigma <float>
+
+   If provided, rest-frame equivalent widths are measured by direct trapezoidal integration of
+   :math:`(1 - f_\lambda)` over a window of :math:`\pm n\sigma` centred on each Gaussian-fit line
+   centre, where *n* is the value supplied here (e.g. ``3``). For close doublets (e.g. C IV with
+   a ~ 2.6 Ang separation), the windows are automatically clipped at the doublet midpoint to
+   prevent double-counting. When omitted (default), EWs are taken from the double-Gaussian model
+   fit.
 
 .. option:: --verbose
 

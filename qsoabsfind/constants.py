@@ -25,8 +25,8 @@ LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid 
 # Gaussian fit bound parameters
 # ==============================
 
-GAUSS_FIT_BD_CT = 1.0   # line-centre bound multiplier: allowed centre shift = BD_CT × d_pix
-GAUSS_FIT_X_SEP = 30    # line-width upper cap: max sigma = X_SEP × del_sigma
+GAUSS_FIT_BD_CT = 1.0   # line-centre bound multiplier: allowed centre shift = BD_CT * d_pix
+GAUSS_FIT_X_SEP = 30    # line-width upper cap: max sigma = X_SEP * del_sigma
 GAUSS_FIT_EDGE  = 0.1   # small numerical buffer on sigma bounds to avoid hard boundary at zero
 
 # ===================
@@ -165,11 +165,11 @@ CANDIDATE_VALIDATION_NPIX = 3   # pixels around a line minimum for candidate val
 SNR_DEFAULT_DPIX = 5             # fallback pixel window for SNR estimation when Gaussian sigma is unavailable
 SNR_NSIG = 3                     # Gaussian sigma multiplier for SNR integration window (~99.7% of flux)
 REDSHIFT_REFINE_WINDOW = 9       # pixel window for refining redshift by locating the flux minimum
-MEDIAN_WEIGHT_GAMMA = 4          # power-law exponent for 1/λ^γ weighting in median_selection_after_combining
+MEDIAN_WEIGHT_GAMMA = 4          # power-law exponent for 1/lambda^gamma weighting in median_selection_after_combining
 CANDIDATE_DEDUP_CT = 2           # pixel tolerance multiplier for deduplicating close candidates
-MAX_VEL_DISPERSION = 120         # maximum allowed velocity difference between doublet components (km/s)
+MAX_VEL_DISPERSION = 50         # maximum allowed velocity difference between doublet components (km/s)
 CONV_KERNEL_EXTENT = 10          # convolution kernel half-extent: +/-N x sigma from line centre
-FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier: d_pix × N Ang on each side
+FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier: d_pix * N Ang on each side
 GAUSS_FIT_NUM_ITER = 500         # maximum curve_fit iterations for double-Gaussian fitting
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)

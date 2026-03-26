@@ -34,7 +34,7 @@ def load_yaml_config(yaml_file):
     Load CLI argument defaults from a YAML configuration file.
 
     YAML keys may use either hyphens (``zabs-known-file``) or underscores
-    (``zabs_known_file``) — both forms are normalised to underscores so they
+    (``zabs_known_file``) -- both forms are normalised to underscores so they
     match the argparse ``dest`` names.  Values in the file are used as
     defaults; any argument explicitly passed on the command line will
     override them.

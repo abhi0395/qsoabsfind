@@ -141,7 +141,7 @@ class TestTrapezoidalEW(unittest.TestCase):
     # ------------------------------------------------------------------ #
 
     def test_pure_continuum_gives_zero_ew(self):
-        """flux == 1 everywhere → EW == 0 for both lines."""
+        """flux == 1 everywhere -> EW == 0 for both lines."""
         lam_obs, res, err = self._spectrum(0.5, noise=0.0)
         result = trapezoidal_ew(lam_obs, res, err, 0.5, self.LINE1, self.LINE2, 1.0, 1.0)
         self.assertAlmostEqual(result['ew1'], 0.0, places=8)
@@ -155,9 +155,9 @@ class TestTrapezoidalEW(unittest.TestCase):
         self.assertAlmostEqual(result['ew_total'], result['ew1'] + result['ew2'], places=10)
 
     def test_rectangle_absorption_ew_matches_box_width(self):
-        """Box absorption of depth=1 and half-width W should give EW ≈ 2W."""
+        """Box absorption of depth=1 and half-width W should give EW ~ 2W."""
         z = 0.5
-        half_w = 1.5  # Å – narrower than n_sigma*sigma=3 integration window
+        half_w = 1.5  # Ang - narrower than n_sigma*sigma=3 integration window
         n = 5000
         # Build spectrum covering only the first line (independently).
         rest_lam = np.linspace(self.LINE1 - 10, self.LINE1 + 10, n)
@@ -244,7 +244,7 @@ class TestTrapezoidalEW(unittest.TestCase):
     # ------------------------------------------------------------------ #
 
     def test_empty_window_returns_nan(self):
-        """Window entirely outside the spectrum → NaN for all return values."""
+        """Window entirely outside the spectrum -> NaN for all return values."""
         z = 0.5
         lam_obs = np.linspace(3500, 3600, 200) * (1.0 + z)
         res = np.ones(200)
@@ -263,7 +263,7 @@ class TestTrapezoidalEW(unittest.TestCase):
         lam_obs = rest_lam * (1.0 + z)
         res = np.ones(6)
         err = np.full(6, 0.01)
-        # With n_sigma=0.001 the window is sub-pixel → at most 1 point selected
+        # With n_sigma=0.001 the window is sub-pixel -> at most 1 point selected
         result = trapezoidal_ew(lam_obs, res, err, z, self.LINE1, self.LINE2,
                                 sigma1=0.0001, sigma2=0.0001, n_sigma=1)
         self.assertTrue(np.isnan(result['ew1']) or result['ew1'] == 0.0)

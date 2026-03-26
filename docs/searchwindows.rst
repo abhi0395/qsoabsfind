@@ -105,7 +105,7 @@ O VI (1032, 1038 Ang)
 N V (1238, 1242 Ang)
 ~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Lyβ (1025.72 Ang), red side - N V (1240.8 Ang)
+- **Emission lines**: blue side - Ly-beta (1025.72 Ang), red side - N V (1240.8 Ang)
 - **Search window**:
 
 .. math::
@@ -119,7 +119,7 @@ N V (1238, 1242 Ang)
 Si IV (1394, 1403 Ang)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Lyα (1215.67 Ang), red side - Si IV (1399.8 Ang)
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - Si IV (1399.8 Ang)
 - **Search window**:
 
 .. math::

@@ -268,7 +268,7 @@ def main():
 
     # Patch qsoabsfind.constants in-place with any overrides from the user constants file.
     # All modules that access constants via `from . import constants as _constants` (i.e.
-    # absorberutils and absfinder) will automatically see the updated values — no function
+    # absorberutils and absfinder) will automatically see the updated values -- no function
     # signature changes needed.
     from . import constants as _pkg_constants
     _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL', 'ZABS_KNOWN_MAX_DV')

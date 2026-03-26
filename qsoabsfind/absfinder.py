@@ -28,7 +28,7 @@ from .ew import (
 )
 from .datamodel import QSOSpecRead
 
-# Constants — imported via the module object so startup-time patches propagate here.
+# Constants -- imported via the module object so startup-time patches propagate here.
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
 from . import constants as _constants
 
@@ -627,7 +627,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         # Append any out-of-range entries at the end with z_abs=-1.
 
         # Apply max_dv_known cut: reject any detection whose fitted centre drifted too far
-        # from the supplied seed redshift — such systems are almost certainly a different feature.
+        # from the supplied seed redshift -- such systems are almost certainly a different feature.
         _max_dv = max_dv_known if max_dv_known is not None else _constants.ZABS_KNOWN_MAX_DV
         for m in range(len(pure_z_abs)):
             if pure_z_abs[m] > 0:

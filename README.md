@@ -43,7 +43,7 @@ Key Features
 --------
 - **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
 - **9 built-in doublet systems**: Automatic search-window calculation and line properties are pre-configured for MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, and NaI.
-- **Extensible to any doublet**: The pipeline is generic — supply a custom constants file (see `data/${survey}` folder) with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds, and the pipeline will search for it. *(Custom systems are functional but not as thoroughly tested as the built-ins.)*
+- **Extensible to any doublet**: The pipeline is generic -- supply a custom constants file (see `data/${survey}` folder) with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds, and the pipeline will search for it. *(Custom systems are functional but not as thoroughly tested as the built-ins.)*
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
 - **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
@@ -53,6 +53,7 @@ Key Features
 - **Parallel processing**: Supports fast and efficient computation across large datasets using Python's `multiprocessing` module.
 - **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
+- **Trapezoidal EW measurement**: In addition to Gaussian-model EWs, the module computes rest-frame equivalent widths via direct trapezoidal integration over a per-line window of +/-n * sigma_line centred on each Gaussian-fit line centre. For close doublets (e.g. C IV), the integration windows are automatically clipped at the doublet midpoint to prevent double-counting. Measurement windows and integrated areas can be visualised with `plot_trapezoidal_ew_windows`.
 - **Visualization**: Plot the full spectrum with all detected absorber systems marked, plus zoomed panels around each detection, using `plot_multiple_metal_systems`.
 
 
@@ -148,8 +149,10 @@ qsoabsfind --help
 | `--headers` | no | - | Extra FITS header keywords in `KEY=VALUE` format, space-separated |
 | `--ncpus` | no | `4` | Number of parallel worker processes |
 | `--coldens-dv` | no | - | Compute column densities via AODM and set the velocity half-width (km/s); e.g. `300` (adds `COLUMN_DENSITY` HDU) |
+| `--trapz-ew-sigma` | no | - | Use trapezoidal integration to measure rest-frame EWs instead of Gaussian-model EWs. Provide the half-width of the integration window in units of sigma; e.g. `3` integrates over +/-3sigma around each fitted line centre. For close doublets (e.g. C IV), windows are automatically clipped at the doublet midpoint to prevent double-counting. |
 | `--verbose` | no | off | Enable detailed per-spectrum debug logging |
 | `--zabs-known-file` | no | - | FITS file with `INDEX_SPEC` and `Z_ABS`; skips convolution, runs Gaussian fitting only |
+
 
 Important Instructions
 -------------

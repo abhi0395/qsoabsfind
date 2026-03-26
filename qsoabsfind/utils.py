@@ -561,6 +561,8 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     ylabel = kwargs.pop('ylabel', 'residual')
     title = kwargs.pop('title', 'QSO')
     fontsize = kwargs.pop('fontsize', 16)
+    ls = kwargs.pop('ls', '-')
+    lw = kwargs.pop('lw', 1.5)
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
@@ -585,9 +587,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     fig.suptitle(title, fontsize=fontsize)
 
     ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
-    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
+    ax_main.plot(lam, residual, ls=ls, lw=lw, label='residual', **kwargs)
     if show_error:
-        ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
+        ax_main.plot(lam, error, ls=ls, lw=lw, label='error', **kwargs)
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
     ax_main.set_xlim(xmin, xmax)
@@ -612,7 +614,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
         mask = (lam > x1 - sep) & (lam < x2 + sep)
         if not show_error:
-            ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data', **kwargs)
+            ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, label='data', **kwargs)
         else:
             ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data', **kwargs)
         ax_zoom.axvline(x=x1, color='r', ls='--')
@@ -663,7 +665,7 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
                         plot_filename=None, **kwargs):
     """
     Plot a full spectrum with all known absorber systems marked, optionally
-    followed by one zoomed panel per absorber — styled identically to
+    followed by one zoomed panel per absorber -- styled identically to
     plot_absorber.
 
     Args:
@@ -681,13 +683,16 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
     ylabel   = kwargs.pop('ylabel',   'residual')
     title    = kwargs.pop('title',    'QSO')
     fontsize = kwargs.pop('fontsize', 16)
+    ls = kwargs.pop('ls', '-')
+    lw = kwargs.pop('lw', 1.5)
+
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     sep = 25
 
     _colours = ['red', 'C1', 'green', 'blue', 'purple', 'brown']
 
-    # Collect per-absorber data — same pattern as plot_absorber
+    # Collect per-absorber data -- same pattern as plot_absorber
     absorber_info = []
     for i, (name, zabs) in enumerate(absorber_dict.items()):
         if name not in doublet_keys:
@@ -708,11 +713,11 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
     fig.subplots_adjust(hspace=0.15, wspace=0.15)
     fig.suptitle(title, fontsize=fontsize)
 
-    # ── Row 0: full spectrum ─────────────────────────────────────────────
+    # -- Row 0: full spectrum ---------------------------------------------
     ax_main = plt.subplot2grid((n_rows, num_panels), (0, 0), colspan=num_panels)
-    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
+    ax_main.plot(lam, residual, ls=ls, lw=lw, label='residual', **kwargs)
     if show_error:
-        ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
+        ax_main.plot(lam, error, ls=ls, lw=lw, label='error', **kwargs)
     ymask = ~np.isnan(residual)
     ax_main.set_xlim(lam[ymask].min(), lam[ymask].max())
     ylo = -1
@@ -747,7 +752,7 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
     ax_main.tick_params(axis='both', which='major', labelsize=13)
     ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
-    # ── Row 1: zoom panels — one per absorber per system, same as plot_absorber
+    # -- Row 1: zoom panels -- one per absorber per system, same as plot_absorber
     if zoom:
         total_cols = max(1, sum(len(r) for _, _, _, r, _, _ in absorber_info))
         col = 0
@@ -758,7 +763,7 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
                 x1, x2  = lines[l1] * shift_z, lines[l2] * shift_z
                 mask     = (lam > x1 - sep) & (lam < x2 + sep)
                 if not show_error:
-                    ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5,
+                    ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw,
                                  label='data', **kwargs)
                 else:
                     ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask],
@@ -787,7 +792,7 @@ def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=Fa
                         params[0], shift_z * params[1], shift_z * params[2],
                         params[3], shift_z * params[4], shift_z * params[5]
                     )
-                    ax_zoom.plot(lam_fit, fit_curve, color=colour, ls='-',
+                    ax_zoom.plot(lam_fit, fit_curve, color=colour, ls=ls,
                                  label='Gaussian Fit', **kwargs)
                 ax_zoom.legend(prop={'size': 11})
                 col += 1
@@ -848,24 +853,25 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
 
     For each line the panel shows:
 
-    * The normalised flux (and optionally ±1σ error bars).
+    * The normalised flux (and optionally ±1sigma error bars).
     * A shaded column marking the integration window
-      ``[line_centre ± n_sigma × sigma]``.
+      ``[line_centre ± n_sigma * sigma]``, clipped at the doublet midpoint
+      when the two windows would otherwise overlap.
     * A filled area between the flux and the continuum (y = 1) inside the
       window, visualising the absorption being integrated.
     * A dashed continuum line at y = 1.
     * A vertical dotted line at the rest-frame line centre.
 
     Args:
-        wavelength (numpy.ndarray): Observed wavelength array (Å).
+        wavelength (numpy.ndarray): Observed wavelength array (Ang).
         residual (numpy.ndarray): Normalised flux array.
         error (numpy.ndarray): Per-pixel 1-sigma flux error array.
         z (float): Absorber redshift used to convert to the rest frame.
-        line1 (float): Rest-frame wavelength of the first line (Å).
-        line2 (float): Rest-frame wavelength of the second line (Å).
-        sigma1 (float): Gaussian width (1-sigma) of the first line (Å, rest
+        line1 (float): Rest-frame wavelength of the first line (Ang).
+        line2 (float): Rest-frame wavelength of the second line (Ang).
+        sigma1 (float): Gaussian width (1-sigma) of the first line (Ang, rest
             frame) used to define the integration window.
-        sigma2 (float): Gaussian width (1-sigma) of the second line (Å, rest
+        sigma2 (float): Gaussian width (1-sigma) of the second line (Ang, rest
             frame) used to define the integration window.
         n_sigma (float): Half-width of each integration window in units of
             sigma.  Default is 3, matching ``trapezoidal_ew``.
@@ -882,20 +888,47 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
 
     rest_lam = wavelength / (1.0 + z)
 
+    # Compute integration windows with the same midpoint-clipping as trapezoidal_ew
+    w1_lo = line1 - n_sigma * sigma1
+    w1_hi = line1 + n_sigma * sigma1
+    w2_lo = line2 - n_sigma * sigma2
+    w2_hi = line2 + n_sigma * sigma2
+    windows_overlap = w1_hi > w2_lo
+    if windows_overlap:
+        midpoint = (line1 + line2) / 2.0
+        w1_hi = midpoint
+        w2_lo = midpoint
+
+    # Pre-compute EWs using the same (clipped) windows so they can appear in titles
+    def _quick_ew(lam, flux):
+        if lam.size < 2:
+            return np.nan
+        return np.trapz(1.0 - flux, lam)
+
+    _mask1 = (rest_lam >= w1_lo) & (rest_lam <= w1_hi)
+    _mask2 = (rest_lam >= w2_lo) & (rest_lam <= w2_hi)
+    ew1_val = _quick_ew(rest_lam[_mask1], residual[_mask1])
+    ew2_val = _quick_ew(rest_lam[_mask2], residual[_mask2])
+
+    def _ew_str(val):
+        return f'{val:.3f} Ang' if np.isfinite(val) else 'NaN'
+
     line_info = [
-        (line1, sigma1, 'C0', f'Line 1  λ={line1:.2f} Å'),
-        (line2, sigma2, 'C1', f'Line 2  λ={line2:.2f} Å'),
+        (line1, w1_lo, w1_hi, 'C0',
+         f'$\\lambda$={line1:.2f} Ang  |  EW = {_ew_str(ew1_val)}'),
+        (line2, w2_lo, w2_hi, 'C1',
+         f'$\\lambda$={line2:.2f} Ang  |  EW = {_ew_str(ew2_val)}'),
     ]
 
-    # Extra context shown around each window (in rest-frame Å)
-    context_pad = max(6 * sigma1, 6 * sigma2, 5.0)
+    # Extra context shown around each window (in rest-frame Ang)
+    context_pad = max(2 * sigma1, 2 * sigma2, 2)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
     fig.suptitle(title, fontsize=fontsize)
 
-    for ax, (lc, sig, colour, label) in zip(axes, line_info):
-        w_lo = lc - n_sigma * sig
-        w_hi = lc + n_sigma * sig
+    legend_handles = []   # collect handles for the shared legend (first panel only)
+
+    for i, (ax, (lc, w_lo, w_hi, colour, label)) in enumerate(zip(axes, line_info)):
 
         # Zoom range: window + padding
         x_lo = w_lo - context_pad
@@ -910,34 +943,48 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
             ax.set_title(f'{label}\n(no data in range)', fontsize=fontsize - 2)
             continue
 
-        # Shaded integration window (full height)
-        win_label = f'Integration window\n±{n_sigma}σ = [{w_lo:.2f}, {w_hi:.2f}] Å'
-        ax.axvspan(w_lo, w_hi, alpha=0.15, color=colour, label=win_label)
+        # Shaded integration window -- label omits wavelength bounds
+        h_win = ax.axvspan(w_lo, w_hi, alpha=0.15, color=colour, label='integration window')
+        if i == 0:
+            legend_handles.append(h_win)
+        if windows_overlap:
+            h_mid = ax.axvline(midpoint, color='gray', ls='-.', lw=1.0, label='midpoint clip')
+            if i == 0:
+                legend_handles.append(h_mid)
 
         # Flux
         if show_error:
-            ax.errorbar(lam_z, flux_z, yerr=err_z,
-                        fmt='o', ms=4, lw=1.2, color=colour,
-                        ecolor='gray', elinewidth=0.8, capsize=2,
-                        label='flux ± error', **kwargs)
+            h_flux = ax.errorbar(lam_z, flux_z, yerr=err_z,
+                                 fmt='o', ms=4, lw=1.2, color=colour,
+                                 ecolor='gray', elinewidth=0.8, capsize=2,
+                                 label='flux ± error', **kwargs)
         else:
-            ax.plot(lam_z, flux_z, '-o', ms=4, lw=1.2,
-                    color=colour, label='flux', **kwargs)
+            h_flux, = ax.plot(lam_z, flux_z, '-o', ms=4, lw=1.2,
+                              color=colour, label='flux', **kwargs)
+        if i == 0:
+            legend_handles.append(h_flux)
 
-        # Filled absorption area inside the window
+        # Filled net-absorbed area inside the (clipped) integration window
         mask_win = (rest_lam >= w_lo) & (rest_lam <= w_hi)
         lam_w  = rest_lam[mask_win]
         flux_w = residual[mask_win]
         if lam_w.size >= 2:
-            ax.fill_between(lam_w, flux_w, 1.0,
-                            where=(flux_w < 1.0),
-                            interpolate=True,
-                            color=colour, alpha=0.45,
-                            label='absorbed area')
+            h_fill = ax.fill_between(lam_w, flux_w, 1.0,
+                                     where=(flux_w < 1.0),
+                                     interpolate=True,
+                                     color=colour, alpha=0.45,
+                                     label='absorbed area')
+            if i == 0:
+                legend_handles.append(h_fill)
 
-        # Continuum and line centre
-        ax.axhline(1.0, color='k', ls='--', lw=1.0, label='continuum')
-        ax.axvline(lc,  color='k', ls=':',  lw=1.2, label=f'line centre {lc:.2f} Å')
+        # Continuum (no legend entry -- axis label is self-explanatory)
+        ax.axhline(1.0, color='k', ls='--', lw=1.0)
+        if i == 0:
+            from matplotlib.lines import Line2D
+            legend_handles.append(Line2D([0], [0], color='k', ls='--', lw=1.0, label='continuum'))
+
+        # Line centre -- no legend entry (wavelength shown in panel title)
+        ax.axvline(lc, color='k', ls=':', lw=1.2)
 
         # Axes limits and decoration
         ax.set_xlim(x_lo, x_hi)
@@ -950,15 +997,20 @@ def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
         ax.set_ylim(ylo, yhi)
 
         ax.set_title(label, fontsize=fontsize - 1)
-        ax.set_xlabel('rest wavelength (Å)', fontsize=fontsize - 1)
+        ax.set_xlabel('rest wavelength (Ang)', fontsize=fontsize - 1)
         ax.set_ylabel('normalised flux', fontsize=fontsize - 1)
-        ax.legend(fontsize=9, loc='lower right')
         ax.grid(True, alpha=0.4)
         ax.minorticks_on()
         ax.tick_params(axis='both', which='major', labelsize=11)
         ax.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
-    plt.tight_layout(rect=[0, 0, 1, 0.93])
+    # Single shared legend to the right of the second subplot, stacked vertically
+    if legend_handles:
+        axes[-1].legend(handles=legend_handles, fontsize=9,
+                        loc='upper left', bbox_to_anchor=(1.02, 1.0),
+                        borderaxespad=0, framealpha=0.8)
+
+    plt.tight_layout(rect=[0, 0, 0.85, 0.93])
 
     if plot_filename is not None:
         plot_path = (plot_filename if os.path.isabs(plot_filename)

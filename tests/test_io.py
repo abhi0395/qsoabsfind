@@ -1,5 +1,5 @@
 """
-Tests for io.py — read_fits_file, save_results_to_fits, append_table_to_fits,
+Tests for io.py -- read_fits_file, save_results_to_fits, append_table_to_fits,
 read_any_fits_file.
 Uses the real SDSS and DESI test FITS files so no synthetic data is needed.
 """

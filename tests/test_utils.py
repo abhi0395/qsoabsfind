@@ -79,7 +79,7 @@ class TestDoubleAndSingleGaussian(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(y)))
 
     def test_double_gaussian_at_continuum(self):
-        # Far from line centers the function should be ≈ 1
+        # Far from line centers the function should be ~ 1
         x = np.array([2700.0, 2900.0])
         y = double_gaussian(x, 0.5, 2796.35, 2.0, 0.3, 2803.52, 2.0)
         np.testing.assert_allclose(y, 1.0, atol=1e-3)
@@ -250,7 +250,7 @@ class TestVelDispersion(unittest.TestCase):
 
     def test_narrow_line_below_resolution_gives_nan(self):
         obs = np.linspace(2796, 2900, 100)
-        # sigma = 0.1 Ang → v_sigma << instrumental 200 km/s → unresolved → NaN
+        # sigma = 0.1 Ang -> v_sigma << instrumental 200 km/s -> unresolved -> NaN
         v1, v2 = vel_dispersion(2796.35, 2803.52, 0.1, 0.1, 200.0, 0.5, obs)
         self.assertTrue(np.isnan(v1))
         self.assertTrue(np.isnan(v2))

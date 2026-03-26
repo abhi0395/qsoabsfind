@@ -188,7 +188,7 @@ class TestSingleColumnDensity(unittest.TestCase):
         self.assertIn(result['flag'], (1, -1))
 
     def test_fail_flag_when_no_valid_pixels(self):
-        # Flux exactly 1 everywhere --> tau ≈ 0 --> N ~ 0 or negative
+        # Flux exactly 1 everywhere --> tau ~ 0 --> N ~ 0 or negative
         flat_flux = np.ones_like(self.wavelength)
         result = single_column_density(
             flat_flux, self.error, self.wavelength, self.z,
@@ -219,7 +219,7 @@ class TestTotalColumnDensity(unittest.TestCase):
         self.assertIn('fN', result.colnames)
 
     def test_unsaturated_both_lines_gives_weighted_flag(self):
-        # DR = ew1/ew2 = 2.0 ≈ f1/f2 = 2.0 --> unsaturated
+        # DR = ew1/ew2 = 2.0 ~ f1/f2 = 2.0 --> unsaturated
         result = self._call(ew1=1.0, ew2=0.5, depth1=0.55, depth2=0.27)
         self.assertIn(result['fN'][0], (1, 2, 3, -1))
 

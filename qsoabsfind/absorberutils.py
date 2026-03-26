@@ -11,7 +11,7 @@ from astropy.table import Table
 from scipy.stats import chi2
 from .utils import elapsed
 
-# Constants — imported via the module object so that startup-time patches
+# Constants -- imported via the module object so that startup-time patches
 # (applied in parallel_convolution.main) propagate here automatically.
 from .constants import lines, speed_of_light, doublet_keys
 from . import constants as _constants
@@ -314,8 +314,8 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_consta
         log (bool): if wavelenght ins log-scale (default False)
 
     Returns:
-        float: Refined redshift estimate computed as `(λ_min / line_rest) - 1`, where
-        `λ_min` is the observed-frame wavelength at the minimum residual within the
+        float: Refined redshift estimate computed as `(lambda_min / line_rest) - 1`, where
+        `lambda_min` is the observed-frame wavelength at the minimum residual within the
         search window. If no pixels fall within the window, returns `z_guess`.
 
     Note:
@@ -323,7 +323,7 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_consta
           `ValueError`. Consider pre-filtering `residual` or guarding with
           `np.isfinite` if this is a possibility in your data.
         - The window is defined in **observed-frame** wavelength by converting the
-          pixel count to delta λ using the local pixel spacing.
+          pixel count to delta lambda using the local pixel spacing.
     """
     lam_expected = line_rest * (1 + z_guess)
     if log:
@@ -941,12 +941,18 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
 
     if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
         if "statistics" in kwargs and kwargs["statistics"] is not None:
-            if kwargs["statistics"] == "median":
+            stat = kwargs["statistics"]
+            if stat == "median":
                 snr_val = np.nanmedian(unmsk_residual / unmsk_error)
-            if kwargs["statistics"] == "mean":
+            elif stat == "mean":
                 snr_val = np.nanmean(unmsk_residual / unmsk_error)
+            elif isinstance(stat, float):
+                # stat is a percentile (0-100): fraction `stat`% of pixels must have SNR > snr_cut
+                pixel_snr = unmsk_residual / unmsk_error
+                snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
+
             if kwargs.get("verbose", False):
-                logger.info('Checking SNR in the wavelength search region %s SNR = %.2f, threshold = %s)', snr_val, kwargs["snr_cut"], kwargs["statistics"])
+                logger.info('Checking SNR in the wavelength search region %s SNR = %.2f, threshold = %s)', snr_val, kwargs["snr_cut"], stat)
         if snr_val < kwargs["snr_cut"]:
             return int(0), snr_val
 
@@ -954,7 +960,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
 
 
 def _check_searchable_one(params):
-    """Worker helper for find_searchable_qsos — must be module-level to be picklable."""
+    """Worker helper for find_searchable_qsos -- must be module-level to be picklable."""
     from .datamodel import QSOSpecRead
     fits_file, idx, absorber, kwargs = params
     spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)

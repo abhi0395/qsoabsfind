@@ -317,7 +317,7 @@ class TestZabsKnown(unittest.TestCase):
     def test_max_dv_known_zero_rejects_all_detections(self):
         # With max_dv_known=0 any fitted z != seed is rejected.
         # On a flat spectrum _validate_candidates produces only z_abs=0 entries anyway,
-        # so the dv filter is a no-op here — but it must not raise and must return z_abs=0.
+        # so the dv filter is a no-op here -- but it must not raise and must return z_abs=0.
         z = 0.7
         lam_obs, flux, error = self._flat_spectrum(z)
         result = convolution_method_absorber_finder_in_QSO_spectra(

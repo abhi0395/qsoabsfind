@@ -495,22 +495,24 @@ def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2,
     Measure the rest-frame equivalent width (EW) and its 1-sigma uncertainty
     for two absorption lines using the trapezoidal integration method.
 
-    The integration window for each line is
+    The integration window for each line is normally
     ``[line_centre - n_sigma * sigma, line_centre + n_sigma * sigma]``
-    evaluated in the rest frame.  Per-pixel errors are propagated analytically
-    through the trapezoidal-rule weights.
+    evaluated in the rest frame.  If the two windows overlap (as can occur
+    for close doublets such as CIV), each window is clipped at the midpoint
+    between the two line centres to prevent double-counting.  Per-pixel
+    errors are propagated analytically through the trapezoidal-rule weights.
 
     Args:
-        wavelength (numpy.ndarray): Observed wavelength array (Å).
+        wavelength (numpy.ndarray): Observed wavelength array (Ang).
         residual (numpy.ndarray): Normalised flux array.  Values should be
             close to 1 in the continuum and dip below 1 in absorption.
         error (numpy.ndarray): Per-pixel 1-sigma flux error array.
         z (float): Absorber redshift used to convert to the rest frame.
-        line1 (float): Rest-frame wavelength of the first line (Å).
-        line2 (float): Rest-frame wavelength of the second line (Å).
-        sigma1 (float): Gaussian width (1-sigma) of the first line (Å, rest
+        line1 (float): Rest-frame wavelength of the first line (Ang).
+        line2 (float): Rest-frame wavelength of the second line (Ang).
+        sigma1 (float): Gaussian width (1-sigma) of the first line (Ang, rest
             frame) used to define the integration window.
-        sigma2 (float): Gaussian width (1-sigma) of the second line (Å, rest
+        sigma2 (float): Gaussian width (1-sigma) of the second line (Ang, rest
             frame) used to define the integration window.
         n_sigma (float): Half-width of each integration window expressed in
             units of the corresponding sigma.  Default is 3.
@@ -518,10 +520,10 @@ def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2,
     Returns:
         tuple: ``(ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err)``
 
-            - *ew1*, *ew2* – rest-frame EW of line 1 and line 2 (Å).
-            - *ew_total* – sum of the two EWs (Å).
-            - *ew1_err*, *ew2_err*, *ew_total_err* – corresponding 1-sigma
-              uncertainties (Å).
+            - *ew1*, *ew2* - rest-frame EW of line 1 and line 2 (Ang).
+            - *ew_total* - sum of the two EWs (Ang).
+            - *ew1_err*, *ew2_err*, *ew_total_err* - corresponding 1-sigma
+              uncertainties (Ang).
 
             A value of ``NaN`` is returned for any quantity whose integration
             window contains fewer than two pixels.
@@ -546,8 +548,19 @@ def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2,
         ew_err = np.sqrt(np.sum((weights * err) ** 2))
         return ew, ew_err
 
-    mask1 = (rest_lam >= line1 - n_sigma * sigma1) & (rest_lam <= line1 + n_sigma * sigma1)
-    mask2 = (rest_lam >= line2 - n_sigma * sigma2) & (rest_lam <= line2 + n_sigma * sigma2)
+    w1_lo = line1 - n_sigma * sigma1
+    w1_hi = line1 + n_sigma * sigma1
+    w2_lo = line2 - n_sigma * sigma2
+    w2_hi = line2 + n_sigma * sigma2
+
+    # Clip at midpoint if windows overlap (e.g. close doublets like CIV)
+    if w1_hi > w2_lo:
+        midpoint = (line1 + line2) / 2.0
+        w1_hi = midpoint
+        w2_lo = midpoint
+
+    mask1 = (rest_lam >= w1_lo) & (rest_lam <= w1_hi)
+    mask2 = (rest_lam >= w2_lo) & (rest_lam <= w2_hi)
 
     ew1, ew1_err = _trapz_ew_and_err(rest_lam[mask1], residual[mask1], error[mask1])
     ew2, ew2_err = _trapz_ew_and_err(rest_lam[mask2], residual[mask2], error[mask2])
