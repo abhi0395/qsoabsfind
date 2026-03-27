@@ -87,3 +87,43 @@ different systems:
        zoom=True,
        plot_filename='absorbers.pdf',   # or None to display interactively
    )
+
+
+Plotting Trapezoidal EW Integration Windows
+-------------------------------------------
+
+If you ran the search with ``--trapz-ew-sigma``, you can visualise the
+integration windows used for each line using
+:func:`qsoabsfind.utils.plot_trapezoidal_ew_windows`. It shows a zoomed
+panel for each doublet line with the integration window shaded and the
+absorbed flux area filled in.
+
+.. code-block:: python
+
+    from qsoabsfind.datamodel import QSOSpecRead, AbsorberData
+    from qsoabsfind.utils import plot_trapezoidal_ew_windows
+
+    # Load spectrum and catalog
+    spectra = QSOSpecRead('/path/to/your/spectra.fits',
+                          index=0, autoload=True)
+    catalog = AbsorberData('/path/to/your/absorber.fits', autoload=True)
+
+    row = catalog.catalog[0]   # pick an absorber
+
+    # Retrieve the Gaussian widths from the fit (sigma1, sigma2 in rest frame)
+    gauss = row['GAUSS_FIT']   # [amp1, cen1, sig1, amp2, cen2, sig2]
+    sigma1, sigma2 = gauss[2], gauss[5]
+
+    plot_trapezoidal_ew_windows(
+        wavelength=spectra.wave,
+        residual=spectra.flux,
+        error=spectra.error,
+        z=row['Z_ABS'],
+        line1=2796.35,   # rest-frame wavelength of line 1 (e.g. MgII 2796)
+        line2=2803.53,   # rest-frame wavelength of line 2 (e.g. MgII 2803)
+        sigma1=sigma1,
+        sigma2=sigma2,
+        n_sigma=3,
+        show_error=True,
+        plot_filename='trapz_ew_windows.png',  # or None to display interactively
+    )
