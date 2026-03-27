@@ -71,7 +71,7 @@ def double_curve_fit(index, fun_to_run, lam_fit_range, nmf_resi_fit, error_fit, 
             fun_to_run, lam_fit_range, nmf_resi_fit,
             bounds=bounds, sigma=error_fit, p0=init_cond,
             maxfev=maxefv, absolute_sigma=True,
-            ftol=1e-4, xtol=1e-4
+            ftol=_constants.GAUSS_FIT_FTOL, xtol=_constants.GAUSS_FIT_XTOL
         )
         EW_first = popt[0] * np.sqrt(np.pi * 2 * popt[2] ** 2)
         EW_second = popt[3] * np.sqrt(np.pi * 2 * popt[5] ** 2)
@@ -208,8 +208,8 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
     nmf_resi = flux[lam_ind]
     error_flux = error[lam_ind]
 
-    amp_first_nmf = max(0.05, 1 - np.nanmin(nmf_resi))
-    amp_second_nmf = min(0.95, amp_ratio * amp_first_nmf)
+    amp_first_nmf = max(_constants.GAUSS_AMP_MIN, 1 - np.nanmin(nmf_resi))
+    amp_second_nmf = min(_constants.GAUSS_AMP_MAX, amp_ratio * amp_first_nmf)
 
     for i in range(nboot):
         # #best-fit corresponding to this best redshift
@@ -217,7 +217,7 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
             sigma1 = np.random.uniform(bound[0][2], bound[1][2])
             sigma2 = np.random.uniform(bound[0][5], bound[1][5])
         else:
-            sigma1 = sigma2 = np.random.uniform(0.2, 5)
+            sigma1 = sigma2 = np.random.uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
         init_cond = [amp_first_nmf, line1, sigma1, amp_second_nmf, line2, sigma2]
         fit_params[i], _, ew1_array[i], ew2_array[i], ew_total_array[i], _ = double_curve_fit(
             index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv= num_iter)
@@ -320,7 +320,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
     z2 = find_z_from_minimum(wavelength, flux, line_centre2, z_init, window=window)
     z_k = (line_centre1 * z1 + line_centre2 * z2) / (line_centre1 + line_centre2)
 
-    min_pixels = 2 * nparm  # need enough points to constrain the 6-parameter double Gaussian
+    min_pixels = _constants.MIN_PIXELS_PER_PARAM * nparm  # need enough points to constrain the 6-parameter double Gaussian
 
     lam_fit, nmf_resi, error_flux = _extract_rest_frame_spectrum(
         wavelength, flux, error, z_k, ix0, ix1)
@@ -331,14 +331,14 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # ========== INITIAL FIT IN REST FRAME ==========
-    amp_first  = max(0.05, 1 - np.nanmin(nmf_resi))
-    amp_second = min(0.95, amp_ratio * amp_first)
+    amp_first  = max(_constants.GAUSS_AMP_MIN, 1 - np.nanmin(nmf_resi))
+    amp_second = min(_constants.GAUSS_AMP_MAX, amp_ratio * amp_first)
     uniform = np.random.uniform
     if bound is not None:
         sigma1 = uniform(bound[0][2], bound[1][2])
         sigma2 = uniform(bound[0][5], bound[1][5])
     else:
-        sigma1 = sigma2 = uniform(0.2, 5)
+        sigma1 = sigma2 = uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
     init_cond = [amp_first, line_centre1, sigma1, amp_second, line_centre2, sigma2]
 
     params, std, ew1, ew2, ew_total, _ = double_curve_fit(
@@ -380,12 +380,12 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
     params, std, ew1, ew2, ew_total, pcov = double_curve_fit(
         index, double_gaussian, lam_fit, nmf_resi,
-        error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=2 * num_iter)
+        error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=_constants.GAUSS_FIT_FINAL_ITER_FACTOR * num_iter)
 
     # ========== CALCULATE SIGNIFICANCE ==========
     fitted_model = double_gaussian(lam_fit, *params)
     dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
-                                    fitted_params=params, wavelength_rest=lam_fit, n_pixels=2)
+                                    fitted_params=params, wavelength_rest=lam_fit, n_pixels=_constants.SIGNIFICANCE_N_PIXELS)
 
     # ========== BOOTSTRAPPING OR ERROR CALCULATION ==========
     if nboot is not None and nboot > 0:
@@ -395,7 +395,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
             ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter)
         fitted_model = double_gaussian(lam_fit, *params)
         dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
-                                        fitted_params=params, wavelength_rest=lam_fit, n_pixels=2)
+                                        fitted_params=params, wavelength_rest=lam_fit, n_pixels=_constants.SIGNIFICANCE_N_PIXELS)
     elif use_covariance:
         ew1_err, ew2_err, ew_total_err = full_covariance_ew_errors(params, pcov)
     else:

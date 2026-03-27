@@ -158,9 +158,13 @@ oscillator_parameters = {
 
 
 # ==============================
-# Algorithm tuning parameters
+# Some Algorithmic parameters
+# (Do not affect the overall search of absorbers,
+# but can be changed if user wants to explore.
+# Though I would suggest to not change much)
 # ==============================
 
+MIN_PIXELS_PER_PARAM = 2         # minimum pixels per free parameter required to constrain the double-Gaussian fit (min_pixels = MIN_PIXELS_PER_PARAM * nparam)
 CANDIDATE_VALIDATION_NPIX = 3   # pixels around a line minimum for candidate validation in find_valid_indices
 SNR_DEFAULT_DPIX = 5             # fallback pixel window for SNR estimation when Gaussian sigma is unavailable
 SNR_NSIG = 3                     # Gaussian sigma multiplier for SNR integration window (~99.7% of flux)
@@ -171,6 +175,14 @@ MAX_VEL_DISPERSION = 50         # maximum allowed velocity difference between do
 CONV_KERNEL_EXTENT = 10          # convolution kernel half-extent: +/-N x sigma from line centre
 FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier: d_pix * N Ang on each side
 GAUSS_FIT_NUM_ITER = 500         # maximum curve_fit iterations for double-Gaussian fitting
+GAUSS_FIT_FINAL_ITER_FACTOR = 2  # multiplier applied to num_iter for the final fitting pass
+GAUSS_FIT_FTOL = 1e-4            # function convergence tolerance for scipy curve_fit
+GAUSS_FIT_XTOL = 1e-4            # parameter convergence tolerance for scipy curve_fit
+GAUSS_AMP_MIN = 0.05             # minimum amplitude floor for Gaussian initial conditions
+GAUSS_AMP_MAX = 0.95             # maximum amplitude cap for Gaussian initial conditions
+GAUSS_SIGMA_INIT_MIN = 0.2       # lower bound (Ang) for sigma draw when no bounds are supplied
+GAUSS_SIGMA_INIT_MAX = 5.0       # upper bound (Ang) for sigma draw when no bounds are supplied
+SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the absorption check in quick_significance_test
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
 ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
