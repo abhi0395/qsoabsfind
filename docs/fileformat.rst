@@ -19,7 +19,7 @@ I have also provided two example QSO spectra FITS files. You can use these files
 Output FITS File Structure
 --------------------------
 
-The **output** FITS file always contains four HDUs. An optional fifth HDU is added when ``--coldens`` is used,
+The **output** FITS file always contains four HDUs. An optional fifth HDU is added when ``--coldens-dv`` is used,
 and when ``--zabs-known-file`` is used the ``ABSORBER`` HDU gains an extra column:
 
 **1) PRIMARY** HDU contains user-supplied key/value headers passed via ``--headers``.
@@ -53,8 +53,8 @@ absorber was detected. Columns:
 
 **5) COLUMN_DENSITY** HDU is optional:
 
-If the ``--coldens`` option is provided when running ``qsoabsfind``, the code also calculates the total column density of each detected doublet using the apparent optical depth method.
-This implementation follows the methodology described by `Savage & Sembach (1991) <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_.
+If the ``--coldens-dv`` option is provided when running ``qsoabsfind``, the code also calculates the total column density of each detected doublet using the apparent optical depth method.
+following `Savage & Sembach (1991) <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_.
 
 This optional HDU will contain:
 

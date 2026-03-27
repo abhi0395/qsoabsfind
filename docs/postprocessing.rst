@@ -16,7 +16,7 @@ the ``AbsorberData`` class:
       print(catalog.catalog)        # absorber table (ABSORBER HDU)
       print(catalog.metadata)       # QSO metadata for detected absorbers (METADATA HDU)
       print(catalog.qso_info)       # all processed spectra with IS_QSO_AVAILABLE flag (QSO_INFO HDU)
-      print(catalog.column_density) # column densities if --coldens was used, else None
+      print(catalog.column_density) # column densities if --coldens-dv was used, else None
 
 
 Plotting a Random Absorber

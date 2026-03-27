@@ -1,7 +1,7 @@
 Absorber Search Windows
 =======================
 
-For each absorber, user can define an observed-frame wavelength search window based on the quasar redshift and proximity to major emission lines. This ensures that:
+For each absorber, the observed-frame wavelength search window is defined based on the quasar redshift and proximity to major emission lines, so that:
 
 - We avoid regions near the quasar's own emission lines where intrinsic absorption may contaminate our detection.
 - We stay within the observed wavelength coverage.
@@ -19,9 +19,9 @@ Parameter Definitions
 Search Window Definitions
 -------------------------
 
-For each absorber, the search window in observed-frame wavelength is defined using quasar intrinsic emission-line and a velocity-based offset. The purpose is to restrict the search to physically motivated regions around the quasar where the absorber is likely to appear, while avoiding contamination from unrelated features.
+For each absorber, the search window in observed-frame wavelength is defined using a quasar intrinsic emission line and a velocity-based offset, restricting the search to regions where the absorber is likely to appear while avoiding contamination from unrelated features.
 
-The offset is determined via a velocity range (e.g., +/-5000 km/s), converted to redshift as:
+The offset is determined via a velocity range (e.g., +/-3000 km/s), converted to redshift as:
 
 The general form for the observed-frame wavelength of a line is:
 
@@ -40,7 +40,7 @@ where :math:`c` is the speed of light.
 User-defined wavelength boundaries (in quasar rest-frame):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The code allows users to provide the wavelength boundaries (in the quasar rest-frame) to define the absorber search window. Details are provided below.
+By default, the code uses the built-in search windows defined below for built-in absorbers. However, users can override these for any absorber — built-in or custom — by supplying their own rest-frame wavelength boundaries via the constants file. This makes the search window fully user-controlled when needed, while still falling back to the defaults if no boundaries are provided.
 
 - **Emission lines**:
     - Blue side: ``search_parameters["start_rest_wave"]``
@@ -57,36 +57,8 @@ The code allows users to provide the wavelength boundaries (in the quasar rest-f
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\rm end}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 
-Default search window logic used for each metal doublet:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Mg II (2796, 2803 Ang)
-~~~~~~~~~~~~~~~~~~~~~~
-
-- **Emission lines**: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)
-- **Search window**:
-
-.. math::
-
-    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
-
-.. math::
-
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
-
-C IV (1548, 1550 Ang)
-~~~~~~~~~~~~~~~~~~~~~
-
-- **Emission lines**: blue side - Outside Si II forest (>1310 Ang), red side - C IV (1549.5 Ang)
-- **Search window**:
-
-.. math::
-
-    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}}+ \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
-
-.. math::
-
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+Default search window for built-in absorbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 O VI (1032, 1038 Ang)
 ~~~~~~~~~~~~~~~~~~~~~
@@ -105,12 +77,12 @@ O VI (1032, 1038 Ang)
 N V (1238, 1242 Ang)
 ~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Ly-beta (1025.72 Ang), red side - N V (1240.8 Ang)
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - N V (1240.8 Ang)
 - **Search window**:
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\beta}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{Ly}\alpha}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
@@ -129,6 +101,20 @@ Si IV (1394, 1403 Ang)
 .. math::
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{SiIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+
+C IV (1548, 1550 Ang)
+~~~~~~~~~~~~~~~~~~~~~
+
+- **Emission lines**: blue side - Outside Si II forest (>1310 Ang), red side - C IV (1549.5 Ang)
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}}, 1310 \times (1 + z_{\mathrm{QSO}}+ \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 Al III (1854, 1862 Ang)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -158,6 +144,20 @@ Fe II (2586, 2600 Ang)
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
+Mg II (2796, 2803 Ang)
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **Emission lines**: blue side - C IV (1549.5 Ang), red side - Mg II (2799.1 Ang)
+- **Search window**:
+
+.. math::
+
+    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\mathrm{CIV}}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+
+.. math::
+
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{MgII}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+
 Ca II (3934, 3969 Ang)
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -171,7 +171,6 @@ Ca II (3934, 3969 Ang)
 .. math::
 
     \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
-
 
 Na I (5891, 5897 Ang)
 ~~~~~~~~~~~~~~~~~~~~~

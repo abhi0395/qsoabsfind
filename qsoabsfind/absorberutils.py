@@ -748,7 +748,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
-            lam_blue = lines['Lyb_1026']
+            lam_blue = lines['Lya']
             lam_red = lines['NV_1240']
 
         elif absorber == 'SiIV':

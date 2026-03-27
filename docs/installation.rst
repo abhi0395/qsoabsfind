@@ -49,18 +49,18 @@ Create and activate a conda environment:
     source qsoabsfind-env/bin/activate  # Linux/Mac
 
     # Install dependencies
-    pip install numpy scipy astropy numba matplotlib pytest
+    pip install numpy scipy astropy numba matplotlib pyyaml tqdm
 
 Install Package
 ---------------
 
-Install qsoabsfind (tagged version, stable and reproducible):
+Install a specific tagged version (for stable releases and reproducibility):
 
 .. code-block:: bash
 
     pip install --upgrade "git+https://github.com/abhi0395/qsoabsfind.git@vX.Y.Z"
 
-Replace vX.Y.Z with the desired Git tag (for example v2.0.1).
+Replace vX.Y.Z with the desired Git tag (for example v2.1.0).
 
 For developers (editable mode installation):
 

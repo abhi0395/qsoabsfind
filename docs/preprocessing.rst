@@ -26,4 +26,4 @@ build a parent sample:
     print(f"{len(good)} / {len(parent)} QSOs have a searchable MgII window")
 
 The function applies the same overridable-constants logic as the
-main pipeline, so the filtering is fully consistent with the absorber search.
+main pipeline, so the filtering is consistent with the absorber search.
