@@ -744,7 +744,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            lam_blue = 0.0  # go to spectrum blue edge (clipped by min_wave in get_search_limits)
+            lam_blue = _constants.SMALL_WAVE
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
@@ -761,12 +761,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
 
         elif absorber == 'NaI':
             lam_blue = lines['Lya']
-            lam_red = 1e10  # go to spectrum red edge (clipped by max_wave in get_search_limits)
+            lam_red = _constants.LARGE_WAVE
 
         elif absorber == 'CaII':
             lam_blue = lines['Lya']
-            lam_red = 1e10  # go to spectrum red edge (clipped by max_wave in get_search_limits)
-
+            lam_red = _constants.LARGE_WAVE
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 
