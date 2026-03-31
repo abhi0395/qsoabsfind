@@ -744,7 +744,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_red = lines['CIV_1549']
 
         elif absorber == 'OVI':
-            lam_blue = _constants.SMALL_WAVE
+            lam_blue = 0.0  # go to spectrum blue edge (clipped by min_wave in get_search_limits)
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
@@ -761,11 +761,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
 
         elif absorber == 'NaI':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
+            lam_red = 1e10  # go to spectrum red edge (clipped by max_wave in get_search_limits)
 
         elif absorber == 'CaII':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
+            lam_red = 1e10  # go to spectrum red edge (clipped by max_wave in get_search_limits)
 
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
@@ -788,6 +788,13 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
 
     Returns:
         lam_start, lam_end (float): Observed-frame wavelength limits
+
+    Note:
+        ``constants.SMALL_WAVE`` and ``constants.LARGE_WAVE`` act as hard observed-frame
+        bounds applied on top of the per-spectrum ``min_wave``/``max_wave`` clip.  Their
+        defaults (0 and 1e10) impose no restriction; set them in your constants file to
+        restrict the search to a fixed detector range (e.g. ``SMALL_WAVE = 3600``,
+        ``LARGE_WAVE = 10000`` for SDSS/DESI optical coverage).
     """
 
     # Convert velocity offset to redshift offset
@@ -801,8 +808,13 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     lam_blue_obs = lam_blue * (1 + zqso + dz)
     lam_red_obs = lam_red * (1 + zqso - dz)
 
-    lam_start = max(min_wave, lam_blue_obs) + lam_edge_sep
-    lam_end = min(max_wave, lam_red_obs) - lam_edge_sep
+    lam_start = max(min_wave, lam_blue_obs, _constants.SMALL_WAVE) + lam_edge_sep
+    lam_end = min(max_wave, lam_red_obs, _constants.LARGE_WAVE) - lam_edge_sep
+
+    if verbose and _constants.SMALL_WAVE > 0:
+        logger.info('SMALL_WAVE observed-frame lower limit applied: %.1f Ang', _constants.SMALL_WAVE)
+    if verbose and _constants.LARGE_WAVE < 1e9:
+        logger.info('LARGE_WAVE observed-frame upper limit applied: %.1f Ang', _constants.LARGE_WAVE)
 
     return lam_start, lam_end
 

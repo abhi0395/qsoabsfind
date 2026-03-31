@@ -14,8 +14,8 @@ Usage:
 
 speed_of_light = 299792.458   # Speed of light in km/s
 
-LARGE_WAVE = 9800.0 # for SDSS/DESI observed wave
-SMALL_WAVE = 500.0 # for SDSS/DESI observed wave
+LARGE_WAVE = 1e6  # observed-frame hard upper wavelength limit (Ang); default 1e10 = no restriction
+SMALL_WAVE = 10.0   # observed-frame hard lower wavelength limit (Ang); default 0 = no restriction
 
 MIN_NPIXEL = 100 # minimum number of pixels required for a valid search region
 
