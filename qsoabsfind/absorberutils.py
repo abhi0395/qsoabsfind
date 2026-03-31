@@ -817,7 +817,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
 
     return lam_start, lam_end
 
-def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, verbose=False):
+def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, verbose=False):
     """
     Wrapper function to return the most basic wavelength window for absorber
     search.
@@ -834,6 +834,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
         dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
+        logwave (bool, optional): If True, wavelength pixels are on a fixed log-scale (e.g. SDSS/DESI). Used to report pixel count. Default is False.
         verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
@@ -878,7 +879,12 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     error_residual = error_residual[~rmv_lam0]
 
     if verbose:
-        elapsed(start, f"INFO: final wave window selection for {absorber} took")
+        npix = lam_search.size
+        if logwave:
+            print(f"INFO: search window: {lam_start:.1f} - {lam_end:.1f} Ang, {npix} pixels, time took to define the search window: {elapsed(start, '')} sec")
+        else:
+            dlam = lam_search[-1] - lam_search[0] if npix > 1 else 0.0
+            print(f"INFO: search window: {lam_start:.1f} - {lam_end:.1f} Ang, {npix} pixels ({dlam:.1f} Ang span), time took to define the search window: {elapsed(start, '')} sec")
 
     return lam_search, residual, error_residual
 
@@ -937,7 +943,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave,
         lam_edge_sep=kwargs["lam_edge_sep"],
         start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-        dv=kwargs["dv"], verbose=kwargs["verbose"]
+        dv=kwargs["dv"], logwave=kwargs.get("logwave", False), verbose=kwargs["verbose"]
     )
 
     # Verify that the arrays are of equal size
@@ -979,7 +985,7 @@ def _check_searchable_one(params):
     return idx, is_good_qso, snr_val
 
 
-def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None, verbose=False):
+def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None):
     """Run searchability checks for all QSO spectra in parallel.
 
     For each spectrum, determines whether the given absorber can be searched
@@ -997,8 +1003,6 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
         n_qso (int or str, optional): Number of spectra to check, or a range
             string such as ``'1-1000'`` or ``'1-1000:10'``.  If ``None``, all
             spectra in the file are checked.
-        verbose (bool): If ``True``, pass verbose flag to the per-spectrum
-            check (default ``False``).
 
     Returns:
         astropy.table.Table: Table with two columns:
@@ -1020,7 +1024,7 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
     user_constants = load_constants(const_path)
 
     _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
-    logger.info('Physical constant resolution (user file overrides shown with *):')
+    print('INFO: Physical constant resolution (user file overrides shown with *):')
     for _name in _overridable:
         _user_val = getattr(user_constants, _name, None)
         _pkg_val = getattr(_constants, _name)
@@ -1032,7 +1036,6 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
 
     # Build per-spectrum kwargs from the user constants search parameters
     search_params = dict(user_constants.search_parameters)
-    search_params['verbose'] = verbose
 
     # Resolve QSO index range
     if n_qso is None:

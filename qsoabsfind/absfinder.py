@@ -118,7 +118,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
         # Identify the wavelength region for searching the specified absorber
         lam_search, unmsk_residual, unmsk_error = absorber_search_window(
             lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], verbose=verbose)
+            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose)
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
