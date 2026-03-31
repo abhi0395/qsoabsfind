@@ -193,7 +193,7 @@ def main():
     parser.add_argument('--config', type=str, default=None, help='Path to a YAML config file. All keys must match CLI argument names (underscores). CLI flags always override YAML values.')
     parser.add_argument('--input-fits-file', type=str, required=False, help='Path to the input FITS file, containing residual spectra.')
     parser.add_argument('--n-qso', type=str, required=False, help="Number of QSO spectra to process, or a bash-like sequence (e.g., '100', '1-1000', '1-1000:10'). If not provided, code will run all the spectra")
-    parser.add_argument('--absorber', type=str, required=False, help='Absorber name for searching doublets (options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).')
+    parser.add_argument('--absorber', type=str, required=False, help='Name of the absorber doublet to search for. Built-in search windows are available for MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, and NaI; custom doublets are also supported.')
     parser.add_argument('--constant-file', type=str, help='Path to the constants .py file, please follow the exact same structure as described in the documentation.')
     parser.add_argument('--output', type=str, required=False, help='Path to the output FITS file to save absorber catalog.')
     parser.add_argument('--headers', type=str, nargs='+', help='Headers for the output FITS file in the format NAME=VALUE.')
