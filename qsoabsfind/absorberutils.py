@@ -791,7 +791,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     Note:
         ``constants.SMALL_WAVE`` and ``constants.LARGE_WAVE`` act as hard observed-frame
         bounds applied on top of the per-spectrum ``min_wave``/``max_wave`` clip.  Their
-        defaults (0 and 1e10) impose no restriction; set them in your constants file to
+        defaults (10 and 1e6) impose no restriction; set them in your constants file to
         restrict the search to a fixed detector range (e.g. ``SMALL_WAVE = 3600``,
         ``LARGE_WAVE = 10000`` for SDSS/DESI optical coverage).
     """
