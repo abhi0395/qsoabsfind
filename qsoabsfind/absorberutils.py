@@ -880,11 +880,12 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
 
     if verbose:
         npix = lam_search.size
+        ls, le = float(lam_start), float(lam_end)
         if logwave:
-            print(f"INFO: search window: {lam_start:.1f} - {lam_end:.1f} Ang, {npix} pixels (log-lambda scale)")
+            print(f"INFO: search window: {ls:.1f} - {le:.1f} Ang, {npix} pixels (log-lambda scale)")
         else:
-            dlam = lam_search[-1] - lam_search[0] if npix > 1 else 0.0
-            print(f"INFO: search window: {lam_start:.1f} - {lam_end:.1f} Ang, {npix} pixels (delta-lambda = {dlam:.2f} Ang)")
+            dlam = float(lam_search[-1] - lam_search[0]) if npix > 1 else 0.0
+            print(f"INFO: search window: {ls:.1f} - {le:.1f} Ang, {npix} pixels (delta-lambda = {dlam:.2f} Ang)")
 
     return lam_search, residual, error_residual
 
