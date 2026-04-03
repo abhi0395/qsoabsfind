@@ -19,6 +19,7 @@ from qsoabsfind.absfinder import (
     _build_result,
     convolution_method_absorber_finder_in_QSO_spectra,
 )
+from qsoabsfind.absorberutils import check_absorber_selection
 from qsoabsfind.constants import lines, doublet_keys
 
 
@@ -415,6 +416,75 @@ class TestTrapzEWSigma(unittest.TestCase):
                     logwave=False, verbose=False,
                     zabs_known=z, trapz_ew_sigma=nsig)
                 self.assertIsInstance(result, dict)
+
+
+class TestCheckAbsorberSelection(unittest.TestCase):
+    """Tests for check_absorber_selection, focusing on the fit_param_std argument."""
+
+    # MgII-like values used as a plausible passing case
+    LINE1 = lines['MgII_2796']
+    LINE2 = lines['MgII_2803']
+
+    def _passing_kwargs(self):
+        """Return a dict of arguments that satisfy every existing condition."""
+        line_sep = self.LINE2 - self.LINE1
+        d_pix = 0.6
+        bound = (
+            np.array([0.02, self.LINE1 - d_pix, 0.1,  0.02, self.LINE2 - d_pix, 0.1]),
+            np.array([1.10, self.LINE1 + d_pix, 15.0, 1.10, self.LINE2 + d_pix, 15.0])
+        )
+        gauss_params = np.array([0.4, self.LINE1, 1.0, 0.2, self.LINE2, 1.0])
+        return dict(
+            qso_id=0,
+            zabs=0.6,
+            gaussian_parameters=gauss_params,
+            bound=bound,
+            lower_del_lam=line_sep - d_pix,
+            c0=self.LINE1,
+            c1=self.LINE2,
+            upper_del_lam=line_sep + d_pix,
+            sn1=5.0, sn_line1=3.0,
+            sn2=4.0, sn_line2=2.0,
+            vel1=20.0, vel2=20.0,
+            min_dr=0.8, dr=1.5, max_dr=2.2,
+            ew1_snr=5.0, ew2_snr=3.0,
+            delta_chi2=30.0,
+            conf_level=0.95,
+        )
+
+    def test_passes_without_fit_param_std(self):
+        """No fit_param_std supplied -> check is skipped and result is True."""
+        result = check_absorber_selection(**self._passing_kwargs())
+        self.assertTrue(result)
+
+    def test_passes_with_good_fit_param_std(self):
+        """fit_param_std much smaller than params -> all SNRs large -> passes."""
+        kw = self._passing_kwargs()
+        kw['fit_param_std'] = np.array([0.01, 0.001, 0.05, 0.01, 0.001, 0.05])
+        result = check_absorber_selection(**kw)
+        self.assertTrue(result)
+
+    def test_fails_with_bad_fit_param_std(self):
+        """fit_param_std >= params -> SNR < 1 -> check fails -> result is False."""
+        kw = self._passing_kwargs()
+        gauss_params = kw['gaussian_parameters']
+        # errors equal to the parameter values -> SNR = 1.0, which is NOT > FIT_PARAM_SNR=1.0
+        kw['fit_param_std'] = np.abs(gauss_params.copy())
+        result = check_absorber_selection(**kw)
+        self.assertFalse(result)
+
+    def test_skips_check_when_std_contains_zero(self):
+        """Any zero in fit_param_std -> not all positive -> check is skipped -> True."""
+        kw = self._passing_kwargs()
+        std = np.array([0.01, 0.001, 0.05, 0.01, 0.001, 0.05])
+        std[2] = 0.0  # one zero
+        kw['fit_param_std'] = std
+        result = check_absorber_selection(**kw)
+        self.assertTrue(result)
+
+    def test_returns_bool(self):
+        result = check_absorber_selection(**self._passing_kwargs())
+        self.assertIsInstance(result, bool)
 
 
 if __name__ == '__main__':

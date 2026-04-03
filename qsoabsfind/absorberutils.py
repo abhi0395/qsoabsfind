@@ -405,7 +405,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=_constants.MAX_VEL_DISPERSION, verbose=False):
+                             ew1_snr, ew2_snr, delta_chi2,
+                             fit_param_std=None,
+                             conf_level=0.95, vmax=_constants.MAX_VEL_DISPERSION, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -434,6 +436,8 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.
         ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.
         delta_chi2 (float): Chi-squared difference between flat and fitted models.
+        fit_param_std (array-like, optional): Standard errors of the 6 Gaussian fit
+            parameters [amp1_err, c0_err, sig1_err, amp2_err, c1_err, sig2_err]. Defaults to None (check skipped).
         conf_level (float, optional): Confidence level for statistical significance.
             Defaults to 0.95 (95% confidence).
         vmax (float, optional): Maximum allowed velocity difference between components
@@ -450,12 +454,21 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         - Doublet ratio physical limits
         - Equivalent width significance
         - Statistical significance via delta chi-squared test
+        - Fit-parameter SNR: abs(param) / param_err > FIT_PARAM_SNR (when fit_param_std supplied)
 
         Prints detailed information about each criterion and whether it passes.
 
     """
 
     critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
+
+    if fit_param_std is not None and np.all(fit_param_std > 0):
+        fit_param_snr = np.abs(gaussian_parameters) / fit_param_std
+        fit_param_snr_ok = bool(np.all(fit_param_snr > _constants.FIT_PARAM_SNR))
+        fit_param_snr_detail = f"{fit_param_snr}"
+    else:
+        fit_param_snr_ok = True
+        fit_param_snr_detail = "N/A (fit_param_std not provided or invalid)"
 
     conds = [
         ((gaussian_parameters > bound[0] + 0.001).all(),
@@ -484,7 +497,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
          f"|vel1 - vel2| < = {vmax}"),
          (delta_chi2 > critical_value, f"{delta_chi2} > {critical_value}",
-         f"delta_chi2 > {critical_value}")
+         f"delta_chi2 > {critical_value}"),
+        (fit_param_snr_ok, fit_param_snr_detail,
+         f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})")
     ]
 
     true_count = sum(c[0] for c in conds)

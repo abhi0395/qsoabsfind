@@ -112,9 +112,10 @@ def calculate_ew_errors(popt, perr):
     EW1 = amp1 * np.sqrt(np.pi * 2 * sigma1 ** 2)
     EW2 = amp2 * np.sqrt(np.pi * 2 * sigma2 ** 2)
 
-    # using correlation between parameters
-    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (sigma1_err / sigma1) ** 2 - 2 * amp1_err * sigma1_err / (amp1 * sigma1))
-    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (sigma2_err / sigma2) ** 2 - 2 * amp2_err * sigma2_err / (amp2 * sigma2))
+    # Standard quadrature propagation assuming independent parameters.
+
+    EW1_error = EW1 * np.sqrt((amp1_err / amp1) ** 2 + (sigma1_err / sigma1) ** 2)
+    EW2_error = EW2 * np.sqrt((amp2_err / amp2) ** 2 + (sigma2_err / sigma2) ** 2)
 
     EW_total_error = np.sqrt(EW1_error ** 2 + EW2_error ** 2)
 
@@ -163,12 +164,17 @@ def full_covariance_ew_errors(popt, pcov):
 
     return EW1_error, EW2_error, EW_total_error
 
-def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1, bound, amp_ratio, line1, line2, num_iter):
+def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1, bound, amp_ratio, line1, line2, num_iter, best_params=None, nparm=6):
 
     """Perform bootstrap resampling to estimate uncertainties in fitting parameters and equivalent widths.
 
     Conducts bootstrap analysis on spectral data to derive robust estimates of double Gaussian
     fitting parameters and equivalent widths with associated uncertainties for a doublet system.
+
+    Each iteration resamples the fit-window pixels with replacement (true bootstrap), uses a
+    reduced iteration budget (GAUSS_FIT_BOOT_ITER_FACTOR * num_iter), and when best_params is
+    provided draws initial conditions from a narrow normal distribution around the best-fit values
+    (warm start) instead of sampling the full bound range.
 
     Args:
         index (int): Index or identifier for the current fitting process.
@@ -184,6 +190,8 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
         line1 (float): Rest wavelength of the first line in the doublet.
         line2 (float): Rest wavelength of the second line in the doublet.
         num_iter (int): Maximum number of iterations for each fitting attempt.
+        best_params (array-like, optional): Best-fit parameters [amp1, c0, sig1, amp2, c1, sig2]
+        nparm (int): Number of fitting parameters (default 6).
 
     Returns:
         tuple: A tuple containing:
@@ -197,7 +205,7 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
             - ew_total_std (float): Standard deviation of total equivalent width.
     """
 
-    fit_params = np.zeros((nboot, 6))
+    fit_params = np.zeros((nboot, nparm))
     ew1_array = np.zeros(nboot)
     ew2_array = np.zeros(nboot)
     ew_total_array = np.zeros(nboot)
@@ -208,19 +216,52 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
     nmf_resi = flux[lam_ind]
     error_flux = error[lam_ind]
 
+    min_pixels = _constants.MIN_PIXELS_PER_PARAM * nparm
+    if nmf_resi.size < min_pixels or np.all(np.isnan(nmf_resi)):
+        nan_p = np.full(nparm, np.nan)
+        return nan_p, nan_p, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+
     amp_first_nmf = max(_constants.GAUSS_AMP_MIN, 1 - np.nanmin(nmf_resi))
     amp_second_nmf = min(_constants.GAUSS_AMP_MAX, amp_ratio * amp_first_nmf)
 
+    # reduced iteration budget per bootstrap fit
+    boot_iter = max(50, int(num_iter * _constants.GAUSS_FIT_BOOT_ITER_FACTOR))
+
+    # check whether a valid warm-start is available
+    spread = _constants.GAUSS_FIT_BOOT_WARM_SPREAD
+    use_warm_start = (best_params is not None and not np.any(np.isnan(best_params)))
+
+    n_pix = len(lam_fit)
     for i in range(nboot):
-        # #best-fit corresponding to this best redshift
-        if bound is not None:
-            sigma1 = np.random.uniform(bound[0][2], bound[1][2])
-            sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+        # resample fit-window pixels with replacement
+        boot_idx = np.sort(np.random.choice(n_pix, size=n_pix, replace=True))
+        lam_boot  = lam_fit[boot_idx]
+        flux_boot = nmf_resi[boot_idx]
+        err_boot  = error_flux[boot_idx]
+
+        # initial conditions drawn near best-fit, else wide random draw
+        if use_warm_start:
+            if bound is not None:
+                amp1   = np.clip(np.random.normal(best_params[0], spread * best_params[0]), bound[0][0], bound[1][0])
+                sigma1 = np.clip(np.random.normal(best_params[2], spread * best_params[2]), bound[0][2], bound[1][2])
+                amp2   = np.clip(np.random.normal(best_params[3], spread * best_params[3]), bound[0][3], bound[1][3])
+                sigma2 = np.clip(np.random.normal(best_params[5], spread * best_params[5]), bound[0][5], bound[1][5])
+            else:
+                amp1   = np.clip(np.random.normal(best_params[0], spread * best_params[0]), _constants.GAUSS_AMP_MIN,        _constants.GAUSS_AMP_MAX)
+                sigma1 = np.clip(np.random.normal(best_params[2], spread * best_params[2]), _constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
+                amp2   = np.clip(np.random.normal(best_params[3], spread * best_params[3]), _constants.GAUSS_AMP_MIN,        _constants.GAUSS_AMP_MAX)
+                sigma2 = np.clip(np.random.normal(best_params[5], spread * best_params[5]), _constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
         else:
-            sigma1 = sigma2 = np.random.uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
-        init_cond = [amp_first_nmf, line1, sigma1, amp_second_nmf, line2, sigma2]
+            amp1, amp2 = amp_first_nmf, amp_second_nmf
+            if bound is not None:
+                sigma1 = np.random.uniform(bound[0][2], bound[1][2])
+                sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+            else:
+                sigma1 = sigma2 = np.random.uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
+
+        init_cond = [amp1, line1, sigma1, amp2, line2, sigma2]
         fit_params[i], _, ew1_array[i], ew2_array[i], ew_total_array[i], _ = double_curve_fit(
-            index, double_gaussian, lam_fit, nmf_resi, error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv= num_iter)
+            index, double_gaussian, lam_boot, flux_boot, error_fit=err_boot, bounds=bound, init_cond=init_cond, maxefv=boot_iter)
 
     fit_params_mean = np.nanmean(fit_params, axis=0)
     fit_param_std = np.nanstd(fit_params, axis=0)
@@ -389,10 +430,10 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
     # ========== BOOTSTRAPPING OR ERROR CALCULATION ==========
     if nboot is not None and nboot > 0:
-        print('INFO: bootstrapping...')
         params, std, ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err = bootstrap_fitting_and_ew(
             index, nboot, z_k, wavelength, flux, error,
-            ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter)
+            ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter,
+            best_params=params, nparm=nparm)
         fitted_model = double_gaussian(lam_fit, *params)
         dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
                                         fitted_params=params, wavelength_rest=lam_fit, n_pixels=_constants.SIGNIFICANCE_N_PIXELS)

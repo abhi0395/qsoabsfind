@@ -24,7 +24,7 @@ search_parameters = {
     'd_pix': 0.6, # tolerance (in Angs) for line difference from true values
     'sn_line1': 3, # SNR cut for first line
     'sn_line2': 2, # SNR cut for second line
-    'use_covariance': False, # to use covariance matrix in EW error calculation
+    'use_covariance': True, # to use covariance matrix in EW error calculation
     'logwave': True,  # Assume SDSS-style log scale by default
     'lam_edge_sep': 25, # Wavelength cut from spectrum edges (in Ang)
     'conf_level':0.95, # 95 percent confidence level for absorber selection
@@ -33,8 +33,7 @@ search_parameters = {
     'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
     'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default
     'nboot':None, # if provided the number, will perform bootstrapping for EW error calculation
-    'continuum_error_frac':0.05, # Fixed fractional error due to continuum normalization (5%) used AODM column density measurements
-    'trapz_ew_sigma':3 # n*sigma window for trapezoidal EW measurement around Gaussian-fit line centres
+    'continuum_error_frac':0.05, # Fixed fractional error due to continuum normalization used AODM column density measurements
 }
 
 # ==============================

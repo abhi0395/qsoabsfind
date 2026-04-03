@@ -368,7 +368,9 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                lower_del_lam, c0, c1, upper_del_lam,
                                                sn1, sn_line1, sn2, sn_line2,
                                                vel1, vel2, min_dr, dr, max_dr,
-                                               ew1_snr, ew2_snr, delta_chi2, conf_level, verbose=verbose)
+                                               ew1_snr, ew2_snr, delta_chi2,
+                                               fit_param_std=fit_param_std_temp[0],
+                                               conf_level=conf_level, verbose=verbose)
                 if good:
                     pure_z_abs[m] = z_new
                     pure_gauss_fit[m] = fit_param_temp[0]

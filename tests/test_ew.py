@@ -3,7 +3,9 @@ import numpy as np
 
 from qsoabsfind.ew import return_line_centers, \
                         measure_absorber_properties_double_gaussian, \
-                        trapezoidal_ew
+                        trapezoidal_ew, \
+                        calculate_ew_errors, \
+                        bootstrap_fitting_and_ew
 
 
 class TestEW(unittest.TestCase):
@@ -267,6 +269,135 @@ class TestTrapezoidalEW(unittest.TestCase):
         result = trapezoidal_ew(lam_obs, res, err, z, self.LINE1, self.LINE2,
                                 sigma1=0.0001, sigma2=0.0001, n_sigma=1)
         self.assertTrue(np.isnan(result['ew1']) or result['ew1'] == 0.0)
+
+
+class TestCalculateEwErrors(unittest.TestCase):
+    """Tests for the diagonal-only EW error propagation function."""
+
+    def _params_and_errs(self, amp1=0.4, sig1=1.0, amp2=0.2, sig2=0.8,
+                         amp1_err=0.05, sig1_err=0.1, amp2_err=0.04, sig2_err=0.08):
+        popt = np.array([amp1, 2796.35, sig1, amp2, 2803.53, sig2])
+        perr = np.array([amp1_err, 0.001, sig1_err, amp2_err, 0.001, sig2_err])
+        return popt, perr
+
+    def test_returns_three_floats(self):
+        popt, perr = self._params_and_errs()
+        result = calculate_ew_errors(popt, perr)
+        self.assertEqual(len(result), 3)
+        for v in result:
+            self.assertTrue(np.isfinite(v))
+
+    def test_pure_quadrature_no_cross_term(self):
+        """Error must equal EW * sqrt((dA/A)^2 + (ds/s)^2) -- no cross-term."""
+        amp1, sig1, amp2, sig2 = 0.4, 1.0, 0.2, 0.8
+        amp1_err, sig1_err, amp2_err, sig2_err = 0.05, 0.1, 0.04, 0.08
+        popt, perr = self._params_and_errs(amp1, sig1, amp2, sig2,
+                                           amp1_err, sig1_err, amp2_err, sig2_err)
+        ew1_err, ew2_err, _ = calculate_ew_errors(popt, perr)
+        EW1 = amp1 * np.sqrt(2 * np.pi) * sig1
+        EW2 = amp2 * np.sqrt(2 * np.pi) * sig2
+        expected_ew1_err = EW1 * np.sqrt((amp1_err / amp1)**2 + (sig1_err / sig1)**2)
+        expected_ew2_err = EW2 * np.sqrt((amp2_err / amp2)**2 + (sig2_err / sig2)**2)
+        self.assertAlmostEqual(ew1_err, expected_ew1_err, places=10)
+        self.assertAlmostEqual(ew2_err, expected_ew2_err, places=10)
+
+    def test_total_error_is_quadrature_of_line_errors(self):
+        popt, perr = self._params_and_errs()
+        ew1_err, ew2_err, ew_total_err = calculate_ew_errors(popt, perr)
+        self.assertAlmostEqual(ew_total_err, np.sqrt(ew1_err**2 + ew2_err**2), places=10)
+
+    def test_larger_param_error_gives_larger_ew_error(self):
+        popt, perr_lo = self._params_and_errs(amp1_err=0.02)
+        _, perr_hi  = self._params_and_errs(amp1_err=0.10)
+        ew1_lo, _, _ = calculate_ew_errors(popt, perr_lo)
+        ew1_hi, _, _ = calculate_ew_errors(popt, perr_hi)
+        self.assertGreater(ew1_hi, ew1_lo)
+
+    def test_zero_param_error_gives_zero_ew_error(self):
+        popt, _ = self._params_and_errs()
+        perr_zero = np.zeros(6)
+        ew1_err, ew2_err, ew_total_err = calculate_ew_errors(popt, perr_zero)
+        self.assertAlmostEqual(ew1_err, 0.0, places=12)
+        self.assertAlmostEqual(ew2_err, 0.0, places=12)
+        self.assertAlmostEqual(ew_total_err, 0.0, places=12)
+
+
+class TestBootstrapFittingAndEw(unittest.TestCase):
+    """Tests for bootstrap_fitting_and_ew with the updated API."""
+
+    LINE1 = 2796.35
+    LINE2 = 2803.53
+
+    def _synthetic_spectrum(self, z=0.6, n=2000, amp1=0.35, amp2=0.18, sig=1.0, noise=0.02):
+        """Return (wavelength, flux, error) with a clean double-Gaussian absorber."""
+        rest_lam = np.linspace(self.LINE1 - 15, self.LINE2 + 15, n)
+        model = (1.0
+                 - amp1 * np.exp(-(rest_lam - self.LINE1)**2 / (2 * sig**2))
+                 - amp2 * np.exp(-(rest_lam - self.LINE2)**2 / (2 * sig**2)))
+        rng = np.random.RandomState(0)
+        error = np.full(n, noise)
+        flux = model + rng.normal(0, noise, n)
+        wavelength = rest_lam * (1 + z)
+        return wavelength, flux, error
+
+    def _simple_bound(self):
+        return (
+            np.array([0.02, self.LINE1 - 1.0, 0.1,  0.02, self.LINE2 - 1.0, 0.1]),
+            np.array([1.10, self.LINE1 + 1.0, 15.0, 1.10, self.LINE2 + 1.0, 15.0])
+        )
+
+    def _run(self, best_params=None, nboot=20):
+        z = 0.6
+        wavelength, flux, error = self._synthetic_spectrum(z)
+        bound = self._simple_bound()
+        return bootstrap_fitting_and_ew(
+            index=0, nboot=nboot, z=z,
+            wavelength=wavelength, flux=flux, error=error,
+            ix0=self.LINE1 - 15, ix1=self.LINE2 + 15,
+            bound=bound, amp_ratio=0.5,
+            line1=self.LINE1, line2=self.LINE2,
+            num_iter=300, best_params=best_params)
+
+    def test_returns_eight_values(self):
+        result = self._run()
+        self.assertEqual(len(result), 8)
+
+    def test_all_means_are_finite(self):
+        params_mean, _, ew1, ew2, ew_total, _, _, _ = self._run()
+        self.assertTrue(np.all(np.isfinite(params_mean)))
+        self.assertTrue(np.isfinite(ew1))
+        self.assertTrue(np.isfinite(ew2))
+        self.assertTrue(np.isfinite(ew_total))
+
+    def test_ew_total_mean_equals_ew1_plus_ew2_mean(self):
+        _, _, ew1, ew2, ew_total, _, _, _ = self._run()
+        self.assertAlmostEqual(ew_total, ew1 + ew2, places=6)
+
+    def test_std_positive_for_real_absorption(self):
+        """Bootstrap std on EWs must be positive when absorption is present."""
+        _, fit_std, _, _, _, ew1_std, ew2_std, _ = self._run(nboot=30)
+        self.assertGreater(ew1_std, 0.0)
+        self.assertGreater(ew2_std, 0.0)
+
+    def test_warm_start_runs_without_error(self):
+        """Passing best_params (warm start) must not raise and must return valid output."""
+        best_params = np.array([0.35, self.LINE1, 1.0, 0.18, self.LINE2, 1.0])
+        params_mean, fit_std, ew1, ew2, ew_total, _, _, _ = self._run(best_params=best_params)
+        self.assertTrue(np.all(np.isfinite(params_mean)))
+        self.assertTrue(np.isfinite(ew1) and np.isfinite(ew2))
+
+    def test_none_best_params_falls_back_to_wide_draw(self):
+        """best_params=None must still return valid results (fallback path)."""
+        params_mean, _, ew1, ew2, _, _, _, _ = self._run(best_params=None)
+        self.assertTrue(np.isfinite(ew1))
+        self.assertTrue(np.isfinite(ew2))
+
+    def test_nan_best_params_falls_back_gracefully(self):
+        """An all-NaN best_params must fall back without raising."""
+        best_params = np.full(6, np.nan)
+        params_mean, _, ew1, ew2, _, _, _, _ = self._run(best_params=best_params)
+        # just check it completed; values may be NaN for some iterations but means should survive
+        self.assertEqual(len(params_mean), 6)
 
 
 if __name__ == "__main__":
