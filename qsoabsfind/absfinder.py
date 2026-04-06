@@ -8,7 +8,7 @@ import time
 import logging
 import numpy as np
 from astropy.table import Table
-from .utils import convolution_fun, vel_dispersion, elapsed
+from .utils import convolution_fun, vel_dispersion
 from .absorberutils import (
     estimate_local_sigma_conv_array,
     median_selection_after_combining,
@@ -145,7 +145,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     )
 
     if verbose:
-        elapsed(start_time, f"INFO: Time taken to finish {absorber} detection for index = {spec_index} Quasar is:")
+        logger.info("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
 
     return result
 

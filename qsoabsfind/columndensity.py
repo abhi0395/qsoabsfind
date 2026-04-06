@@ -11,9 +11,12 @@ Otherwise, we adopt the weaker column density as a lower limit, or stronger line
 
 import time
 from multiprocessing import Pool
+import logging
 import numpy as np
 from astropy.table import Table, vstack
 from .absorberutils import calculate_doublet_ratio
+
+logger = logging.getLogger(__name__)
 
 # Constants
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
@@ -315,7 +318,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
         for i in range(nabs) if valid_mask[i]
     ]
 
-    print(f"INFO: Starting column density calculation with {nproc} processes")
+    logger.info("Starting column density calculation with %d processes", nproc)
 
     if args_list:
         with Pool(nproc) as pool:
@@ -335,7 +338,7 @@ def return_total_column_density_table(spectra_fits, absorber, output, continuum_
         else:
             N_table[col] = N_table[col].astype('int32')
 
-    print(f'INFO: Num of zeros = {np.sum(N_table["LOG10N"].data==0)}')
-    print(f'INFO: Column density took = {time.time()-start:.3f} [sec]')
+    logger.info("Num of zeros = %d", np.sum(N_table["LOG10N"].data==0))
+    logger.info("Column density took = %.3f [sec]", time.time()-start)
 
     return N_table

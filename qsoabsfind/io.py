@@ -2,9 +2,12 @@
 This script contains functions to read, append and write fits files.
 """
 import os
+import logging
 from astropy.io import fits
 import numpy as np
 from astropy.table import Table
+
+logger = logging.getLogger(__name__)
 
 #Constants
 from .constants import doublet_keys
@@ -137,7 +140,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
     if spec_indices is not None:
         hdu_list.append(_build_qso_info_hdu(input_file, spec_indices, results))
     fits.HDUList(hdu_list).writeto(output_file, overwrite=True)
-    print(f'INFO: ouptut file {output_file} written.')
+    logger.info("output file %s written.", output_file)
 
 def append_table_to_fits(filename, table, hdu_name):
     """

@@ -126,22 +126,6 @@ def parse_qso_sequence(qso_sequence):
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
 
-def elapsed(start, msg):
-    """
-    Prints the elapsed time since `start`.
-
-    Args:
-        start (float): The start time.
-        msg (str): The message to print with the elapsed time.
-
-    Returns:
-        float: The current time.
-    """
-    end = time.time()
-    if start is not None:
-        print(f"{msg} {end - start:.2f} seconds")
-    return end
-
 def gauss_two_lines_kernel(x, a):
     """
     Defines the kernel function using double gaussian only.

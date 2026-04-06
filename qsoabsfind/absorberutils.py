@@ -9,7 +9,7 @@ import time
 import logging
 from astropy.table import Table
 from scipy.stats import chi2
-from .utils import elapsed
+
 
 # Constants -- imported via the module object so that startup-time patches
 # (applied in parallel_convolution.main) propagate here automatically.
@@ -855,7 +855,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     Returns:
         tuple: A tuple containing unmasked wavelength, residual, and errors.
     """
-    start = elapsed(None, "")
+    start = time.time()
 
     lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep, verbose=verbose)
 
@@ -897,10 +897,10 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         npix = lam_search.size
         ls, le = float(lam_start), float(lam_end)
         if logwave:
-            print(f"INFO: search window: {ls:.1f} - {le:.1f} Ang, {npix} pixels (log-lambda scale)")
+            logger.info("search window: %.1f - %.1f Ang, %d pixels (log-lambda scale)", ls, le, npix)
         else:
             dlam = float(lam_search[-1] - lam_search[0]) if npix > 1 else 0.0
-            print(f"INFO: search window: {ls:.1f} - {le:.1f} Ang, {npix} pixels (delta-lambda = {dlam:.2f} Ang)")
+            logger.info("search window: %.1f - %.1f Ang, %d pixels (delta-lambda = %.2f Ang)", ls, le, npix, dlam)
 
     return lam_search, residual, error_residual
 
