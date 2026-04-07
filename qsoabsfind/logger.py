@@ -18,9 +18,6 @@ one-liner instead::
 
     import logging
     logging.basicConfig(level=logging.INFO)
-
-``verbose=True`` sets the root level to DEBUG (shows all ``logger.debug`` calls);
-``verbose=False`` (the default) sets it to INFO.
 """
 
 import logging

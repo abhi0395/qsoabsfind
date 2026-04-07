@@ -4,7 +4,7 @@ Installation
 Prerequisites
 -------------
 
-- Python 3.10 or higher
+- Python 3.9 or higher
 - ``numpy``
 - ``scipy``
 - ``astropy``
@@ -37,7 +37,9 @@ Create and activate a conda environment:
     conda activate qsoabsfind
 
     # Install dependencies
-    conda install numpy scipy astropy numba matplotlib
+    conda install numpy scipy astropy numba matplotlib tqdm pyyaml
+
+    # Optional: for running tests
     conda install -c conda-forge pytest
 
 **Option 2: Using pip with virtual environment**
