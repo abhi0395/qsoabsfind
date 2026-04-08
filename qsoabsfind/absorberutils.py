@@ -462,13 +462,18 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
 
     critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
 
-    if fit_param_std is not None and np.all(fit_param_std > 0):
+    if fit_param_std is None:
+        fit_param_snr_ok = True
+        fit_param_snr_detail = "(fit_param_std not provided)"
+
+    elif np.all(fit_param_std > 0):
         fit_param_snr = np.abs(gaussian_parameters) / fit_param_std
         fit_param_snr_ok = bool(np.all(fit_param_snr > _constants.FIT_PARAM_SNR))
         fit_param_snr_detail = f"{fit_param_snr}"
+
     else:
-        fit_param_snr_ok = True
-        fit_param_snr_detail = "N/A (fit_param_std not provided or invalid)"
+        fit_param_snr_ok = False
+        fit_param_snr_detail = "(fit_param_std is invalid)"
 
     conds = [
         ((gaussian_parameters > bound[0] + 0.001).all(),

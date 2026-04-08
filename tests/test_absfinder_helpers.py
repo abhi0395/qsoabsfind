@@ -474,13 +474,13 @@ class TestCheckAbsorberSelection(unittest.TestCase):
         self.assertFalse(result)
 
     def test_skips_check_when_std_contains_zero(self):
-        """Any zero in fit_param_std -> not all positive -> check is skipped -> True."""
+        """Any zero in fit_param_std -> not all positive -> absorber check must return false."""
         kw = self._passing_kwargs()
         std = np.array([0.01, 0.001, 0.05, 0.01, 0.001, 0.05])
         std[2] = 0.0  # one zero
         kw['fit_param_std'] = std
         result = check_absorber_selection(**kw)
-        self.assertTrue(result)
+        self.assertFalse(result)
 
     def test_returns_bool(self):
         result = check_absorber_selection(**self._passing_kwargs())
