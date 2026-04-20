@@ -26,12 +26,15 @@ from .config import load_yaml_config
 logger = logging.getLogger(__name__)
 
 
-def _init_worker_logging(queue):
+def _init_worker_logging(queue, level=logging.WARNING):
     """Route all worker-process log records (including captured warnings) through the main-process queue."""
     root = logging.getLogger()
     root.handlers = []
     root.addHandler(logging.handlers.QueueHandler(queue))
+    # Keep root at WARNING so third-party libraries (numba, scipy, …) stay quiet.
+    # Raise only qsoabsfind's own logger to the requested level.
     root.setLevel(logging.WARNING)
+    logging.getLogger('qsoabsfind').setLevel(level)
     logging.captureWarnings(True)
 
 def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, absorber, kwargs):
@@ -96,21 +99,31 @@ def parallel_convolution_search(
     # Run jobs in parallel with live progress bar (ordered, streamed results).
     # Warnings are routed in a separate log file.
 
+    verbose = kwargs.get('verbose', False)
+    worker_level = logging.DEBUG if verbose else logging.WARNING
+
     pool_kwargs = {"processes": n_jobs}
     listener = None
     if warnings_file:
-        _warn_queue = multiprocessing.Queue(-1)
-        _warn_handler = logging.FileHandler(warnings_file, encoding='utf-8')
-        _warn_handler.setFormatter(logging.Formatter(
+        _log_fmt = logging.Formatter(
             '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S',
-        ))
+        )
+        _warn_queue = multiprocessing.Queue(-1)
+        _warn_handler = logging.FileHandler(warnings_file, encoding='utf-8')
+        _warn_handler.setFormatter(_log_fmt)
+        listener_handlers = [_warn_handler]
+        if verbose:
+            _stream_handler = logging.StreamHandler()
+            _stream_handler.setFormatter(_log_fmt)
+            _stream_handler.setLevel(logging.DEBUG)
+            listener_handlers.append(_stream_handler)
         listener = logging.handlers.QueueListener(
-            _warn_queue, _warn_handler, respect_handler_level=True
+            _warn_queue, *listener_handlers, respect_handler_level=True
         )
         listener.start()
         pool_kwargs["initializer"] = _init_worker_logging
-        pool_kwargs["initargs"] = (_warn_queue,)
+        pool_kwargs["initargs"] = (_warn_queue, worker_level)
 
     try:
         with Pool(**pool_kwargs) as pool:
@@ -321,6 +334,7 @@ def main():
     # Start timing
     start_time = time.time()
 
+    n_qso_explicit = args.n_qso  # None if user did not pass --n-qso
     if not args.n_qso:
         nqso = read_nqso_from_header(args.input_fits_file)
         args.n_qso = nqso
@@ -361,7 +375,19 @@ def main():
         logger.info('Loaded %d known-redshift entries for %d spectra from %s',
                     len(zk_table), len(zabs_known_map), args.zabs_known_file)
         spec_indices = sorted(zabs_known_map.keys())
-        logger.info('Running only on %d spectra listed in the known-redshift file', len(spec_indices))
+        if n_qso_explicit is not None:
+            n_qso_str = str(n_qso_explicit)
+            if '-' in n_qso_str:
+                # Range-style (e.g. '1-100'): keep only those indices inside the range
+                requested_set = set(parse_qso_sequence(n_qso_explicit))
+                spec_indices = [i for i in spec_indices if i in requested_set]
+            else:
+                # Count-style (e.g. '10'): take the first N entries from the known file
+                n_cap = int(n_qso_str)
+                spec_indices = spec_indices[:n_cap]
+            logger.info('After --n-qso %s filter: %d spectra to process', n_qso_explicit, len(spec_indices))
+        else:
+            logger.info('Running only on %d spectra listed in the known-redshift file', len(spec_indices))
 
     # Run the convolution method in parallel
     results = parallel_convolution_search(

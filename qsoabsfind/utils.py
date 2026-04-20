@@ -538,7 +538,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
-        absorber (str): Type of absorber, e.g., 'MgII', 'CIV'.
+        absorber (str): Type of absorber, e.g., 'MgII', 'CIV', 'OVI', 'NV', 'SiIV', 'AlIII', 'FeII', 'CaII', 'NaI'.
         zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and
             'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)

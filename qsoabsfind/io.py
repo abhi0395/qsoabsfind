@@ -72,7 +72,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         input_file (str): The path to the input spectra FITS file.
         output_file (str): The path to the output FITS file.
         headers (dict): The headers to include in the FITS file.
-        absorber (str): The absorber type (e.g. MgII, CIV).
+        absorber (str): The absorber type (e.g. MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         spec_indices (list or array, optional): All spectrum indices that were processed.
             When provided, a ``QSO_INFO`` BinTableHDU with columns ``INDEX_SPEC``,
             ``Z_QSO``, and ``IS_QSO_AVAILABLE`` is appended. ``IS_QSO_AVAILABLE`` is

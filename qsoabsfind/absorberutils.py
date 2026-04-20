@@ -352,7 +352,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
         d_pix (float): Pixel separation tolerance in wavelength (default 0.6 Angstrom).
-        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV).
+        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         delta_z (float): Maximum redshift difference to consider two candidates contiguous.
         window (int): window size for redshift estimate (default 9)
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
@@ -598,7 +598,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
         residual (numpy.ndarray): Residual values.
         error (numpy.ndarray): Error values corresponding to the residuals.
         d_pix (float): Pixel distance for line separation during Gaussian fitting.
-        use_kernel (str, optional): Kernel type (MgII, CIV).
+        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         logwave (bool): if wavelength bins are on log scale
 
     Returns:
@@ -1018,7 +1018,7 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
 
     Args:
         fits_file (str): Path to the FITS file containing normalised QSO spectra.
-        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``).
+        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``, ``'OVI'``, ``'NV'``, ``'SiIV'``, ``'AlIII'``, ``'FeII'``, ``'CaII'``, ``'NaI'``).
         constant_file (str): Path to the user constants ``.py`` file.
         ncpus (int): Number of parallel worker processes (default 4).
         n_qso (int or str, optional): Number of spectra to check, or a range
