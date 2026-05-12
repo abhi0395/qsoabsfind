@@ -93,6 +93,7 @@ def update_header(args, user_constants):
         'RED_LAM': {"value": user_constants.search_parameters["lam_red"], "comment": 'red end of quasar-rest frame (Ang) for search'},
         'CONTERR': {"value": user_constants.search_parameters["continuum_error_frac"], "comment": 'fractional error in continuum normalization'},
         'CONFLEV': {"value": user_constants.search_parameters["conf_level"], "comment": 'minimum confidence level for selection'},
+        'DV_QSO': {"value": user_constants.search_parameters["dv"], "comment": 'qso velocity separation from absorber (km/s)'},
     })
 
     return headers
