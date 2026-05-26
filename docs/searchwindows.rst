@@ -161,7 +161,7 @@ Mg II (2796, 2803 Ang)
 Ca II (3934, 3969 Ang)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - blueshifted from QSO redshift (to avoid intrinsic absorbers)
 - **Search window**:
 
 .. math::
@@ -170,12 +170,12 @@ Ca II (3934, 3969 Ang)
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{CaII}_{3969}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
 
 Na I (5891, 5897 Ang)
 ~~~~~~~~~~~~~~~~~~~~~
 
-- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - 9800 Ang (arbitrary high)
+- **Emission lines**: blue side - Ly-alpha (1215.67 Ang), red side - blueshifted from QSO redshift (to avoid intrinsic absorbers)
 - **Search window**:
 
 .. math::
@@ -184,5 +184,5 @@ Na I (5891, 5897 Ang)
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, 9800 \times (1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\mathrm{NaI}_{5897}}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge']}
 

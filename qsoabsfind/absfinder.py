@@ -68,7 +68,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
             - sn_2 (list): SNR of line 2 for each absorber
             - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
             - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
-            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
+            - delta_chi2_line1 (list): per-line delta_chi2 for line 1
+            - delta_chi2_line2 (list): per-line delta_chi2 for line 2
 
     Raises:
         AssertionError: If the sizes of `lam_search`, `unmsk_residual`, and `unmsk_error` do not match.
@@ -152,7 +153,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
 
 def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean,
                   ew_total_mean, ew_1_error, ew_2_error, ew_total_error,
-                  z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2, delta_chi2, zabs_known=None):
+                  z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2,
+                  delta_chi2_line1, delta_chi2_line2, zabs_known=None):
     result = {
         'index_spec': index_spec,
         'z_abs': z_abs,
@@ -169,7 +171,8 @@ def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_m
         'sn_2': sn_2,
         'vel_disp1': vel_disp1,
         'vel_disp2': vel_disp2,
-        'delta_chi2': delta_chi2,
+        'delta_chi2_line1': delta_chi2_line1,
+        'delta_chi2_line2': delta_chi2_line2,
     }
     if zabs_known is not None:
         result['zabs_known'] = zabs_known
@@ -290,7 +293,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     # velocity dispersion and doublet ratio, then keep only those that pass
     # check_absorber_selection.  All output arrays are indexed the same way as
     # z_abs_candidates so the caller can apply a boolean mask afterwards.
-    z_abs, _, fit_param, _, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
+    z_abs, _, fit_param, _, _, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
         index=spec_index, wavelength=lam_obs, flux=residual, error=error,
         absorber_redshift=z_abs_candidates, bound=bound, use_kernel=absorber,
         d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
@@ -310,7 +313,8 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     sn2_all = np.zeros(n)
     vel_disp1 = np.zeros(n)
     vel_disp2 = np.zeros(n)
-    delta_chi2_array = np.zeros(n)
+    delta_chi2_line1_array = np.zeros(n)
+    delta_chi2_line2_array = np.zeros(n)
 
     z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
     if verbose:
@@ -318,13 +322,14 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
         logger.debug("only absorbers with conf_level > %s will be selected", conf_level)
     for m in z_inds:
         if len(fit_param[m]) > 0 and not np.all(np.isnan(fit_param[m])):
-            z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp, delta_chi2 = measure_absorber_properties_double_gaussian(
+            z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp, delta_chi2_line1, delta_chi2_line2 = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error,
                 absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber,
                 d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
             z_new = float(z_new[0])
             z_new_error = float(z_new_error[0])
-            delta_chi2 = delta_chi2[0]
+            delta_chi2_line1 = delta_chi2_line1[0]
+            delta_chi2_line2 = delta_chi2_line2[0]
 
             if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                 gaussian_parameters = np.array(fit_param_temp[0])
@@ -368,7 +373,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                lower_del_lam, c0, c1, upper_del_lam,
                                                sn1, sn_line1, sn2, sn_line2,
                                                vel1, vel2, min_dr, dr, max_dr,
-                                               ew1_snr, ew2_snr, delta_chi2,
+                                               ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                                                fit_param_std=fit_param_std_temp[0],
                                                conf_level=conf_level, verbose=verbose)
                 if good:
@@ -386,12 +391,14 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                     sn2_all[m] = sn2
                     vel_disp1[m] = vel1
                     vel_disp2[m] = vel2
-                    delta_chi2_array[m] = delta_chi2
+                    delta_chi2_line1_array[m] = delta_chi2_line1
+                    delta_chi2_line2_array[m] = delta_chi2_line2
 
     return (pure_z_abs, pure_gauss_fit, pure_gauss_fit_std,
             pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
             pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
-            redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2_array)
+            redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
+            delta_chi2_line1_array, delta_chi2_line2_array)
 
 
 def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residual, error,
@@ -472,7 +479,9 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             - sn_2 (list): SNR of line 2 for each absorber
             - vel_disp1 (list): rest-frame velocity dispersion of line 1 for each absorber (in km/s)
             - vel_disp2 (list): rest-frame velocity dispersion of line 2 for each absorber (in km/s)
-            - delta_chi2 (list): delta_chi2 between fitted model and flat continuum (null hypothesis)
+            - delta_chi2 (list): min(delta_chi2_line1, delta_chi2_line2) for backward compatibility
+            - delta_chi2_line1 (list): per-line delta_chi2 for line 1
+            - delta_chi2_line2 (list): per-line delta_chi2 for line 2
 
     Note:
         ``z_abs`` in the returned dict uses two sentinel values when no absorber is detected:
@@ -496,11 +505,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 [spec_index] * n, [-1] * n, [[0, 0, 0, 0, 0, 0]] * n, [[0, 0, 0, 0, 0, 0]] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
+                [0] * n,
                 zabs_known=zabs_known,
             )
         return _build_result(
             [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-            [0], [0], [0], [0], [0], [0], [0], [0], [0]
+            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
         )
 
     if zabs_known is None and (lam_search is None or lam_search.size <= _constants.MIN_NPIXEL):
@@ -508,7 +518,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             logger.info("No wavelength pixels available in search region, spec index = %s", spec_index)
         return _build_result(
             [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-            [0], [0], [0], [0], [0], [0], [0], [0], [0]
+            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
         )
 
     line1, line2, f1, f2, line_ratio, line_sep, del_z = _get_doublet_constants(absorber)
@@ -552,6 +562,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 [spec_index] * n, [-1] * n, [[0, 0, 0, 0, 0, 0]] * n, [[0, 0, 0, 0, 0, 0]] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
+                [0] * n,
                 zabs_known=zabs_known,
             )
         combined_final_our_z = searchable
@@ -567,14 +578,15 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         if len(combined_final_our_z) == 0:
             return _build_result(
                 [spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-                [0], [0], [0], [0], [0], [0], [0], [0], [0]
+                [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
             )
         zabs_known_input = None
 
     (pure_z_abs, pure_gauss_fit, pure_gauss_fit_std,
      pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
      pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
-     redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, delta_chi2_array) = _validate_candidates(
+     redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
+     delta_chi2_line1_array, delta_chi2_line2_array) = _validate_candidates(
         spec_index, combined_final_our_z, lam_obs, residual, error, bound, absorber,
         d_pix, f1, f2, resolution, line_ratio, lower_del_lam, upper_del_lam,
         sn_line1, sn_line2, logwave, use_covariance, nboot, conf_level, verbose,
@@ -597,7 +609,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         sn2_all = sn2_all[valid_indices]
         vel_disp1 = vel_disp1[valid_indices]
         vel_disp2 = vel_disp2[valid_indices]
-        delta_chi2_array = delta_chi2_array[valid_indices]
+        delta_chi2_line1_array = delta_chi2_line1_array[valid_indices]
+        delta_chi2_line2_array = delta_chi2_line2_array[valid_indices]
 
         if verbose:
             logger.debug("final candidates: %s", pure_z_abs)
@@ -619,7 +632,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = sn2_all[sel_indices]
             vel_disp1 = vel_disp1[sel_indices]
             vel_disp2 = vel_disp2[sel_indices]
-            delta_chi2_array = delta_chi2_array[sel_indices]
+            delta_chi2_line1_array = delta_chi2_line1_array[sel_indices]
+            delta_chi2_line2_array = delta_chi2_line2_array[sel_indices]
         else:
             redshift_err = np.array([0])
             pure_z_abs = np.array([0])
@@ -628,7 +642,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
             sn1_all = sn2_all = np.array([0])
             vel_disp1 = vel_disp2 = np.array([0])
-            delta_chi2_array = np.array([0])
+            delta_chi2_line1_array = np.array([0])
+            delta_chi2_line2_array = np.array([0])
     else:
         # known-z mode: keep all rows as-is (z_abs=0 for failed, fitted z for passed).
         # False-positive filters are not applied here since the redshifts were user-supplied.
@@ -665,7 +680,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = np.concatenate([sn2_all, np.zeros(n_oor)])
             vel_disp1 = np.concatenate([vel_disp1, np.zeros(n_oor)])
             vel_disp2 = np.concatenate([vel_disp2, np.zeros(n_oor)])
-            delta_chi2_array = np.concatenate([delta_chi2_array, np.zeros(n_oor)])
+            delta_chi2_line1_array = np.concatenate([delta_chi2_line1_array, np.zeros(n_oor)])
+            delta_chi2_line2_array = np.concatenate([delta_chi2_line2_array, np.zeros(n_oor)])
             zabs_known_input = np.concatenate([zabs_known_input, np.array(out_of_range)])
 
     not_found = max(1, len(pure_z_abs))
@@ -686,6 +702,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         sn2_all.tolist(),
         vel_disp1.tolist(),
         vel_disp2.tolist(),
-        delta_chi2_array.tolist(),
+        delta_chi2_line1_array.tolist(),
+        delta_chi2_line2_array.tolist(),
         zabs_known=zabs_known_input.tolist() if zabs_known_input is not None else None,
     )

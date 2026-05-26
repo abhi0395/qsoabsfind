@@ -82,7 +82,7 @@ def parallel_convolution_search(
             Keys: ``index_spec``, ``z_abs``, ``gauss_fit``, ``gauss_fit_std``,
             ``ew_1_mean``, ``ew_2_mean``, ``ew_total_mean``, ``ew_1_error``,
             ``ew_2_error``, ``ew_total_error``, ``z_abs_err``, ``sn_1``, ``sn_2``,
-            ``vel_disp1``, ``vel_disp2``, ``delta_chi2``.
+            ``vel_disp1``, ``vel_disp2``, ``delta_chi2_line1``, ``delta_chi2_line2``.
     """
 
     if zabs_known_map is not None:
@@ -157,7 +157,8 @@ def parallel_convolution_search(
         'sn_2': [],
         'vel_disp1': [],
         'vel_disp2': [],
-        'delta_chi2': [],
+        'delta_chi2_line1': [],
+        'delta_chi2_line2': [],
         'unsearchable_indices': [],
     }
     if zabs_known_map is not None:
@@ -188,7 +189,8 @@ def parallel_convolution_search(
         combined_results['sn_2'].extend(np.array(result['sn_2'])[keep])
         combined_results['vel_disp1'].extend(np.array(result['vel_disp1'])[keep])
         combined_results['vel_disp2'].extend(np.array(result['vel_disp2'])[keep])
-        combined_results['delta_chi2'].extend(np.array(result['delta_chi2'])[keep])
+        combined_results['delta_chi2_line1'].extend(np.array(result['delta_chi2_line1'])[keep])
+        combined_results['delta_chi2_line2'].extend(np.array(result['delta_chi2_line2'])[keep])
         if 'zabs_known' in combined_results:
             zk = result.get('zabs_known')
             if zk is not None:

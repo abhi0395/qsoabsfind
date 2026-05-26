@@ -405,7 +405,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2,
+                             ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                              fit_param_std=None,
                              conf_level=0.95, vmax=_constants.MAX_VEL_DISPERSION, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
@@ -435,7 +435,8 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         max_dr (float): Maximum doublet ratio threshold.
         ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.
         ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.
-        delta_chi2 (float): Chi-squared difference between flat and fitted models.
+        delta_chi2_line1 (float): Per-line delta chi-squared for line 1.
+        delta_chi2_line2 (float): Per-line delta chi-squared for line 2.
         fit_param_std (array-like, optional): Standard errors of the 6 Gaussian fit
             parameters [amp1_err, c0_err, sig1_err, amp2_err, c1_err, sig2_err]. Defaults to None (check skipped).
         conf_level (float, optional): Confidence level for statistical significance.
@@ -460,7 +461,7 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
 
     """
 
-    critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
+    critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters) / 2)
 
     if fit_param_std is None:
         fit_param_snr_ok = True
@@ -495,14 +496,16 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
          "vel2 >=0"),
         (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
          "min_dr < dr < max_dr"),
-        (ew1_snr > 1, f"{ew1_snr} > 1",
-         "ew1_snr > 1"),
-        (ew2_snr > 1, f"{ew2_snr} > 1",
-         "ew2_snr > 1"),
+        (ew1_snr > sn_line1, f"{ew1_snr} > {sn_line1}",
+         f"ew1_snr > {sn_line1}"),
+        (ew2_snr > sn_line2, f"{ew2_snr} > {sn_line2}",
+         f"ew2_snr > {sn_line2}"),
         (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
          f"|vel1 - vel2| < = {vmax}"),
-         (delta_chi2 > critical_value, f"{delta_chi2} > {critical_value}",
-         f"delta_chi2 > {critical_value}"),
+         (delta_chi2_line1 > critical_value, f"{delta_chi2_line1} > {critical_value}",
+         f"delta_chi2_line1 > {critical_value}"),
+        (delta_chi2_line2 > critical_value, f"{delta_chi2_line2} > {critical_value}",
+         f"delta_chi2_line2 > {critical_value}"),
         (fit_param_snr_ok, fit_param_snr_detail,
          f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})")
     ]
@@ -781,11 +784,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
 
         elif absorber == 'NaI':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
+            lam_red = lines['NaI_5897']
 
         elif absorber == 'CaII':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
+            lam_red = lines['CaII_3969']
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 

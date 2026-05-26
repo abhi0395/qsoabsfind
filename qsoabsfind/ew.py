@@ -279,7 +279,10 @@ def quick_significance_test(flux_norm, fitted_model, error,
                                   fitted_params=None, wavelength_rest=None,
                                   n_pixels=5):
     """
-    Significance test with simple absorption check at line centers.
+    Significance test computing delta_chi2 independently for each line in the
+    doublet.  For each line the chi-squared improvement is evaluated over the
+    ``n_pixels`` window centred on that line's fitted position, so the two
+    values are completely independent.
 
     Args:
         flux_norm: Normalized flux array
@@ -290,40 +293,44 @@ def quick_significance_test(flux_norm, fitted_model, error,
         n_pixels: Number of pixels around each line center to check
 
     Returns:
-        delta_chi2: Delta chi-square value, or 0 if absorption criteria not met
+        tuple: (delta_chi2_line1, delta_chi2_line2)
+            Per-line delta chi-square values.  A value of 0 is returned for a
+            line if its surrounding pixels are not all below the continuum level.
     """
-    # Check for empty arrays
     if flux_norm.size == 0 or error.size == 0:
-        return 0.0
+        return 0.0, 0.0
 
-    # Check absorption at line centers
+    dchi2_line1 = 0.0
+    dchi2_line2 = 0.0
+
     if fitted_params is not None and wavelength_rest is not None and wavelength_rest.size > 0:
-        # Get fitted line centers
-        line_center1 = fitted_params[1]
-        line_center2 = fitted_params[4]
+        # --- Line 1 ---
+        lc1 = fitted_params[1]
+        idx1 = np.argmin(np.abs(wavelength_rest - lc1))
+        s1 = max(0, idx1 - n_pixels)
+        e1 = min(len(flux_norm), idx1 + n_pixels + 1)
+        pix1 = flux_norm[s1:e1]
+        if np.all(pix1 < 1.0):
+            mod1 = fitted_model[s1:e1]
+            err1 = error[s1:e1]
+            cont1 = np.ones(e1 - s1)
+            dchi2_line1 = (np.sum(((pix1 - cont1) / err1) ** 2)
+                          - np.sum(((pix1 - mod1) / err1) ** 2))
 
-        # Check both line centers
-        for line_center in [line_center1, line_center2]:
-            # Find nearest wavelength pixel
-            idx = np.argmin(np.abs(wavelength_rest - line_center))
+        # --- Line 2 ---
+        lc2 = fitted_params[4]
+        idx2 = np.argmin(np.abs(wavelength_rest - lc2))
+        s2 = max(0, idx2 - n_pixels)
+        e2 = min(len(flux_norm), idx2 + n_pixels + 1)
+        pix2 = flux_norm[s2:e2]
+        if np.all(pix2 < 1.0):
+            mod2 = fitted_model[s2:e2]
+            err2 = error[s2:e2]
+            cont2 = np.ones(e2 - s2)
+            dchi2_line2 = (np.sum(((pix2 - cont2) / err2) ** 2)
+                          - np.sum(((pix2 - mod2) / err2) ** 2))
 
-            # Get flux values around this pixel
-            start = max(0, idx - n_pixels)
-            end = min(len(flux_norm), idx + n_pixels + 1)
-
-            pixels_around_line = flux_norm[start:end]
-
-            # Check if all pixels < 1
-            if not np.all(pixels_around_line < 1.0):
-                return 0.0
-
-    # Calculate delta chi2
-    continuum_level = np.ones_like(flux_norm)
-    chi2_flat = np.sum(((flux_norm - continuum_level) / error) ** 2)
-    chi2_with_lines = np.sum(((flux_norm - fitted_model) / error) ** 2)
-    delta_chi2 = chi2_flat - chi2_with_lines
-
-    return delta_chi2
+    return dchi2_line1, dchi2_line2
 
 def _extract_rest_frame_spectrum(wavelength, flux, error, z, ix0, ix1):
     """Slice spectrum into the rest frame defined by redshift *z* between ix0 and ix1."""
@@ -349,7 +356,8 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
     Returns:
         tuple: (z, z_err, params, std, pcov,
-                ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err, delta_chi2)
+                ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err,
+                delta_chi2_line1, delta_chi2_line2)
     """
     zeros_p = np.zeros(nparm)
     zeros_c = np.zeros((nparm, nparm))
@@ -369,7 +377,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
     if nmf_resi.size < min_pixels or np.all(np.isnan(nmf_resi)):
         # Too few pixels or all NaN: return original redshift, everything else zeroed
         return (z_init, 0.0, zeros_p.copy(), zeros_p.copy(), zeros_c.copy(),
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # ========== INITIAL FIT IN REST FRAME ==========
     amp_first  = max(_constants.GAUSS_AMP_MIN, 1 - np.nanmin(nmf_resi))
@@ -425,7 +433,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
     # ========== CALCULATE SIGNIFICANCE ==========
     fitted_model = double_gaussian(lam_fit, *params)
-    dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
+    dchi2_line1, dchi2_line2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
                                     fitted_params=params, wavelength_rest=lam_fit, n_pixels=_constants.SIGNIFICANCE_N_PIXELS)
 
     # ========== BOOTSTRAPPING OR ERROR CALCULATION ==========
@@ -435,7 +443,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
             ix0, ix1, bound, amp_ratio, line_centre1, line_centre2, num_iter,
             best_params=params, nparm=nparm)
         fitted_model = double_gaussian(lam_fit, *params)
-        dchi2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
+        dchi2_line1, dchi2_line2 = quick_significance_test(nmf_resi, fitted_model, error_flux,
                                         fitted_params=params, wavelength_rest=lam_fit, n_pixels=_constants.SIGNIFICANCE_N_PIXELS)
     elif use_covariance:
         ew1_err, ew2_err, ew_total_err = full_covariance_ew_errors(params, pcov)
@@ -446,10 +454,10 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
     if np.isnan(ew1) or np.isnan(ew2) or np.isnan(ew_total):
         # Keep the refined z but zero out all EW results
         return (z_k, 0.0, zeros_p.copy(), zeros_p.copy(), zeros_c.copy(),
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     return (z_k, z_err, params, std, pcov,
-            ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err, dchi2)
+            ew1, ew2, ew_total, ew1_err, ew2_err, ew_total_err, dchi2_line1, dchi2_line2)
 
 
 def measure_absorber_properties_double_gaussian(
@@ -485,7 +493,8 @@ def measure_absorber_properties_double_gaussian(
             - EW_first_line_error (numpy.ndarray): Error in the equivalent width of the first line.
             - EW_second_line_error (numpy.ndarray): Error in the equivalent width of the second line.
             - EW_total_error (numpy.ndarray): Total error in the equivalent width of both lines.
-            - delta_chi2 (numpy.ndarray): Delta chi-squared values for significance testing.
+            - delta_chi2_line1 (numpy.ndarray): Per-line delta chi-squared for line 1.
+            - delta_chi2_line2 (numpy.ndarray): Per-line delta chi-squared for line 2.
     """
     z_abs_array = np.array(absorber_redshift)
     size_array  = z_abs_array.size
@@ -499,8 +508,9 @@ def measure_absorber_properties_double_gaussian(
     EW_second_line_error = np.zeros(size_array, dtype='float32')
     EW_total             = np.zeros(size_array, dtype='float32')
     EW_total_error       = np.zeros(size_array, dtype='float32')
-    z_abs_err  = np.zeros(size_array, dtype='float32')
-    delta_chi2 = np.zeros(size_array, dtype='float32')
+    z_abs_err       = np.zeros(size_array, dtype='float32')
+    delta_chi2_line1 = np.zeros(size_array, dtype='float32')
+    delta_chi2_line2 = np.zeros(size_array, dtype='float32')
 
     line_centre1, line_centre2 = return_line_centers(use_kernel)
     amp_ratio = (oscillator_parameters[f'{use_kernel}_f2']
@@ -514,7 +524,7 @@ def measure_absorber_properties_double_gaussian(
             z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
             EW_first_line, EW_second_line, EW_total,
             EW_first_line_error, EW_second_line_error, EW_total_error,
-            delta_chi2
+            delta_chi2_line1, delta_chi2_line2
         )
 
     for k in range(size_array):
@@ -522,7 +532,7 @@ def measure_absorber_properties_double_gaussian(
          fitting_param_for_spectrum[k], fitting_param_std_for_spectrum[k], _,
          EW_first_line[k], EW_second_line[k], EW_total[k],
          EW_first_line_error[k], EW_second_line_error[k], EW_total_error[k],
-         delta_chi2[k]) = _fit_single_absorber(
+         delta_chi2_line1[k], delta_chi2_line2[k]) = _fit_single_absorber(
             index, absorber_redshift[k], wavelength, flux, error,
             bound, ix0, ix1, line_centre1, line_centre2,
             amp_ratio, num_iter, window, use_covariance, nboot, nparm)
@@ -531,7 +541,7 @@ def measure_absorber_properties_double_gaussian(
         z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
         EW_first_line, EW_second_line, EW_total,
         EW_first_line_error, EW_second_line_error, EW_total_error,
-        delta_chi2
+        delta_chi2_line1, delta_chi2_line2
     )
 
 

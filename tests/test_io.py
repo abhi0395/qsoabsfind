@@ -141,7 +141,8 @@ class TestSaveResultsToFits(unittest.TestCase):
             'sn_2': [4.0] * n,
             'vel_disp1': [30.0] * n,
             'vel_disp2': [28.0] * n,
-            'delta_chi2': [20.0] * n,
+            'delta_chi2_line1': [20.0] * n,
+            'delta_chi2_line2': [18.0] * n,
         }
 
     def setUp(self):
@@ -240,7 +241,7 @@ class TestAppendTableToFits(unittest.TestCase):
             'ew_2_mean': [0.3], 'ew_total_mean': [0.8], 'ew_1_error': [0.05],
             'ew_2_error': [0.04], 'ew_total_error': [0.06], 'z_abs_err': [0.001],
             'sn_1': [5.0], 'sn_2': [4.0], 'vel_disp1': [30.0], 'vel_disp2': [28.0],
-            'delta_chi2': [20.0],
+            'delta_chi2_line1': [20.0], 'delta_chi2_line2': [18.0],
         }
         hdrs = headers or {'SURVEY': {'value': 'DESI', 'comment': ''}}
         f = tempfile.NamedTemporaryFile(suffix='.fits', delete=False)

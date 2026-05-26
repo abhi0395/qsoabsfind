@@ -44,7 +44,7 @@ class TestEW(unittest.TestCase):
         )
 
         self.assertIsInstance(result, tuple)
-        self.assertEqual(len(result), 11)
+        self.assertEqual(len(result), 12)
 
     def test_measure_absorber_properties_return_length_nonempty(self):
         """Function should return 11 values when absorbers are present."""
@@ -83,7 +83,7 @@ class TestEW(unittest.TestCase):
         )
 
         self.assertIsInstance(result, tuple)
-        self.assertEqual(len(result), 11)
+        self.assertEqual(len(result), 12)
 
         z_array = result[0]
         EW1 = result[4]

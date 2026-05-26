@@ -30,13 +30,13 @@ It also provides the ability to search for additional absorber systems at the re
 |----------|--------|------------|----------|
 | O VI (O⁵⁺)    | 1031.93    | 1037.62     | Lines fall inside the Ly-alpha forest; makes detection and confirmation difficult |
 | N V (N⁴⁺)    | 1238.82    | 1242.80     | Lies near the red edge of the Ly-alpha forest; avoiding the forest leaves a very short absorber path length, but detection is feasible |
-| Si IV (Si³⁺)   | 1393.76    | 1402.77     | Outside the Ly-alpha forest; relatively clean spectral region, easier to detect and confirm |
-| C IV (C³⁺)   | 1548.20    | 1550.77     | Outside the Ly-alpha forest; one of the strongest UV doublets, easy to detect and confirm |
-| Al III (Al²⁺)   | 1854.72     | 1862.79    | Outside the Ly-alpha forest; clean region |
-| Fe II (Fe⁺)  | 2586.65     | 2600.17     | Outside the Ly-alpha forest; clean region; large line separation, easy to detect and confirm |
-| Mg II (Mg⁺) | 2796.35    | 2803.52     | Outside the Ly-alpha forest; large line separation, easy to detect and confirm |
-| CaII (Ca⁺) | 3934.78 | 3969.59 | Outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
-| NaI (Na⁰)   | 5891.58    | 5897.57     | Outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
+| Si IV (Si³⁺)   | 1393.76    | 1402.77     | Searching outside the Ly-alpha forest; relatively clean spectral region, easier to detect and confirm |
+| C IV (C³⁺)   | 1548.20    | 1550.77     | Searching outside the Ly-alpha forest; one of the strongest UV doublets, easy to detect and confirm |
+| Al III (Al²⁺)   | 1854.72     | 1862.79    | Searching outside the Ly-alpha forest; clean region |
+| Fe II (Fe⁺)  | 2586.65     | 2600.17     | Searching outside the Ly-alpha forest; clean region; large line separation, easy to detect and confirm |
+| Mg II (Mg⁺) | 2796.35    | 2803.52     | Searching outside the Ly-alpha forest; large line separation, easy to detect and confirm |
+| CaII (Ca⁺) | 3934.78 | 3969.59 | Searching outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
+| NaI (Na⁰)   | 5891.58    | 5897.57     | Searching outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
 
 **Note on Absorbers:** The pipeline is generic. Users can supply a custom constants file with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds (see [Parameter File](https://qsoabsfind.readthedocs.io/en/latest/paramfile.html)), and the pipeline will search for it. Custom systems are functional but not as *thoroughly tested as the default ones*.
 
@@ -49,7 +49,7 @@ Key Features
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Fits absorption lines with a double-Gaussian model to extract equivalent width, FWHM, and central wavelength.
 - **Selection criteria**: Identifies absorber candidates based on S/N thresholds and doublet properties. Optionally uses $\chi^2$ statistics to get the confidence level of the selected candidates.
-- **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
+- **Pixel resolution correction**: Corrects measured line widths for observed pixel resolution to infer intrinsic properties.
 - **Known-redshift validation**: When a prior absorber catalog (e.g. from another survey or absorber finder or catalog built from `qsoabsfind`) is available, `--zabs-known-file` skips the convolution search and runs Gaussian fitting and selection only at the supplied redshifts, allowing quick validation of known systems.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)). Can be turned on via ``--coldens-dv`` to specify the velocity range for integration.
 - **Parallel processing**: Runs across large datasets using Python's `multiprocessing` module.
