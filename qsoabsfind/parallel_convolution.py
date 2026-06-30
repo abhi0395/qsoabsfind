@@ -160,6 +160,7 @@ def parallel_convolution_search(
         'delta_chi2_line1': [],
         'delta_chi2_line2': [],
         'unsearchable_indices': [],
+        'snr_qso_map': {},
     }
     if zabs_known_map is not None:
         combined_results['zabs_known'] = []
@@ -173,6 +174,7 @@ def parallel_convolution_search(
             keep = np.array(result['z_abs']) > 0
         if np.all(np.array(result['z_abs']) == -1):
             combined_results['unsearchable_indices'].append(int(result['index_spec'][0]))
+        combined_results['snr_qso_map'][int(result['index_spec'][0])] = float(result.get('snr_qso', -1.0))
 
         combined_results['index_spec'].extend(np.array(result['index_spec'])[keep])
         combined_results['z_abs'].extend(np.array(result['z_abs'])[keep])

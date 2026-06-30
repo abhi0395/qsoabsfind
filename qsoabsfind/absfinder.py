@@ -106,6 +106,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
     lam_obs, residual, error = lam_obs[non_nan_indices], residual[non_nan_indices], error[non_nan_indices]
 
     zabs_known = kwargs.get("zabs_known", None)
+    snr_val = -1.0  # per-spectrum SNR in the search window; -1.0 if not computed
 
     if zabs_known is not None:
         # Known-redshift mode: skip absorber search window entirely.
@@ -122,8 +123,32 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
             dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose)
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
+        # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
+        # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
+        snr_cut = kwargs.get("snr_cut")
+        if snr_cut is not None:
+            stat = kwargs.get("statistics")
+            if stat == "median":
+                snr_val = np.nanmedian(unmsk_residual / unmsk_error)
+            elif stat == "mean":
+                snr_val = np.nanmean(unmsk_residual / unmsk_error)
+            elif isinstance(stat, (int, float)):
+                pixel_snr = unmsk_residual / unmsk_error
+                snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
+            if snr_val < snr_cut:
+                if verbose:
+                    logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f), spec index = %s",
+                                snr_val, snr_cut, spec_index)
+                result = _build_result(
+                    [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
+                    [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+                )
+                result['snr_qso'] = snr_val
+                return result
+
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
-                            "dv", "continuum_error_frac", "lam_red", "lam_blue"]
+                            "dv", "continuum_error_frac", "lam_red", "lam_blue",
+                            "snr_cut", "statistics"]
 
     conv_kwargs = {}
     for key in kwargs.keys():
@@ -145,6 +170,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
         **conv_kwargs,
     )
 
+    result['snr_qso'] = snr_val
     if verbose:
         logger.info("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
 

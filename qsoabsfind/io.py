@@ -56,10 +56,13 @@ def _build_qso_info_hdu(input_file, spec_indices, results):
     # the wavelength coverage (sentinel value -1).
     unsearchable = set(results.get('unsearchable_indices', []))
     is_available = np.array([int(idx) not in unsearchable for idx in spec_arr], dtype=bool)
+    snr_qso_map = results.get('snr_qso_map', {})
+    snr_qso = np.array([snr_qso_map.get(int(idx), -1.0) for idx in spec_arr], dtype=np.float32)
     return fits.BinTableHDU.from_columns([
         fits.Column(name='INDEX_SPEC', format='K', array=spec_arr),
         fits.Column(name='Z_QSO', format='D', array=z_qso),
         fits.Column(name='IS_QSO_AVAILABLE', format='L', array=is_available),
+        fits.Column(name='SNR_QSO', format='E', array=snr_qso),
     ], name='QSO_INFO')
 
 
