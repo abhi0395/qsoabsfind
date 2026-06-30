@@ -71,11 +71,11 @@ class TestQSOAbsFind(unittest.TestCase):
 
         # Validate the output
         self.assertIsInstance(sdss_result, dict)
-        self.assertEqual(len(sdss_result), 17)  # Ensure the correct number of keys
+        self.assertEqual(len(sdss_result), 18)  # Ensure the correct number of keys
         self.assertIn('z_abs', sdss_result)
 
         self.assertIsInstance(desi_result, dict)
-        self.assertEqual(len(desi_result), 17)  # Ensure the correct number of keys
+        self.assertEqual(len(desi_result), 18)  # Ensure the correct number of keys
         self.assertIn('z_abs', desi_result)
 
     def test_parallel_convolution_method_absorber_finder_QSO_spectra(self):
