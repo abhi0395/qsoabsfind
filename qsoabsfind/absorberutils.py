@@ -987,7 +987,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
                 snr_val = np.nanmedian(unmsk_residual / unmsk_error)
             elif stat == "mean":
                 snr_val = np.nanmean(unmsk_residual / unmsk_error)
-            elif isinstance(stat, float):
+            elif isinstance(stat, (int, float)):
                 # stat is a percentile (0-100): fraction `stat`% of pixels must have SNR > snr_cut
                 pixel_snr = unmsk_residual / unmsk_error
                 snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
