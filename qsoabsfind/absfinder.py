@@ -27,6 +27,7 @@ from .ew import (
     trapezoidal_ew,
 )
 from .datamodel import QSOSpecRead
+from .config import load_constants
 
 # Constants -- imported via the module object so startup-time patches propagate here.
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
@@ -34,7 +35,7 @@ from . import constants as _constants
 
 logger = logging.getLogger(__name__)
 
-def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs):
+def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, constant_file=None, **kwargs):
     """
     This function retrieves a single QSO spectrum from a FITS file, processes the data to remove NaNs,
     and prepares the spectrum for absorber search within specified wavelength regions
@@ -46,6 +47,11 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
                          and METADATA which must contain keyword Z_QSO.
         spec_index (int): Index of the quasar spectrum to retrieve from the FITS file.
         absorber (str): Name of the absorber to search for (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
+        constant_file (str, optional): Path to a user constants file. When provided, the file
+            is loaded, global constants (``SMALL_WAVE``, ``LARGE_WAVE``, ``LAM_CIV_MIN``,
+            ``MIN_NPIXEL``, ``ZABS_KNOWN_MAX_DV``) are patched in-place, and
+            ``search_parameters`` from the file are merged into ``kwargs`` as defaults
+            (explicit ``kwargs`` take precedence). Default is None.
         kwargs (dict): search parameters as taken in convolution_method..()
             An optional key ``zabs_known`` (float or list) may be provided.
             When present, the absorber search window is skipped and the code
@@ -78,6 +84,20 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kw
         - This function assumes that the input spectra are already normalized (i.e., flux divided by continuum).
         - The wavelength search region is determined dynamically based on the observed wavelength range.
     """
+    if constant_file is not None:
+        _user_constants = load_constants(constant_file)
+        # Patch global constants in-place with any overrides from the user constants file.
+        # This is necessary for spawn-based multiprocessing (macOS/Windows) where child
+        # processes re-import modules fresh and do not inherit patches from the parent.
+        for _name in _constants.OVERRIDABLE_CONSTANTS:
+            _user_val = getattr(_user_constants, _name, None)
+            if _user_val is not None:
+                setattr(_constants, _name, _user_val)
+        # Merge search_parameters as base; explicit kwargs take precedence.
+        _merged = dict(_user_constants.search_parameters)
+        _merged.update(kwargs)
+        kwargs = _merged
+
     start_time = time.time()
     verbose = kwargs.get("verbose", False)
 

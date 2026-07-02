@@ -1047,9 +1047,8 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
     const_path = os.path.abspath(constant_file)
     user_constants = load_constants(const_path)
 
-    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
     print('INFO: Physical constant resolution (user file overrides shown with *):')
-    for _name in _overridable:
+    for _name in _constants.OVERRIDABLE_CONSTANTS:
         _user_val = getattr(user_constants, _name, None)
         _pkg_val = getattr(_constants, _name)
         if _user_val is not None and _user_val != _pkg_val:

@@ -293,9 +293,8 @@ def main():
     # absorberutils and absfinder) will automatically see the updated values -- no function
     # signature changes needed.
     from . import constants as _pkg_constants
-    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL', 'ZABS_KNOWN_MAX_DV')
     logger.info('Physical constant resolution (user file overrides shown with *):')
-    for _name in _overridable:
+    for _name in _pkg_constants.OVERRIDABLE_CONSTANTS:
         _user_val = getattr(user_constants, _name, None)
         _pkg_val  = getattr(_pkg_constants, _name)
         if _user_val is not None and _user_val != _pkg_val:

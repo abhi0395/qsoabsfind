@@ -191,6 +191,50 @@ AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation i
 ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
 
 # ==============================
+# User-overridable parameters
+# All scalar parameters listed here can be overridden by a user-provided constants file.
+# True physical constants (speed_of_light, lines, oscillator_parameters) and
+# dict-type absorber registries (doublet_keys, amplitude_dict) are excluded.
+# ==============================
+OVERRIDABLE_CONSTANTS = (
+    # Instrument / survey wavelength limits and search thresholds
+    'SMALL_WAVE',
+    'LARGE_WAVE',
+    'MIN_NPIXEL',
+    'LAM_CIV_MIN',
+    # Gaussian fit bound parameters
+    'GAUSS_FIT_BD_CT',
+    'GAUSS_FIT_X_SEP',
+    'GAUSS_FIT_EDGE',
+    'FIT_PARAM_SNR',
+    # Algorithmic parameters
+    'MIN_PIXELS_PER_PARAM',
+    'CANDIDATE_VALIDATION_NPIX',
+    'SNR_DEFAULT_DPIX',
+    'SNR_NSIG',
+    'REDSHIFT_REFINE_WINDOW',
+    'MEDIAN_WEIGHT_GAMMA',
+    'CANDIDATE_DEDUP_CT',
+    'MAX_VEL_DISPERSION',
+    'CONV_KERNEL_EXTENT',
+    'FIT_WINDOW_HALF_WIDTH',
+    'GAUSS_FIT_NUM_ITER',
+    'GAUSS_FIT_FINAL_ITER_FACTOR',
+    'GAUSS_FIT_BOOT_ITER_FACTOR',
+    'GAUSS_FIT_BOOT_WARM_SPREAD',
+    'GAUSS_FIT_FTOL',
+    'GAUSS_FIT_XTOL',
+    'GAUSS_AMP_MIN',
+    'GAUSS_AMP_MAX',
+    'GAUSS_SIGMA_INIT_MIN',
+    'GAUSS_SIGMA_INIT_MAX',
+    'SIGNIFICANCE_N_PIXELS',
+    'EW_FIT_WINDOW',
+    'AODM_FLUX_CLIP_MIN',
+    'ZABS_KNOWN_MAX_DV',
+)
+
+# ==============================
 # Notes:
 # ==============================
 
