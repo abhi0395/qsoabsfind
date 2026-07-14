@@ -124,6 +124,7 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error, f1, f2):
 
     return doublet_ratio, doublet_ratio_error
 
+
 @jit(nopython=True)
 def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     """
@@ -152,7 +153,7 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
             delta1 = dpix * (lam_rest[1]-lam_rest[0])
             delta2 = delta1
     else:
-        nsig = _constants.SNR_NSIG  # for gaussian more than 99.7 percentile data is within 4sigma
+        nsig = _constants.SNR_NSIG  # for gaussian sigma to account how far we want to go.
         delta1, delta2 = nsig * sig1, nsig * sig2
 
     ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
@@ -176,7 +177,7 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
 
     mean_sn1, mean_sn2 = -1, -1 # in case failure
 
-    if sum_err1 != 0 and sum_err2 !=0:
+    if sum_err1 != 0 and sum_err2 !=0 and np.isfinite(sum_err1) and np.isfinite(sum_err2):
         mean_sn1 = sum_diff1 / sum_err1
         mean_sn2 = sum_diff2 / sum_err2
 
@@ -490,18 +491,15 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
          "sn1 >= sn_line1"),
         (sn2 >= sn_line2, f"{sn2} >= {sn_line2}",
          "sn2 >= sn_line2"),
-        (vel1 >= 0, f"{vel1} >= 0",
-         "vel1 >=0"),
-        (vel2 >= 0, f"{vel2} >= 0",
-         "vel2 >=0"),
+        (np.isfinite(vel1) and np.isfinite(vel2) and abs(vel1 - vel2) <= vmax,
+        f"|{vel1} - {vel2}| <= {vmax}",
+        f"|vel1 - vel2| <= {vmax}"),
         (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
          "min_dr < dr < max_dr"),
         (ew1_snr > sn_line1, f"{ew1_snr} > {sn_line1}",
          f"ew1_snr > {sn_line1}"),
         (ew2_snr > sn_line2, f"{ew2_snr} > {sn_line2}",
          f"ew2_snr > {sn_line2}"),
-        (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
-         f"|vel1 - vel2| < = {vmax}"),
          (delta_chi2_line1 > critical_value, f"{delta_chi2_line1} > {critical_value}",
          f"delta_chi2_line1 > {critical_value}"),
         (delta_chi2_line2 > critical_value, f"{delta_chi2_line2} > {critical_value}",

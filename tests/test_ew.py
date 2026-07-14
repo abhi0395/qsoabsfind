@@ -213,8 +213,10 @@ class TestTrapezoidalEW(unittest.TestCase):
         lam_obs, res, _ = self._absorber_spectrum(0.5)
         err_lo = np.full_like(res, 0.02)
         err_hi = np.full_like(res, 0.04)
-        r_lo = trapezoidal_ew(lam_obs, res, err_lo, 0.5, self.LINE1, self.LINE2, 1.0, 1.0)
-        r_hi = trapezoidal_ew(lam_obs, res, err_hi, 0.5, self.LINE1, self.LINE2, 1.0, 1.0)
+        r_lo = trapezoidal_ew(lam_obs, res, err_lo, 0.5, self.LINE1, self.LINE2, 1.0, 1.0,
+                      continuum_error_frac=0.0)
+        r_hi = trapezoidal_ew(lam_obs, res, err_hi, 0.5, self.LINE1, self.LINE2, 1.0, 1.0,
+                      continuum_error_frac=0.0)
         self.assertAlmostEqual(r_hi['ew1_err'] / r_lo['ew1_err'], 2.0, places=5)
 
     # ------------------------------------------------------------------ #

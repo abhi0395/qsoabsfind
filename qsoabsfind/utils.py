@@ -94,6 +94,11 @@ def update_header(args, user_constants):
         'CONTERR': {"value": user_constants.search_parameters["continuum_error_frac"], "comment": 'fractional error in continuum normalization'},
         'CONFLEV': {"value": user_constants.search_parameters["conf_level"], "comment": 'minimum confidence level for selection'},
         'DV_QSO': {"value": user_constants.search_parameters["dv"], "comment": 'qso velocity separation from absorber (km/s)'},
+        'RWSTART': {"value": user_constants.search_parameters["res_wave_start"], "comment": 'start wavelength for resolution curve (Ang)'},
+        'RVSTART': {"value": user_constants.search_parameters["res_val_start"], "comment": 'resolution value at start wavelength'},
+        'RWEND': {"value": user_constants.search_parameters["res_wave_end"], "comment": 'end wavelength for resolution curve (Ang)'},
+        'RVEND': {"value": user_constants.search_parameters["res_val_end"], "comment": 'resolution value at end wavelength'},
+        'RES_IS_R': {"value": user_constants.search_parameters["res_is_R"], "comment": 'if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values'},
     })
 
     return headers
@@ -478,57 +483,51 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
 
 def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     """
-    Calculates and corrects velocity dispersion using Gaussian quadrature.
+    Instrumental-resolution-corrected velocity dispersion via Gaussian quadrature.
 
     Args:
-        c1 (float): rest-frame fitted line center 1 (in Ang).
-        c2 (float): rest-frame fitted line center 2 (in Ang).
-        sigma1 (float): rest-frame fitted width 1 (in Ang).
-        sigma2 (float): rest-frame fitted width 2 (in Ang).
-        resolution (float or np.array): instrumental true resolution (in km/s), see note.
-        z (float): redshift of absorber
-        obs_wave (np.array): observed wavelength in Angstroms
+        c1, c2       : fitted line centers (Ang), rest or observed frame (must be
+                       consistent with sigma1/sigma2).
+        sigma1, sigma2: fitted Gaussian widths (Ang), same frame as c1/c2.
+        resolution   : instrumental 1-sigma dispersion in km/s (already FWHM/2.355).
+                       Scalar, or array sampled on the obs_wave grid.
+        z            : redshift of absorber.
+        obs_wave     : observed wavelength grid (Ang), aligned with `resolution`
+                       when `resolution` is an array.
 
     Returns:
-        tuple: A tuple ``(vel1, vel2)`` where each element is a float giving the
-            instrumental-resolution-corrected velocity dispersion (km/s) for the
-            respective line. Returns ``numpy.nan`` for a line whose fitted width
-            is smaller than the instrumental resolution.
+        (vel1, vel2): corrected velocity dispersions (km/s), or NaN for a line
+                      whose fitted width is below the instrumental resolution or
+                      falls off the resolution grid.
 
     Note:
-        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.
+        resolution is the TRUE 1-sigma dispersion. Do NOT divide by 2.355 again.
     """
-
+    # velocities are frame-independent: c*sigma_lambda/lambda is the same in any frame
     v1_sig = sigma1 / c1 * speed_of_light
     v2_sig = sigma2 / c2 * speed_of_light
 
-    lam_obs1 = (1 + z) * c1
-    lam_obs2 = (1 + z) * c2
+    lam_obs1 = (1.0 + z) * c1
+    lam_obs2 = (1.0 + z) * c2
 
-    # Get per-line instrumental sigma_v (km/s)
     if np.isscalar(resolution):
         res1 = float(resolution)
         res2 = float(resolution)
     else:
-        # Interpolate instrumental sigma_v at the exact observed wavelengths
-        # Assumes obs_wave is monotonic and same length as resolution.
-        res1 = float(np.interp(lam_obs1, obs_wave, resolution))
-        res2 = float(np.interp(lam_obs2, obs_wave, resolution))
+        # sigma_v at each line's OBSERVED wavelength; NaN if off-grid (e.g. blue edge)
+        res1 = float(np.interp(lam_obs1, obs_wave, resolution,
+                               left=np.nan, right=np.nan))
+        res2 = float(np.interp(lam_obs2, obs_wave, resolution,
+                               left=np.nan, right=np.nan))
 
-    #Gaussian quadrature correction
     del_v1_sq = v1_sig**2 - res1**2
     del_v2_sq = v2_sig**2 - res2**2
 
-    is_resolved1 = del_v1_sq >= 0
-    is_resolved2 = del_v2_sq >= 0
+    # NaN comparisons are False, so off-grid or unresolved -> NaN, as intended
+    corr_del_v1 = np.sqrt(del_v1_sq) if del_v1_sq >= 0 else np.nan
+    corr_del_v2 = np.sqrt(del_v2_sq) if del_v2_sq >= 0 else np.nan
 
-    # Correct for instrumental resolution
-    # Set to NaN if the fitted  width is less than rest-frame instrumental width
-    # One line may resolved and one may be not, so this condition is a little relaxed
-    corr_del_v1_sq = np.sqrt(del_v1_sq) if is_resolved1 else np.nan
-    corr_del_v2_sq = np.sqrt(del_v2_sq) if is_resolved2 else np.nan
-
-    return corr_del_v1_sq, corr_del_v2_sq
+    return corr_del_v1, corr_del_v2
 
 
 def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):

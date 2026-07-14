@@ -247,9 +247,9 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
                 amp2   = np.clip(np.random.normal(best_params[3], spread * best_params[3]), bound[0][3], bound[1][3])
                 sigma2 = np.clip(np.random.normal(best_params[5], spread * best_params[5]), bound[0][5], bound[1][5])
             else:
-                amp1   = np.clip(np.random.normal(best_params[0], spread * best_params[0]), _constants.GAUSS_AMP_MIN,        _constants.GAUSS_AMP_MAX)
+                amp1   = np.clip(np.random.normal(best_params[0], spread * best_params[0]), _constants.GAUSS_AMP_MIN,_constants.GAUSS_AMP_MAX)
                 sigma1 = np.clip(np.random.normal(best_params[2], spread * best_params[2]), _constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
-                amp2   = np.clip(np.random.normal(best_params[3], spread * best_params[3]), _constants.GAUSS_AMP_MIN,        _constants.GAUSS_AMP_MAX)
+                amp2   = np.clip(np.random.normal(best_params[3], spread * best_params[3]), _constants.GAUSS_AMP_MIN, _constants.GAUSS_AMP_MAX)
                 sigma2 = np.clip(np.random.normal(best_params[5], spread * best_params[5]), _constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
         else:
             amp1, amp2 = amp_first_nmf, amp_second_nmf
@@ -347,6 +347,29 @@ def _z_from_rest_fit(params, std, z_k, lc1, lc2):
         std[1]   * scale, std[4]   * scale,
         lc1, lc2,
     )
+
+def _return_continuum_systematic_error_on_ew(line1, line2, sigma1, sigma2, ew1, ew2, rest_lam, continuum_error_frac=0.05, n_sigma=3):
+
+    w1_lo = line1 - n_sigma * sigma1
+    w1_hi = line1 + n_sigma * sigma1
+    w2_lo = line2 - n_sigma * sigma2
+    w2_hi = line2 + n_sigma * sigma2
+
+    # Clip at midpoint if windows overlap (e.g. close doublets like CIV)
+    if w1_hi > w2_lo:
+        midpoint = (line1 + line2) / 2.0
+        w1_hi = midpoint
+        w2_lo = midpoint
+
+    mask1 = (rest_lam >= w1_lo) & (rest_lam <= w1_hi)
+    mask2 = (rest_lam >= w2_lo) & (rest_lam <= w2_hi)
+
+    dlam1 = rest_lam[mask1][-1] - rest_lam[mask1][0] if np.any(mask1) else 0.0
+    ew1_cont_err = continuum_error_frac * (dlam1  - ew1)
+    dlam2 = rest_lam[mask2][-1] - rest_lam[mask2][0] if np.any(mask2) else 0.0
+    ew2_cont_err = continuum_error_frac * (dlam2  - ew2)
+
+    return ew1_cont_err, ew2_cont_err
 
 
 def _fit_single_absorber(index, z_init, wavelength, flux, error,
@@ -462,7 +485,7 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
 
 def measure_absorber_properties_double_gaussian(
     index, wavelength, flux, error, absorber_redshift, bound, use_kernel, d_pix,
-    num_iter=_constants.GAUSS_FIT_NUM_ITER, window=_constants.EW_FIT_WINDOW, use_covariance=False, nboot=None):
+    num_iter=_constants.GAUSS_FIT_NUM_ITER, window=_constants.EW_FIT_WINDOW, use_covariance=False, nboot=None, continuum_error_frac=0.05):
     """
     Measures the properties of each potential absorber by fitting a double
     Gaussian to the absorption feature and measuring the equivalent width (EW)
@@ -537,6 +560,14 @@ def measure_absorber_properties_double_gaussian(
             bound, ix0, ix1, line_centre1, line_centre2,
             amp_ratio, num_iter, window, use_covariance, nboot, nparm)
 
+        # continuum error contribution in EW measurements
+        ew1_cont_err, ew2_cont_err = _return_continuum_systematic_error_on_ew(
+            line_centre1, line_centre2,  fitting_param_for_spectrum[k][2],  fitting_param_for_spectrum[k][5], EW_first_line[k], EW_second_line[k], wavelength/(1+z_abs_array[k]), continuum_error_frac=continuum_error_frac, n_sigma=_constants.SNR_NSIG)
+
+        EW_first_line_error[k] = np.sqrt(EW_first_line_error[k]**2 + ew1_cont_err**2)
+        EW_second_line_error[k] = np.sqrt(EW_second_line_error[k]**2 + ew2_cont_err**2)
+        EW_total_error[k] = np.sqrt(EW_first_line_error[k]**2 + EW_second_line_error[k]**2)
+
     return (
         z_abs_array, z_abs_err, fitting_param_for_spectrum, fitting_param_std_for_spectrum,
         EW_first_line, EW_second_line, EW_total,
@@ -545,7 +576,7 @@ def measure_absorber_properties_double_gaussian(
     )
 
 
-def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2, n_sigma=3):
+def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2, n_sigma=3, continuum_error_frac=0.05):
     """
     Measure the rest-frame equivalent width (EW) and its 1-sigma uncertainty
     for two absorption lines using the trapezoidal integration method.
@@ -619,6 +650,14 @@ def trapezoidal_ew(wavelength, residual, error, z, line1, line2, sigma1, sigma2,
 
     ew1, ew1_err = _trapz_ew_and_err(rest_lam[mask1], residual[mask1], error[mask1])
     ew2, ew2_err = _trapz_ew_and_err(rest_lam[mask2], residual[mask2], error[mask2])
+
+    dlam1 = rest_lam[mask1][-1] - rest_lam[mask1][0] if np.any(mask1) else 0.0
+    ew1_cont_err = continuum_error_frac * (dlam1  - ew1)
+    dlam2 = rest_lam[mask2][-1] - rest_lam[mask2][0] if np.any(mask2) else 0.0
+    ew2_cont_err = continuum_error_frac * (dlam2  - ew2)
+
+    ew1_err = np.sqrt(ew1_err**2 + ew1_cont_err**2)
+    ew2_err = np.sqrt(ew2_err**2 + ew2_cont_err**2)
 
     both_nan = np.isnan(ew1) and np.isnan(ew2)
     if both_nan:

@@ -49,13 +49,13 @@ Key Features
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
 - **Gaussian profile fitting**: Fits absorption lines with a double-Gaussian model to extract equivalent width, FWHM, and central wavelength.
 - **Selection criteria**: Identifies absorber candidates based on S/N thresholds and doublet properties. Optionally uses $\chi^2$ statistics to get the confidence level of the selected candidates.
-- **Pixel resolution correction**: Corrects measured line widths for observed pixel resolution to infer intrinsic properties.
+- **Pixel resolution correction**: Corrects measured line widths for observed pixel resolution to infer intrinsic properties, assuming linear relation between spectral resolution and wavelength. Users can provide the linear relation parameters.
 - **Known-redshift validation**: When a prior absorber catalog (e.g. from another survey or absorber finder or catalog built from `qsoabsfind`) is available, `--zabs-known-file` skips the convolution search and runs Gaussian fitting and selection only at the supplied redshifts, allowing quick validation of known systems.
 - **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)). Can be turned on via ``--coldens-dv`` to specify the velocity range for integration.
 - **Parallel processing**: Runs across large datasets using Python's `multiprocessing` module.
 - **Detailed output**: Catalogs with redshifts, equivalent widths, S/N ratios, and more.
 - **Verbose mode**: Optionally prints each processing step for debugging.
-- **Trapezoidal EW measurement**: In addition to Gaussian-model EWs, the module computes rest-frame equivalent widths via direct trapezoidal integration (provided via `--trapz-ew-sigma`) over a per-line window of $\pm n \cdot \sigma_{\rm line}$ centred on each Gaussian-fit line centre. For close doublets (e.g. C IV), the integration windows are automatically clipped at the doublet midpoint to prevent double-counting. Measurement windows and integrated areas can be visualised with `plot_trapezoidal_ew_windows`.
+- **Trapezoidal EW measurement**: In addition to Gaussian-model EWs, the module computes rest-frame equivalent widths via direct trapezoidal integration (provided via `--trapz-ew-sigma`) over a per-line window of $\pm n \cdot \sigma_{\rm line}$ centred on each Gaussian-fit line centre. For close doublets (e.g. C IV), the integration windows are automatically clipped at the doublet midpoint to prevent double-counting. Measurement windows and integrated areas can be visualised with `plot_trapezoidal_ew_windows`. EW errors also account for the systematic uncertainity in continuum placement.
 - **Visualization**: Plot the full spectrum with all detected absorber systems marked, plus zoomed panels around each detection, using `plot_multiple_metal_systems`.
 
 

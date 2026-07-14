@@ -34,7 +34,12 @@ search_parameters = {
     'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default
     'nboot':None, # if provided the number, will perform bootstrapping for EW error calculation
     'continuum_error_frac':0.05, # Fixed fractional error due to continuum normalization used AODM column density measurements
-}
+    'res_wave_start': 3600, # start wavelength for resolution curve
+    'res_val_start': 2000, # resolution value at start wavelength
+    'res_wave_end': 9824, # end wavelength for resolution curve
+    'res_val_end': 5500, # resolution value at end wavelength
+    'res_is_R': True, # if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values
+    }
 
 # ==============================
 # Notes:

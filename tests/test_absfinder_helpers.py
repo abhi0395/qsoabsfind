@@ -69,12 +69,6 @@ class TestComputeResolution(unittest.TestCase):
             self.lam_lin, self.lam_lin, self.line1, logwave=False)
         self.assertGreater(del_sigma, 0)
 
-    def test_logwave_mean_resolution_equals_resolution(self):
-        # for log-spaced arrays, mean_resolution is just the scalar resolution
-        _, resolution, mean_resolution, _ = _compute_resolution(
-            self.lam_log, self.lam_log, self.line1, logwave=True)
-        self.assertAlmostEqual(mean_resolution, resolution)
-
     def test_linwave_resolution_is_array(self):
         # for linear grids, resolution is an array with one value per pixel
         _, resolution, _, _ = _compute_resolution(
@@ -85,6 +79,33 @@ class TestComputeResolution(unittest.TestCase):
         for logwave, lam in [(True, self.lam_log), (False, self.lam_lin)]:
             wave_res, _, _, _ = _compute_resolution(lam, lam, self.line1, logwave=logwave)
             self.assertGreater(wave_res, 0, msg=f"wave_res <= 0 for logwave={logwave}")
+
+    def test_anchor_R_mode_returns_array_with_correct_shape(self):
+        # with resolving-power anchors, resolution must be an array per lam_obs pixel
+        _, resolution, _, del_sigma = _compute_resolution(
+            self.lam_lin, self.lam_lin, self.line1, logwave=False,
+            res_wave_start=3800, res_val_start=1500,
+            res_wave_end=9000,   res_val_end=2500)
+        self.assertEqual(resolution.shape, self.lam_lin.shape)
+        self.assertTrue(np.all(del_sigma > 0))
+
+    def test_anchor_sigma_v_mode_returns_array_with_correct_shape(self):
+        # res_is_R=False: res_val_* are sigma_v [km/s] and are interpolated directly
+        _, resolution, _, _ = _compute_resolution(
+            self.lam_lin, self.lam_lin, self.line1, logwave=False,
+            res_wave_start=3800, res_val_start=50,
+            res_wave_end=9000,   res_val_end=80,
+            res_is_R=False)
+        self.assertEqual(resolution.shape, self.lam_lin.shape)
+        self.assertTrue(np.all(resolution > 0))
+
+    def test_anchor_resolution_varies_with_wavelength(self):
+        # the linear model must produce different sigma_v at the blue and red ends
+        _, resolution, _, _ = _compute_resolution(
+            self.lam_lin, self.lam_lin, self.line1, logwave=False,
+            res_wave_start=3800, res_val_start=1500,
+            res_wave_end=9000,   res_val_end=2500)
+        self.assertNotAlmostEqual(float(resolution[0]), float(resolution[-1]))
 
 
 class TestComputeFitBounds(unittest.TestCase):
@@ -332,8 +353,22 @@ class TestZabsKnown(unittest.TestCase):
         # No detection should survive with max_dv_known=0
         self.assertTrue(all(v <= 0 for v in result['z_abs']))
 
-
-class TestTrapzEWSigma(unittest.TestCase):
+    def test_res_params_accepted(self):
+        # resolution anchor parameters must be forwarded without TypeError
+        z = 0.7
+        lam_obs, flux, error = self._flat_spectrum(z)
+        try:
+            result = convolution_method_absorber_finder_in_QSO_spectra(
+                spec_index=8, absorber='MgII',
+                lam_obs=lam_obs, residual=flux, error=error,
+                lam_search=None, unmsk_residual=None,
+                logwave=False, verbose=False, zabs_known=z,
+                res_wave_start=3800, res_val_start=1500,
+                res_wave_end=9000,   res_val_end=2500)
+        except TypeError as exc:
+            self.fail(f'res_* params raised TypeError: {exc}')
+        self.assertIsInstance(result, dict)
+        self.assertIn('zabs_known', result)
     """Tests for the trapz_ew_sigma parameter of convolution_method_absorber_finder_in_QSO_spectra."""
 
     def _flat_spectrum(self, z_centre, absorber='MgII', n=3000):
