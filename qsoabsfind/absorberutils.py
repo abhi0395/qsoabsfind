@@ -183,6 +183,52 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
 
     return mean_sn1, mean_sn2
 
+
+def check_local_continuum_return(
+    wave, flux, error, z_abs,
+    lam1_rest,
+    lam2_rest,
+    sigma_rest1,
+    sigma_rest2,
+    n_sigma_inner=3.0,
+    n_sigma_side=4.0,
+    min_pixels=5,
+    min_median_flux=0.9,
+):
+    """
+    Simple veto for broad troughs/blends.
+
+    Returns True if the residual returns close to continuum
+    on both sides of the Na I doublet.
+    """
+
+    lam1 = lam1_rest * (1.0 + z_abs)
+    lam2 = lam2_rest * (1.0 + z_abs)
+    sigma_obs1 = sigma_rest1 * (1.0 + z_abs)
+    sigma_obs2 = sigma_rest2 * (1.0 + z_abs)
+
+    left_edge  = lam1 - n_sigma_inner * sigma_obs1
+    right_edge = lam2 + n_sigma_inner * sigma_obs2
+
+    side_width1 = n_sigma_side * sigma_obs1
+    side_width2 = n_sigma_side * sigma_obs2
+
+    left = (wave > left_edge - side_width1) & (wave < left_edge)
+    right = (wave > right_edge) & (wave < right_edge + side_width2)
+
+    def side_ok(mask):
+        good = mask & np.isfinite(flux) & np.isfinite(error) & (error > 0)
+        if np.count_nonzero(good) < min_pixels:
+            return False
+
+        med_flux = np.nanmedian(flux[good])
+        med_err = np.nanmedian(error[good]) / np.sqrt(np.count_nonzero(good))
+
+        return med_flux >= (min_median_flux - med_err)
+
+    return bool(side_ok(left) and side_ok(right))
+
+
 def group_contiguous_pixel(data, resi, avg):
     """
     Arrange data into groups where successive elements differ by less than the average difference.
