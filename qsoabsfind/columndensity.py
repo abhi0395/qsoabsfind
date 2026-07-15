@@ -179,7 +179,8 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
 
     dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2, f1, f2)
     max_dr = max(f1, f2) / min(f1, f2)
-    sflag = 0 if dr > max_dr - dr_error else 1
+    unsaturated = dr > max_dr - dr_error
+    sflag = 0 if unsaturated else 1
 
     results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range, logwave=logwave)
     results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range,logwave=logwave)
@@ -195,7 +196,7 @@ def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, 
 
     log_N, err_log_N = np.nan, np.nan
 
-    if dr > max_dr - dr_error:
+    if unsaturated:
         # Unsaturated
         if flag1 > 0 and flag2 > 0:
             w1, w2 = 1 / sig_N1**2, 1 / sig_N2**2

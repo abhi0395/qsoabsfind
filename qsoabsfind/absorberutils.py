@@ -194,12 +194,13 @@ def check_local_continuum_return(
     n_sigma_side=4.0,
     min_pixels=5,
     min_median_flux=0.9,
+    max_median_flux=1.1,
 ):
     """
-    Simple veto for broad troughs/blends.
+    Simple veto for broad troughs/blends/local continuum problems.
 
     Returns True if the residual returns close to continuum
-    on both sides of the Na I doublet.
+    on both sides of the doublet.
     """
 
     lam1 = lam1_rest * (1.0 + z_abs)
@@ -218,13 +219,18 @@ def check_local_continuum_return(
 
     def side_ok(mask):
         good = mask & np.isfinite(flux) & np.isfinite(error) & (error > 0)
-        if np.count_nonzero(good) < min_pixels:
+
+        n_good = np.count_nonzero(good)
+        if n_good < min_pixels:
             return False
 
         med_flux = np.nanmedian(flux[good])
-        med_err = np.nanmedian(error[good]) / np.sqrt(np.count_nonzero(good))
+        med_err = 1.253 * np.nanmedian(error[good]) / np.sqrt(n_good)
 
-        return med_flux >= (min_median_flux - med_err)
+        lower_ok = med_flux >= (min_median_flux - med_err)
+        upper_ok = med_flux <= (max_median_flux + med_err)
+
+        return bool(lower_ok and upper_ok)
 
     return bool(side_ok(left) and side_ok(right))
 
@@ -451,10 +457,10 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
 def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
-                             vel1, vel2, min_dr, dr, max_dr,
+                             vel1, vel2, min_dr, dr, max_dr,line_ratio,
                              ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                              fit_param_std=None,
-                             conf_level=0.95, vmax=_constants.MAX_VEL_DISPERSION, verbose=False):
+                             conf_level=0.95, vmax=10, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -527,29 +533,42 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         ((gaussian_parameters > bound[0] + 0.001).all(),
          f"{gaussian_parameters} > {bound[0] + 0.001}",
          "gaussian_parameters > bound[0] + 0.001"),
+
         ((gaussian_parameters < bound[1] - 0.001).all(),
          f"{gaussian_parameters} < {bound[1] - 0.001}",
-         "gaussian_parameters < bound[0] - 0.001"),
+         "gaussian_parameters < bound[1] - 0.001"),
+
         (lower_del_lam <= c1 - c0 <= upper_del_lam,
          f"{lower_del_lam} <= {c1 - c0} <= {upper_del_lam}",
          "lower_del_lam <= c1 - c0 <= upper_del_lam"),
+
         (sn1 >= sn_line1, f"{sn1} >= {sn_line1}",
          "sn1 >= sn_line1"),
+
         (sn2 >= sn_line2, f"{sn2} >= {sn_line2}",
          "sn2 >= sn_line2"),
+
         (np.isfinite(vel1) and np.isfinite(vel2) and abs(vel1 - vel2) <= vmax,
         f"|{vel1} - {vel2}| <= {vmax}",
         f"|vel1 - vel2| <= {vmax}"),
-        (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
-         "min_dr < dr < max_dr"),
+
+        (min_dr <= dr <= max_dr,
+        f"{min_dr} <= {dr} <= {max_dr}",
+        "physical_min_dr - dr_error <= dr <= physical_max_dr + dr_error"
+        ),
+
         (ew1_snr > sn_line1, f"{ew1_snr} > {sn_line1}",
          f"ew1_snr > {sn_line1}"),
+
         (ew2_snr > sn_line2, f"{ew2_snr} > {sn_line2}",
          f"ew2_snr > {sn_line2}"),
+
          (delta_chi2_line1 > critical_value, f"{delta_chi2_line1} > {critical_value}",
          f"delta_chi2_line1 > {critical_value}"),
+
         (delta_chi2_line2 > critical_value, f"{delta_chi2_line2} > {critical_value}",
          f"delta_chi2_line2 > {critical_value}"),
+
         (fit_param_snr_ok, fit_param_snr_detail,
          f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})")
     ]

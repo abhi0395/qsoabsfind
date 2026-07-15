@@ -167,6 +167,7 @@ oscillator_parameters = {
 
 MIN_PIXELS_PER_PARAM = 2         # minimum pixels per free parameter required to constrain the double-Gaussian fit (min_pixels = MIN_PIXELS_PER_PARAM * nparam)
 CANDIDATE_VALIDATION_NPIX = 3   # pixels around a line minimum for candidate validation in find_valid_indices
+MAX_REDUCED_CHI2_FIT = 5.0          # maximum allowed reduced chi2 for a valid double-Gaussian fit
 SNR_DEFAULT_DPIX = 5             # fallback pixel window for SNR estimation when Gaussian sigma is unavailable
 SNR_NSIG = 3                     # Gaussian sigma multiplier for SNR integration window (~99.7% of flux)
 REDSHIFT_REFINE_WINDOW = 9       # pixel window for refining redshift by locating the flux minimum
@@ -181,8 +182,8 @@ GAUSS_FIT_BOOT_ITER_FACTOR = 0.4 # fraction of num_iter used per bootstrap fit
 GAUSS_FIT_BOOT_WARM_SPREAD = 0.1 # fractional std for initial perturbation of best-fit params in bootstrap
 GAUSS_FIT_FTOL = 1e-4            # function convergence tolerance for scipy curve_fit
 GAUSS_FIT_XTOL = 1e-4            # parameter convergence tolerance for scipy curve_fit
-GAUSS_AMP_MIN = 0.05             # minimum amplitude floor for Gaussian initial conditions
-GAUSS_AMP_MAX = 0.95             # maximum amplitude cap for Gaussian initial conditions
+GAUSS_AMP_MIN = 0.025             # minimum amplitude floor for Gaussian initial conditions
+GAUSS_AMP_MAX = 0.975             # maximum amplitude cap for Gaussian initial conditions
 GAUSS_SIGMA_INIT_MIN = 0.2       # lower bound (Ang) for sigma draw when no bounds are supplied
 GAUSS_SIGMA_INIT_MAX = 5.0       # upper bound (Ang) for sigma draw when no bounds are supplied
 SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the absorption check in quick_significance_test
@@ -209,6 +210,7 @@ OVERRIDABLE_CONSTANTS = (
     'FIT_PARAM_SNR',
     # Algorithmic parameters
     'MIN_PIXELS_PER_PARAM',
+    'MAX_REDUCED_CHI2_FIT',
     'CANDIDATE_VALIDATION_NPIX',
     'SNR_DEFAULT_DPIX',
     'SNR_NSIG',

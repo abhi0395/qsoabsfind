@@ -26,6 +26,7 @@ from .absorberutils import (
 from .ew import (
     measure_absorber_properties_double_gaussian,
     trapezoidal_ew,
+    reduced_chi2_doublet_lines
 )
 from .datamodel import QSOSpecRead
 from .config import load_constants
@@ -345,14 +346,24 @@ def _compute_fit_bounds(line1, line2, line_sep, d_pix, del_sigma):
     bd_ct = _constants.GAUSS_FIT_BD_CT
     x_sep = _constants.GAUSS_FIT_X_SEP
     edge  = _constants.GAUSS_FIT_EDGE
+
+    amp_min = _constants.GAUSS_AMP_MIN   # physical lower limit for absorption depth
+    amp_max = _constants.GAUSS_AMP_MAX   # physical upper limit for absorption depth
+
     bound = (
-        np.array([2e-2, line1 - bd_ct * d_pix, max(0.1, del_sigma - edge),
-                  2e-2, line2 - bd_ct * d_pix, max(0.1, del_sigma - edge)]),
-        np.array([1.11, line1 + bd_ct * d_pix, x_sep * del_sigma + edge,
-                  1.11, line2 + bd_ct * d_pix, x_sep * del_sigma + edge])
+        np.array([
+            amp_min, line1 - bd_ct * d_pix, max(0.1, del_sigma - edge),
+            amp_min, line2 - bd_ct * d_pix, max(0.1, del_sigma - edge)
+        ]),
+        np.array([
+            amp_max, line1 + bd_ct * d_pix, x_sep * del_sigma + edge,
+            amp_max, line2 + bd_ct * d_pix, x_sep * del_sigma + edge
+        ])
     )
+
     lower_del_lam = line_sep - d_pix
     upper_del_lam = line_sep + d_pix
+
     return bound, lower_del_lam, upper_del_lam
 
 
@@ -455,7 +466,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 c1 = gaussian_parameters[4]
                 sig1, sig2 = gaussian_parameters[2], gaussian_parameters[5]
                 sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
-                vel1, vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5],
+                disp_vel1, disp_vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5],
                                             resolution, z_new, lam_obs)
                 # Use trapezoidal EWs if requested, otherwise fall back to Gaussian analytic EWs.
                 # The same EW values are used consistently for doublet ratio, ew_snr cuts
@@ -489,16 +500,31 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 good = check_absorber_selection(spec_index, z_new, gaussian_parameters, bound,
                                                lower_del_lam, c0, c1, upper_del_lam,
                                                sn1, sn_line1, sn2, sn_line2,
-                                               vel1, vel2, min_dr, dr, max_dr,
+                                               disp_vel1, disp_vel2, min_dr, dr, max_dr, line_ratio,
                                                ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                                                fit_param_std=fit_param_std_temp[0],
-                                               conf_level=conf_level, verbose=verbose)
+                                               conf_level=conf_level, vmax=_constants.MAX_VEL_DISPERSION, verbose=verbose)
                 
                 cont_ok = check_local_continuum_return(lam_obs, residual, error, 
                 z_new, c0, c1, gaussian_parameters[2], gaussian_parameters[5],
-                 n_sigma_inner=2.0, n_sigma_side=3.0, min_pixels=5, min_median_flux=0.9)
+                 n_sigma_inner=2.0, n_sigma_side=3.0, min_pixels=5, min_median_flux=0.9, max_median_flux=1.1)
 
-                if good and cont_ok:
+                redchi2_line1, redchi2_line2 = reduced_chi2_doublet_lines(lam_obs,
+                                                residual,
+                                                error,
+                                                z_new,
+                                                gaussian_parameters,
+                                                n_sigma_window=_constants.SNR_NSIG,
+                                                min_pixels_each_side=3,
+                                                max_pixels_each_side=15,
+                                                param_count_per_line=len(gaussian_parameters)//2)
+                cond_redchi2 = (
+                                np.isfinite(redchi2_line1) and np.isfinite(redchi2_line2) and
+                                redchi2_line1 < _constants.MAX_REDUCED_CHI2_FIT and
+                                redchi2_line2 < _constants.MAX_REDUCED_CHI2_FIT
+                            )
+
+                if good and cont_ok and cond_redchi2:
                     pure_z_abs[m] = z_new
                     pure_gauss_fit[m] = fit_param_temp[0]
                     pure_gauss_fit_std[m] = fit_param_std_temp[0]
@@ -511,8 +537,8 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                     redshift_err[m] = z_new_error
                     sn1_all[m] = sn1
                     sn2_all[m] = sn2
-                    vel_disp1[m] = vel1
-                    vel_disp2[m] = vel2
+                    vel_disp1[m] = disp_vel1
+                    vel_disp2[m] = disp_vel2
                     delta_chi2_line1_array[m] = delta_chi2_line1
                     delta_chi2_line2_array[m] = delta_chi2_line2
 
