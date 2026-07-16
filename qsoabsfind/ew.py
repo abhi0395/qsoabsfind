@@ -332,118 +332,72 @@ def quick_significance_test(flux_norm, fitted_model, error,
 
     return dchi2_line1, dchi2_line2
 
-def reduced_chi2_doublet_lines(
-    lam_obs,
+
+def reduced_chi2_double_gaussian(
+    wave,
     flux,
     error,
     z_abs,
     params,
-    n_sigma_window=3.0,
-    min_pixels_each_side=3,
-    max_pixels_each_side=15,
-    param_count_per_line=3,
+    n_sigma_inner=3.0,
+    min_pixels=8,
 ):
     """
-    Compute local reduced chi2 separately for both lines of a fitted doublet.
+    Compute reduced chi2 of the fitted double-Gaussian model
+    over the local doublet fitting region.
 
-    Args:
-        lam_obs : array
-            Observed-frame wavelength array.
-        flux : array
-            Continuum-normalized flux array.
-        error : array
-            Continuum-normalized error array.
-        z_abs : float
-            Absorber redshift.
-        params : array-like
-            Gaussian parameters [a1, c1, sigma1, a2, c2, sigma2],
-            where c1, sigma1, c2, sigma2 are in rest-frame Angstrom.
-        n_sigma_window : float
-            Half-width of local chi2 window in units of fitted sigma.
-        min_pixels_each_side : int
-            Minimum number of pixels on each side of fitted line center.
-        max_pixels_each_side : int
-            Maximum number of pixels on each side of fitted line center.
-        param_count_per_line : int
-            Effective number of fitted parameters per line used for ndof.
-            For one Gaussian line this is usually 3: amplitude, center, sigma.
-
-    Returns:
-        tuple
-            (redchi2_line1, redchi2_line2)
+    params = [a1, c1, sigma1, a2, c2, sigma2]
+    c1, c2, sigma1, sigma2 are rest-frame values.
     """
 
-    lam_obs = np.asarray(lam_obs, dtype=float)
+    wave = np.asarray(wave, dtype=float)
     flux = np.asarray(flux, dtype=float)
     error = np.asarray(error, dtype=float)
     params = np.asarray(params, dtype=float)
 
-    if (
-        lam_obs.size == 0 or flux.size == 0 or error.size == 0 or
-        lam_obs.size != flux.size or flux.size != error.size or
-        params.size != 6 or not np.isfinite(z_abs)
+    if params.size != 6:
+        return np.nan
+
+    a1, c1, s1, a2, c2, s2 = params
+
+    if not (
+        np.isfinite(z_abs) and
+        np.all(np.isfinite(params)) and
+        s1 > 0 and s2 > 0
     ):
-        return np.nan, np.nan
+        return np.nan
 
-    # Work in rest frame because params are rest-frame.
-    lam_rest = lam_obs / (1.0 + z_abs)
+    wave_rest = wave / (1.0 + z_abs)
 
-    a1, c1, sigma1, a2, c2, sigma2 = params
+    left_edge  = min(c1, c2) - n_sigma_inner * max(s1, s2)
+    right_edge = max(c1, c2) + n_sigma_inner * max(s1, s2)
 
-    model = double_gaussian(lam_rest, a1, c1, sigma1, a2, c2, sigma2)
+    region = (wave_rest >= left_edge) & (wave_rest <= right_edge)
 
-    def get_window(line_center, sigma):
-        idx = np.argmin(np.abs(lam_rest - line_center))
+    good = (
+        region &
+        np.isfinite(wave_rest) &
+        np.isfinite(flux) &
+        np.isfinite(error) &
+        (error > 0)
+    )
 
-        dw = np.nanmedian(np.diff(lam_rest))
-        if not np.isfinite(dw) or dw <= 0 or not np.isfinite(sigma) or sigma <= 0:
-            return None, None
+    n_good = np.count_nonzero(good)
 
-        half_pix = int(np.ceil(n_sigma_window * sigma / dw))
+    if n_good < min_pixels or n_good <= 6:
+        return np.nan
 
-        half_pix = max(half_pix, min_pixels_each_side)
-        half_pix = min(half_pix, max_pixels_each_side)
+    model = (
+        1.0
+        - a1 * np.exp(-0.5 * ((wave_rest - c1) / s1)**2)
+        - a2 * np.exp(-0.5 * ((wave_rest - c2) / s2)**2)
+    )
 
-        s = max(0, idx - half_pix)
-        e = min(len(lam_rest), idx + half_pix + 1)
+    chi2 = np.sum(((flux[good] - model[good]) / error[good])**2)
+    ndof = n_good - 6
 
-        return s, e
+    return chi2 / ndof
 
-    def one_line_redchi2(line_center, sigma):
-        s, e = get_window(line_center, sigma)
-
-        if s is None or e is None or e <= s:
-            return np.nan
-
-        pix = flux[s:e]
-        mod = model[s:e]
-        err = error[s:e]
-
-        good = (
-            np.isfinite(pix) &
-            np.isfinite(mod) &
-            np.isfinite(err) &
-            (err > 0)
-        )
-
-        n_good = np.count_nonzero(good)
-
-        if n_good <= param_count_per_line:
-            return np.nan
-
-        pix = pix[good]
-        mod = mod[good]
-        err = err[good]
-
-        chi2 = np.sum(((pix - mod) / err) ** 2)
-        ndof = n_good - param_count_per_line
-
-        return chi2 / ndof if ndof > 0 else np.nan
-
-    redchi2_line1 = one_line_redchi2(c1, sigma1)
-    redchi2_line2 = one_line_redchi2(c2, sigma2)
-
-    return redchi2_line1, redchi2_line2
 
 def _extract_rest_frame_spectrum(wavelength, flux, error, z, ix0, ix1):
     """Slice spectrum into the rest frame defined by redshift *z* between ix0 and ix1."""

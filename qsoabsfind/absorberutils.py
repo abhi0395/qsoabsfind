@@ -190,47 +190,98 @@ def check_local_continuum_return(
     lam2_rest,
     sigma_rest1,
     sigma_rest2,
-    n_sigma_inner=3.0,
-    n_sigma_side=4.0,
+    n_sigma_inner=2.0,
+    near_abs_lam_lim=50.0,
     min_pixels=5,
-    min_median_flux=0.9,
-    max_median_flux=1.1,
+    frac_continuum_required=0.95,
+    continuum_error_frac=0.05
 ):
     """
     Simple veto for broad troughs/blends/local continuum problems.
 
-    Returns True if the residual returns close to continuum
-    on both sides of the doublet.
+    Returns True if the residual returns close to continuum on both sides
+    of the doublet.
+
+    The fitted absorption core is excluded using n_sigma_inner. Then fixed
+    wavelength sidebands of width near_abs_lam_lim are checked immediately
+    outside the doublet.
     """
+
+    global_med = np.nanmedian(flux[np.isfinite(flux)])
+
+    if not np.isfinite(global_med) or global_med <= 0:
+        global_med = 1.0
+
+    min_median_flux = global_med * (1.0 - continuum_error_frac)
+    max_median_flux = global_med * (1.0 + continuum_error_frac)
 
     lam1 = lam1_rest * (1.0 + z_abs)
     lam2 = lam2_rest * (1.0 + z_abs)
+
     sigma_obs1 = sigma_rest1 * (1.0 + z_abs)
     sigma_obs2 = sigma_rest2 * (1.0 + z_abs)
 
-    left_edge  = lam1 - n_sigma_inner * sigma_obs1
+    if not (
+        np.isfinite(lam1) and np.isfinite(lam2) and
+        np.isfinite(sigma_obs1) and np.isfinite(sigma_obs2) and
+        sigma_obs1 > 0 and sigma_obs2 > 0
+    ):
+        return False
+
+    # Edges of the fitted doublet core
+    left_edge = lam1 - n_sigma_inner * sigma_obs1
     right_edge = lam2 + n_sigma_inner * sigma_obs2
 
-    side_width1 = n_sigma_side * sigma_obs1
-    side_width2 = n_sigma_side * sigma_obs2
+    # Fixed sidebands immediately outside the doublet core
+    left = (
+        (wave >= left_edge - near_abs_lam_lim) &
+        (wave < left_edge)
+    )
 
-    left = (wave > left_edge - side_width1) & (wave < left_edge)
-    right = (wave > right_edge) & (wave < right_edge + side_width2)
+    right = (
+        (wave > right_edge) &
+        (wave <= right_edge + near_abs_lam_lim)
+    )
 
     def side_ok(mask):
-        good = mask & np.isfinite(flux) & np.isfinite(error) & (error > 0)
+        good = (
+            mask &
+            np.isfinite(flux) &
+            np.isfinite(error) &
+            (error > 0)
+        )
 
         n_good = np.count_nonzero(good)
+
         if n_good < min_pixels:
             return False
 
-        med_flux = np.nanmedian(flux[good])
-        med_err = 1.253 * np.nanmedian(error[good]) / np.sqrt(n_good)
+        f = flux[good]
+        e = error[good]
 
-        lower_ok = med_flux >= (min_median_flux - med_err)
-        upper_ok = med_flux <= (max_median_flux + med_err)
+        # Median continuum sanity check
+        med_flux = np.nanmedian(f)
+        med_err = 1.253 * np.nanmedian(e) / np.sqrt(n_good)
 
-        return bool(lower_ok and upper_ok)
+        median_ok = (
+            med_flux >= (min_median_flux - med_err) and
+            med_flux <= (max_median_flux + med_err)
+        )
+
+        # Pixel-level continuum check.
+        # A pixel is allowed if it is consistent with the continuum band,
+        # including its own error.
+        pixel_ok = (
+            f >= (min_median_flux - e)
+        ) & (
+            f <= (max_median_flux + e)
+        )
+
+        frac_ok = np.count_nonzero(pixel_ok) / n_good
+
+        frac_ok = np.isfinite(frac_ok) and (frac_ok >= frac_continuum_required)
+
+        return bool(median_ok and frac_ok)
 
     return bool(side_ok(left) and side_ok(right))
 
@@ -903,7 +954,44 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
 
     return lam_start, lam_end
 
-def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, verbose=False):
+def get_qso_emission_mask(wavelength, zqso, dv=10000.0, qso_emission_lines=None):
+    """
+    Return True for wavelength pixels allowed for absorber search.
+
+    Pixels within +/- dv km/s of major QSO emission lines are masked out.
+
+    Args:
+        wavelength (numpy.ndarray): Observed-frame wavelength array.
+        zqso (float): QSO redshift.
+        dv (float): Velocity window around QSO emission lines in km/s.
+        qso_emission_lines (dict, optional): Dictionary of QSO emission lines
+            in rest-frame Angstrom.
+
+    Returns:
+        numpy.ndarray: Boolean array. True means pixel is allowed.
+    """
+
+    wavelength = np.asarray(wavelength, dtype=float)
+
+    allowed = np.isfinite(wavelength)
+
+    if qso_emission_lines is None:
+        qso_emission_lines = _constants.emission_lines
+
+    for _, lam_rest in qso_emission_lines.items():
+        lam_em_obs = lam_rest * (1.0 + zqso)
+
+        if not np.isfinite(lam_em_obs) or lam_em_obs <= 0:
+            continue
+
+        vel = speed_of_light * (wavelength - lam_em_obs) / lam_em_obs
+
+        allowed &= np.abs(vel) > dv
+
+    return allowed
+
+
+def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, mask_emline=False, verbose=False):
     """
     Wrapper function to return the most basic wavelength window for absorber
     search.
@@ -921,12 +1009,12 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
         logwave (bool, optional): If True, wavelength pixels are on a fixed log-scale (e.g. SDSS/DESI). Used to report pixel count. Default is False.
+        mask_emline (bool, optional): If True, will mask pixels within +/- dv km/s of major QSO emission lines. Default is False.
         verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
         tuple: A tuple containing unmasked wavelength, residual, and errors.
     """
-    start = time.time()
 
     lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep, verbose=verbose)
 
@@ -963,6 +1051,18 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     lam_search = lam_search[~rmv_lam0]
     residual = residual[~rmv_lam0]
     error_residual = error_residual[~rmv_lam0]
+
+    # Mask QSO emission-line regions if requested
+    if mask_emline:
+        emline_allowed = get_qso_emission_mask(
+            lam_search,
+            zqso,
+            dv=dv
+        )
+
+        lam_search = lam_search[emline_allowed]
+        residual = residual[emline_allowed]
+        error_residual = error_residual[emline_allowed]
 
     if verbose:
         npix = lam_search.size

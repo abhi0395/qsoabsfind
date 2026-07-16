@@ -159,6 +159,7 @@ def parallel_convolution_search(
         'vel_disp2': [],
         'delta_chi2_line1': [],
         'delta_chi2_line2': [],
+        'pure_redchi2': [],
         'unsearchable_indices': [],
         'snr_qso_map': {},
     }
@@ -193,6 +194,8 @@ def parallel_convolution_search(
         combined_results['vel_disp2'].extend(np.array(result['vel_disp2'])[keep])
         combined_results['delta_chi2_line1'].extend(np.array(result['delta_chi2_line1'])[keep])
         combined_results['delta_chi2_line2'].extend(np.array(result['delta_chi2_line2'])[keep])
+        combined_results['pure_redchi2'].extend(np.array(result['pure_redchi2'])[keep])
+
         if 'zabs_known' in combined_results:
             zk = result.get('zabs_known')
             if zk is not None:
@@ -421,6 +424,7 @@ def main():
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
+    logger.info("chi2: %s ", results['pure_redchi2'])
     logger.info("Elapsed time: %.2f seconds", elapsed_time)
     logger.info("Script ended at: %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 

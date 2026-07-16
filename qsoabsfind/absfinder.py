@@ -26,7 +26,7 @@ from .absorberutils import (
 from .ew import (
     measure_absorber_properties_double_gaussian,
     trapezoidal_ew,
-    reduced_chi2_doublet_lines
+    reduced_chi2_double_gaussian
 )
 from .datamodel import QSOSpecRead
 from .config import load_constants
@@ -142,7 +142,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         # Identify the wavelength region for searching the specified absorber
         lam_search, unmsk_residual, unmsk_error = absorber_search_window(
             lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose)
+            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose, mask_emline=kwargs.get("mask_emline", False))
+
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
         # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
@@ -163,14 +164,14 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
                                 snr_val, snr_cut, spec_index)
                 result = _build_result(
                     [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-                    [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+                    [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
                 )
                 result['snr_qso'] = snr_val
                 return result
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
                             "dv", "lam_red", "lam_blue",
-                            "snr_cut", "statistics"]
+                            "snr_cut", "statistics", "mask_emline"]
 
     conv_kwargs = {}
     for key in kwargs.keys():
@@ -202,7 +203,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
 def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean,
                   ew_total_mean, ew_1_error, ew_2_error, ew_total_error,
                   z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2,
-                  delta_chi2_line1, delta_chi2_line2, zabs_known=None):
+                  delta_chi2_line1, delta_chi2_line2, pure_redchi2, zabs_known=None):
     result = {
         'index_spec': index_spec,
         'z_abs': z_abs,
@@ -221,6 +222,7 @@ def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_m
         'vel_disp2': vel_disp2,
         'delta_chi2_line1': delta_chi2_line1,
         'delta_chi2_line2': delta_chi2_line2,
+        'pure_redchi2': pure_redchi2
     }
     if zabs_known is not None:
         result['zabs_known'] = zabs_known
@@ -416,7 +418,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                          absorber, d_pix, f1, f2, resolution, line_ratio,
                          lower_del_lam, upper_del_lam, sn_line1, sn_line2,
                          logwave, use_covariance, nboot, conf_level, verbose,
-                         trapz_ew_sigma=None, continuum_error_frac=0.05):
+                         trapz_ew_sigma=None, continuum_error_frac=0.05, frac_continuum_required=0.90):
     # For each candidate redshift, re-run the double-Gaussian fit, compute SNR,
     # velocity dispersion and doublet ratio, then keep only those that pass
     # check_absorber_selection.  All output arrays are indexed the same way as
@@ -443,6 +445,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     vel_disp2 = np.zeros(n)
     delta_chi2_line1_array = np.zeros(n)
     delta_chi2_line2_array = np.zeros(n)
+    pure_redchi2_array = np.zeros(n)
 
     z_inds = [i for i, x in enumerate(z_abs) if not np.isnan(x) and x > 0]
     if verbose:
@@ -504,24 +507,23 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                                                fit_param_std=fit_param_std_temp[0],
                                                conf_level=conf_level, vmax=_constants.MAX_VEL_DISPERSION, verbose=verbose)
-                
-                cont_ok = check_local_continuum_return(lam_obs, residual, error, 
-                z_new, c0, c1, gaussian_parameters[2], gaussian_parameters[5],
-                 n_sigma_inner=2.0, n_sigma_side=3.0, min_pixels=5, min_median_flux=0.9, max_median_flux=1.1)
 
-                redchi2_line1, redchi2_line2 = reduced_chi2_doublet_lines(lam_obs,
+                cont_ok = check_local_continuum_return(lam_obs, residual, error,
+                z_new, c0, c1, gaussian_parameters[2], gaussian_parameters[5],
+                 n_sigma_inner=2.0, near_abs_lam_lim=_constants.NEAR_ABS_LAM_LIM, min_pixels=5, frac_continuum_required=frac_continuum_required, continuum_error_frac=continuum_error_frac)
+
+
+                redchi2_doublet = reduced_chi2_double_gaussian(lam_obs,
                                                 residual,
                                                 error,
                                                 z_new,
                                                 gaussian_parameters,
-                                                n_sigma_window=_constants.SNR_NSIG,
-                                                min_pixels_each_side=3,
-                                                max_pixels_each_side=15,
-                                                param_count_per_line=len(gaussian_parameters)//2)
+                                                n_sigma_inner=2.5,
+                                                min_pixels=8)
+
                 cond_redchi2 = (
-                                np.isfinite(redchi2_line1) and np.isfinite(redchi2_line2) and
-                                redchi2_line1 < _constants.MAX_REDUCED_CHI2_FIT and
-                                redchi2_line2 < _constants.MAX_REDUCED_CHI2_FIT
+                                np.isfinite(redchi2_doublet) and
+                                redchi2_doublet < _constants.MAX_REDUCED_CHI2_FIT
                             )
 
                 if good and cont_ok and cond_redchi2:
@@ -541,12 +543,13 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                     vel_disp2[m] = disp_vel2
                     delta_chi2_line1_array[m] = delta_chi2_line1
                     delta_chi2_line2_array[m] = delta_chi2_line2
+                    pure_redchi2_array[m] = redchi2_doublet
 
     return (pure_z_abs, pure_gauss_fit, pure_gauss_fit_std,
             pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
             pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
             redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
-            delta_chi2_line1_array, delta_chi2_line2_array)
+            delta_chi2_line1_array, delta_chi2_line2_array, pure_redchi2_array)
 
 
 def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residual, error,
@@ -566,7 +569,7 @@ def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residua
     return (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True, continuum_error_frac=0.05):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True, continuum_error_frac=0.05, frac_continuum_required=0.90):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -621,6 +624,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             ``res_val_start``. Default is ``None``.
         res_is_R (bool, optional): If ``True`` (default), ``res_val_*`` are resolving powers
             R = lambda / FWHM_lambda. If ``False``, they are ``sigma_v`` in km/s.
+        frac_continuum_required (float): Minimum fraction of pixels in the local continuum window
 
     Returns:
         dict: Contains lists of various parameters related to detected absorbers.
@@ -665,12 +669,12 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 [spec_index] * n, [-1] * n, [[0, 0, 0, 0, 0, 0]] * n, [[0, 0, 0, 0, 0, 0]] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
-                [0] * n,
+                [0] * n, [] * n,
                 zabs_known=zabs_known,
             )
         return _build_result(
             [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
         )
 
     if zabs_known is None and (lam_search is None or lam_search.size <= _constants.MIN_NPIXEL):
@@ -678,7 +682,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             logger.info("No wavelength pixels available in search region, spec index = %s", spec_index)
         return _build_result(
             [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
         )
 
     line1, line2, f1, f2, line_ratio, line_sep, del_z = _get_doublet_constants(absorber)
@@ -726,7 +730,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
                 [spec_index] * n, [-1] * n, [[0, 0, 0, 0, 0, 0]] * n, [[0, 0, 0, 0, 0, 0]] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
                 [0] * n, [0] * n, [0] * n, [0] * n, [0] * n, [0] * n,
-                [0] * n,
+                [0] * n, [0] * n,
                 zabs_known=zabs_known,
             )
         combined_final_our_z = searchable
@@ -742,7 +746,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         if len(combined_final_our_z) == 0:
             return _build_result(
                 [spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-                [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+                [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
             )
         zabs_known_input = None
 
@@ -750,11 +754,11 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
      pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
      pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
      redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
-     delta_chi2_line1_array, delta_chi2_line2_array) = _validate_candidates(
+     delta_chi2_line1_array, delta_chi2_line2_array, pure_redchi2_array) = _validate_candidates(
         spec_index, combined_final_our_z, lam_obs, residual, error, bound, absorber,
         d_pix, f1, f2, resolution, line_ratio, lower_del_lam, upper_del_lam,
         sn_line1, sn_line2, logwave, use_covariance, nboot, conf_level, verbose,
-        trapz_ew_sigma=trapz_ew_sigma, continuum_error_frac=continuum_error_frac)
+        trapz_ew_sigma=trapz_ew_sigma, continuum_error_frac=continuum_error_frac, frac_continuum_required=frac_continuum_required)
 
     if zabs_known_input is None:
         # convolution mode: discard failed candidates and remove false positives
@@ -775,6 +779,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         vel_disp2 = vel_disp2[valid_indices]
         delta_chi2_line1_array = delta_chi2_line1_array[valid_indices]
         delta_chi2_line2_array = delta_chi2_line2_array[valid_indices]
+        pure_redchi2_array = pure_redchi2_array[valid_indices]
 
         if verbose:
             logger.debug("final candidates: %s", pure_z_abs)
@@ -798,6 +803,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             vel_disp2 = vel_disp2[sel_indices]
             delta_chi2_line1_array = delta_chi2_line1_array[sel_indices]
             delta_chi2_line2_array = delta_chi2_line2_array[sel_indices]
+            pure_redchi2_array = pure_redchi2_array[sel_indices]
+
         else:
             redshift_err = np.array([0])
             pure_z_abs = np.array([0])
@@ -808,6 +815,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             vel_disp1 = vel_disp2 = np.array([0])
             delta_chi2_line1_array = np.array([0])
             delta_chi2_line2_array = np.array([0])
+            pure_redchi2_array = np.array([0])
     else:
         # known-z mode: keep all rows as-is (z_abs=0 for failed, fitted z for passed).
         # False-positive filters are not applied here since the redshifts were user-supplied.
@@ -846,6 +854,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             vel_disp2 = np.concatenate([vel_disp2, np.zeros(n_oor)])
             delta_chi2_line1_array = np.concatenate([delta_chi2_line1_array, np.zeros(n_oor)])
             delta_chi2_line2_array = np.concatenate([delta_chi2_line2_array, np.zeros(n_oor)])
+            pure_redchi2_array = np.concatenate([pure_redchi2_array, np.zeros(n_oor)])
             zabs_known_input = np.concatenate([zabs_known_input, np.array(out_of_range)])
 
     not_found = max(1, len(pure_z_abs))
@@ -868,5 +877,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         vel_disp2.tolist(),
         delta_chi2_line1_array.tolist(),
         delta_chi2_line2_array.tolist(),
+        pure_redchi2_array.tolist(),
         zabs_known=zabs_known_input.tolist() if zabs_known_input is not None else None,
     )

@@ -46,6 +46,23 @@ doublet_keys = {
         'NaI': ('NaI_5891', 'NaI_5897')
     }
 
+# =============================
+# Major emission lines in QSOs
+# =============================
+
+emission_lines = {
+            "LyA": 1215.67,
+            "NV": 1240.81,
+            "SiIV_OIV": 1400.0,
+            "CIV": 1549.0,
+            "CIII": 1908.7,
+            "MgII": 2798.0,
+            "OII_3727": 3727.0,
+            "Hbeta": 4861.33,
+            "OIII": 5007.0,
+            "Halpha": 6562.8,
+        }
+
 # ==============================
 # Absorption Line Wavelengths (in Ang)
 # ==============================
@@ -190,6 +207,7 @@ SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the 
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
 ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
+NEAR_ABS_LAM_LIM = 50           # minimum allowed wavelength separation (Ang) between the two nearby absorbers
 
 # ==============================
 # User-overridable parameters
@@ -234,6 +252,7 @@ OVERRIDABLE_CONSTANTS = (
     'EW_FIT_WINDOW',
     'AODM_FLUX_CLIP_MIN',
     'ZABS_KNOWN_MAX_DV',
+    'NEAR_ABS_LAM_LIM'
 )
 
 # ==============================
