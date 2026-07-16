@@ -9,6 +9,7 @@ import time
 import logging
 from astropy.table import Table
 from scipy.stats import chi2
+from scipy.signal import medfilt
 
 
 # Constants -- imported via the module object so that startup-time patches
@@ -182,6 +183,102 @@ def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
         mean_sn2 = sum_diff2 / sum_err2
 
     return mean_sn1, mean_sn2
+
+def flatten_residual_near_qso_emission(
+    wave,
+    residual,
+    error,
+    zqso,
+    windows_rest=None,
+    kernel_size=71,
+    correction_clip=(0.90, 1.10),
+    min_pixels=30,
+):
+    """
+    Locally flatten broad residual trends near QSO emission-line regions
+    before absorber search.
+
+    This does not modify the original continuum or flux. It only returns a
+    search residual:
+
+        residual_search = residual / smooth_residual
+
+    The smoothing scale must be much broader than the absorber width/separation.
+    """
+
+    wave = np.asarray(wave, dtype=float)
+    residual = np.asarray(residual, dtype=float)
+    error = np.asarray(error, dtype=float)
+
+    residual_search = residual.copy()
+    error_search = error.copy()
+    correction = np.ones_like(residual, dtype=float)
+
+    if windows_rest is None:
+       windows_rest =  _constants.windows_rest
+
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+
+    rest_wave = wave / (1.0 + zqso)
+
+    good0 = (
+        np.isfinite(wave)
+        & np.isfinite(rest_wave)
+        & np.isfinite(residual)
+        & np.isfinite(error)
+        & (error > 0)
+    )
+
+    for _, (wmin, wmax) in windows_rest.items():
+
+        win = (
+            good0
+            & (rest_wave >= wmin)
+            & (rest_wave <= wmax)
+        )
+
+        nwin = np.count_nonzero(win)
+
+        if nwin < min_pixels:
+            continue
+
+        idx = np.where(win)[0]
+        r = residual[idx].copy()
+
+        # neutral fill
+        r_fill = r.copy()
+        r_fill[~np.isfinite(r_fill)] = 1.0
+
+        k = min(kernel_size, nwin)
+        if k % 2 == 0:
+            k -= 1
+
+        if k < 3:
+            continue
+
+        smooth_r = medfilt(r_fill, kernel_size=k)
+
+        smooth_r[~np.isfinite(smooth_r)] = 1.0
+        smooth_r[smooth_r <= 0.0] = 1.0
+
+        smooth_r = np.clip(
+            smooth_r,
+            correction_clip[0],
+            correction_clip[1],
+        )
+
+        correction[idx] = smooth_r
+
+    good_corr = (
+        np.isfinite(correction)
+        & (correction > 0)
+    )
+
+    residual_search[good_corr] = residual[good_corr] / correction[good_corr]
+    error_search[good_corr] = error[good_corr] / correction[good_corr]
+
+    return residual_search, error_search
 
 
 def check_local_continuum_return(

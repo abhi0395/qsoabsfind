@@ -424,7 +424,7 @@ def main():
     # End timing
     end_time = time.time()
     elapsed_time = end_time - start_time
-    logger.info("chi2: %s ", results['pure_redchi2'])
+
     logger.info("Elapsed time: %.2f seconds", elapsed_time)
     logger.info("Script ended at: %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 

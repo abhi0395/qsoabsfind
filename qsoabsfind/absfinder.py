@@ -21,7 +21,8 @@ from .absorberutils import (
     calculate_doublet_ratio,
     group_and_select_weighted_redshift,
     check_absorber_selection,
-    check_local_continuum_return
+    check_local_continuum_return,
+    flatten_residual_near_qso_emission,
 )
 from .ew import (
     measure_absorber_properties_double_gaussian,
@@ -123,8 +124,17 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
 
+    residual, error = flatten_residual_near_qso_emission(
+                                                    wave=lam_obs,
+                                                    residual=residual,
+                                                    error=error,
+                                                    zqso=z_qso,
+                                                    kernel_size=71,
+                                                    correction_clip=(0.90, 1.10),
+                                                )
+
     # Remove NaN values from the arrays
-    non_nan_indices = ~np.isnan(residual)
+    non_nan_indices = np.isfinite(residual)
     lam_obs, residual, error = lam_obs[non_nan_indices], residual[non_nan_indices], error[non_nan_indices]
 
     zabs_known = kwargs.get("zabs_known", None)
