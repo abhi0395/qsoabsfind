@@ -124,12 +124,12 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
 
-    residual, error = flatten_residual_near_qso_emission(
+    residual, error, correction = flatten_residual_near_qso_emission(
                                                     wave=lam_obs,
                                                     residual=residual,
                                                     error=error,
                                                     zqso=z_qso,
-                                                    kernel_size=71,
+                                                    kernel_size=31,
                                                     correction_clip=(0.90, 1.10),
                                                 )
 
@@ -139,6 +139,19 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
 
     zabs_known = kwargs.get("zabs_known", None)
     snr_val = -1.0  # per-spectrum SNR in the search window; -1.0 if not computed
+
+    # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
+    # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
+    snr_cut = kwargs.get("snr_cut")
+    if snr_cut is not None:
+        stat = kwargs.get("statistics")
+        if stat == "median":
+            snr_val = np.nanmedian(residual / error)
+        elif stat == "mean":
+            snr_val = np.nanmean(residual / error)
+        elif isinstance(stat, (int, float)):
+            pixel_snr = residual / error
+            snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
 
     if zabs_known is not None:
         # Known-redshift mode: skip absorber search window entirely.
@@ -156,28 +169,16 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
 
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-        # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
-        # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
-        snr_cut = kwargs.get("snr_cut")
-        if snr_cut is not None:
-            stat = kwargs.get("statistics")
-            if stat == "median":
-                snr_val = np.nanmedian(unmsk_residual / unmsk_error)
-            elif stat == "mean":
-                snr_val = np.nanmean(unmsk_residual / unmsk_error)
-            elif isinstance(stat, (int, float)):
-                pixel_snr = unmsk_residual / unmsk_error
-                snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
-            if snr_val < snr_cut:
-                if verbose:
-                    logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f), spec index = %s",
-                                snr_val, snr_cut, spec_index)
-                result = _build_result(
-                    [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
-                    [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
-                )
-                result['snr_qso'] = snr_val
-                return result
+        if snr_val < snr_cut:
+            if verbose:
+                logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f), spec index = %s",
+                            snr_val, snr_cut, spec_index)
+            result = _build_result(
+                [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
+                [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
+            )
+            result['snr_qso'] = snr_val
+            return result
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
                             "dv", "lam_red", "lam_blue",
@@ -486,7 +487,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 # (inside check_absorber_selection) and the stored catalog values.
                 if trapz_ew_sigma is not None:
                     _tr = trapezoidal_ew(lam_obs, residual, error, z_new,
-                                        c0, c1, sig1, sig2, n_sigma=trapz_ew_sigma)
+                                        c0, c1, sig1, sig2, n_sigma=trapz_ew_sigma, continuum_error_frac=continuum_error_frac)
                     ew1_val      = _tr['ew1']      if np.isfinite(_tr['ew1'])      else 0.0
                     ew2_val      = _tr['ew2']      if np.isfinite(_tr['ew2'])      else 0.0
                     ew_total_val = _tr['ew_total'] if np.isfinite(_tr['ew_total']) else 0.0
@@ -531,12 +532,11 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                 n_sigma_inner=2.5,
                                                 min_pixels=8)
 
-                cond_redchi2 = (
-                                np.isfinite(redchi2_doublet) and
-                                redchi2_doublet < _constants.MAX_REDUCED_CHI2_FIT
-                            )
-
-                if good and cont_ok and cond_redchi2:
+                # cond_redchi2 = (
+                #                 np.isfinite(redchi2_doublet) and
+                #                 redchi2_doublet < _constants.MAX_REDUCED_CHI2_FIT
+                #             )
+                if good and cont_ok:
                     pure_z_abs[m] = z_new
                     pure_gauss_fit[m] = fit_param_temp[0]
                     pure_gauss_fit_std[m] = fit_param_std_temp[0]

@@ -129,58 +129,76 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error, f1, f2):
 @jit(nopython=True)
 def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     """
-    Estimate S/N of the doublet lines.
+    Estimate local integrated S/N around the two doublet lines.
 
-    Args:
-        l1 (float): First wavelength to check around.
-        l2 (float): Second wavelength to check around.
-        sig1 (float): fitted width of the first line
-        sig2 (float): fitted width of second line
-        lam_rest (numpy.ndarray): Rest-frame wavelengths.
-        residual (numpy.ndarray): Residual flux values.
-        error (numpy.ndarray): Error values corresponding to the residuals.
-        log (bool): if wavelength bins are on log scale
+    The pixel-selection logic is matched to trapezoidal_ew():
+
+      - same +/- n_sigma * sigma window
+      - same midpoint clipping if the two windows overlap
+      - same >= and <= boundary convention
 
     Returns:
-        tuple: Integrated signal-to-noise ratios (SNR) around the specified wavelengths.
-               Returns (mean_sn1, mean_sn2).
+        tuple: (mean_sn1, mean_sn2)
     """
+
     if sig1 is None or sig2 is None:
         dpix = _constants.SNR_DEFAULT_DPIX
+
         if log:
             delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
             delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
         else:
-            delta1 = dpix * (lam_rest[1]-lam_rest[0])
+            delta1 = dpix * (lam_rest[1] - lam_rest[0])
             delta2 = delta1
     else:
-        nsig = _constants.SNR_NSIG  # for gaussian sigma to account how far we want to go.
-        delta1, delta2 = nsig * sig1, nsig * sig2
+        nsig = _constants.SNR_NSIG
+        delta1 = nsig * sig1
+        delta2 = nsig * sig2
 
-    ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
-    ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
+    # Same window definition as trapezoidal_ew
+    w1_lo = l1 - delta1
+    w1_hi = l1 + delta1
+    w2_lo = l2 - delta2
+    w2_hi = l2 + delta2
 
-    resi1 = residual[ind1]
-    resi2 = residual[ind2]
+    # Same midpoint clipping as trapezoidal_ew
+    if w1_hi > w2_lo:
+        midpoint = 0.5 * (l1 + l2)
+        w1_hi = midpoint
+        w2_lo = midpoint
 
-    err1 = error[ind1]
-    err2 = error[ind2]
+    # Same >= <= convention as trapezoidal_ew
+    ind1 = np.where((lam_rest >= w1_lo) & (lam_rest <= w1_hi))[0]
+    ind2 = np.where((lam_rest >= w2_lo) & (lam_rest <= w2_hi))[0]
 
-    median = 1  # Assuming median residual value is 1, as it continuum-normalized
+    def _one_line_snr(ind):
+        if ind.size == 0:
+            return -1.0
 
-    diff1 = median - resi1
-    diff2 = median - resi2
+        resi = residual[ind]
+        err = error[ind]
 
-    sum_diff1 = np.nansum(diff1)
-    sum_diff2 = np.nansum(diff2)
-    sum_err1 = np.sqrt(np.nansum(err1**2))
-    sum_err2 = np.sqrt(np.nansum(err2**2))
+        good = (
+            np.isfinite(resi)
+            & np.isfinite(err)
+            & (err > 0)
+        )
 
-    mean_sn1, mean_sn2 = -1, -1 # in case failure
+        if np.count_nonzero(good) == 0:
+            return -1.0
 
-    if sum_err1 != 0 and sum_err2 !=0 and np.isfinite(sum_err1) and np.isfinite(sum_err2):
-        mean_sn1 = sum_diff1 / sum_err1
-        mean_sn2 = sum_diff2 / sum_err2
+        diff = 1.0 - resi[good]
+
+        sum_diff = np.nansum(diff)
+        sum_err = np.sqrt(np.nansum(err[good]**2))
+
+        if sum_err > 0 and np.isfinite(sum_err):
+            return sum_diff / sum_err
+
+        return -1.0
+
+    mean_sn1 = _one_line_snr(ind1)
+    mean_sn2 = _one_line_snr(ind2)
 
     return mean_sn1, mean_sn2
 
@@ -278,7 +296,7 @@ def flatten_residual_near_qso_emission(
     residual_search[good_corr] = residual[good_corr] / correction[good_corr]
     error_search[good_corr] = error[good_corr] / correction[good_corr]
 
-    return residual_search, error_search
+    return residual_search, error_search, correction
 
 
 def check_local_continuum_return(
