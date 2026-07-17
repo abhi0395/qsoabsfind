@@ -22,7 +22,6 @@ from .absorberutils import (
     group_and_select_weighted_redshift,
     check_absorber_selection,
     check_local_continuum_return,
-    flatten_residual_near_qso_emission,
 )
 from .ew import (
     measure_absorber_properties_double_gaussian,
@@ -124,14 +123,6 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
 
-    residual, error, correction = flatten_residual_near_qso_emission(
-                                                    wave=lam_obs,
-                                                    residual=residual,
-                                                    error=error,
-                                                    zqso=z_qso,
-                                                    kernel_size=31,
-                                                    correction_clip=(0.90, 1.10),
-                                                )
 
     # Remove NaN values from the arrays
     non_nan_indices = np.isfinite(residual)
@@ -519,11 +510,6 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                fit_param_std=fit_param_std_temp[0],
                                                conf_level=conf_level, vmax=_constants.MAX_VEL_DISPERSION, verbose=verbose)
 
-                cont_ok = check_local_continuum_return(lam_obs, residual, error,
-                z_new, c0, c1, gaussian_parameters[2], gaussian_parameters[5],
-                 n_sigma_inner=2.0, near_abs_lam_lim=_constants.NEAR_ABS_LAM_LIM, min_pixels=5, frac_continuum_required=frac_continuum_required, continuum_error_frac=continuum_error_frac)
-
-
                 redchi2_doublet = reduced_chi2_double_gaussian(lam_obs,
                                                 residual,
                                                 error,
@@ -532,11 +518,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                 n_sigma_inner=2.5,
                                                 min_pixels=8)
 
-                # cond_redchi2 = (
-                #                 np.isfinite(redchi2_doublet) and
-                #                 redchi2_doublet < _constants.MAX_REDUCED_CHI2_FIT
-                #             )
-                if good and cont_ok:
+                if good
                     pure_z_abs[m] = z_new
                     pure_gauss_fit[m] = fit_param_temp[0]
                     pure_gauss_fit_std[m] = fit_param_std_temp[0]

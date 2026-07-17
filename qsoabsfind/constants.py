@@ -16,9 +16,7 @@ speed_of_light = 299792.458   # Speed of light in km/s
 
 LARGE_WAVE = 1e6  # observed-frame hard upper wavelength limit (Ang); default 1e10 = no restriction
 SMALL_WAVE = 10.0   # observed-frame hard lower wavelength limit (Ang); default 0 = no restriction
-
 MIN_NPIXEL = 100 # minimum number of pixels required for a valid search region
-
 LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid confusion with Silicon forest)
 
 # ==============================
@@ -50,7 +48,7 @@ doublet_keys = {
 # Major emission lines in QSOs
 # =============================
 
-emission_lines = {
+QSO_EMISSION_LINES = {
             "LyA": 1215.67,
             "NV": 1240.81,
             "SiIV_OIV": 1400.0,
@@ -62,18 +60,6 @@ emission_lines = {
             "OIII": 5007.0,
             "Halpha": 6562.8,
         }
-
-windows_rest = {
-        "LyA":        (1180.0, 1285.0),
-        "NV":         (1215.0, 1265.0),
-        "SiIV_OIV":   (1360.0, 1445.0),
-        "CIV":        (1500.0, 1605.0),
-        "CIII":       (1840.0, 1975.0),
-        "MgII":       (2700.0, 2920.0),
-        "OII":        (3680.0, 3775.0),
-        "Hbeta_OIII": (4700.0, 5100.0),
-        "Halpha":     (6450.0, 6675.0),
-    }
 
 # ==============================
 # Absorption Line Wavelengths (in Ang)
@@ -228,19 +214,24 @@ NEAR_ABS_LAM_LIM = 50           # minimum allowed wavelength separation (Ang) be
 # dict-type absorber registries (doublet_keys, amplitude_dict) are excluded.
 # ==============================
 OVERRIDABLE_CONSTANTS = (
+
     # Instrument / survey wavelength limits and search thresholds
+
     'SMALL_WAVE',
     'LARGE_WAVE',
     'MIN_NPIXEL',
     'LAM_CIV_MIN',
+
     # Gaussian fit bound parameters
+
     'GAUSS_FIT_BD_CT',
     'GAUSS_FIT_X_SEP',
     'GAUSS_FIT_EDGE',
     'FIT_PARAM_SNR',
+
     # Algorithmic parameters
+
     'MIN_PIXELS_PER_PARAM',
-    'MAX_REDUCED_CHI2_FIT',
     'CANDIDATE_VALIDATION_NPIX',
     'SNR_DEFAULT_DPIX',
     'SNR_NSIG',
@@ -264,7 +255,8 @@ OVERRIDABLE_CONSTANTS = (
     'EW_FIT_WINDOW',
     'AODM_FLUX_CLIP_MIN',
     'ZABS_KNOWN_MAX_DV',
-    'NEAR_ABS_LAM_LIM'
+    'NEAR_ABS_LAM_LIM',
+    'QSO_EMISSION_LINES',
 )
 
 # ==============================
