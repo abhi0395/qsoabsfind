@@ -39,6 +39,8 @@ search_parameters = {
     'res_wave_end': 9000, # end wavelength for resolution curve
     'res_val_end': 2500, # resolution value at end wavelength
     'res_is_R': True, # if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values
+    'statistics':'median', # 'mean' or 'median' for QSOs in search window
+    'snr_cut':3, # SNR cut for candidate selection
     }
 
 # ==============================

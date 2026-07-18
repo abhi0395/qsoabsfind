@@ -527,7 +527,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
 def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
-                             vel1, vel2, min_dr, dr, max_dr,line_ratio,
+                             vel1, vel2, min_dr, dr, max_dr,
                              ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                              fit_param_std=None,
                              conf_level=0.95, vmax=10, verbose=False):
