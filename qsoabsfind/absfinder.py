@@ -501,10 +501,10 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 else:
                     dr, min_dr, max_dr = 0, 0, -1
                     ew1_snr, ew2_snr = 0, 0
-                good = check_absorber_selection(spec_index,             z_new, gaussian_parameters, bound,
+                good = check_absorber_selection(spec_index, z_new, gaussian_parameters, bound,
                                                lower_del_lam, c0, c1, upper_del_lam,
                                                sn1, sn_line1, sn2, sn_line2,
-                                               disp_vel1, disp_vel2, min_dr, dr, max_dr, line_ratio,
+                                               disp_vel1, disp_vel2, min_dr, dr, max_dr,
                                                ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
                                                fit_param_std=fit_param_std_temp[0],
                                                conf_level=conf_level, vmax=_constants.MAX_VEL_DISPERSION, verbose=verbose)

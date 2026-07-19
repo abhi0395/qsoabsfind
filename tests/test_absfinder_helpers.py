@@ -211,9 +211,10 @@ class TestBuildResult(unittest.TestCase):
                     'ew_1_error', 'ew_2_error', 'ew_total_error',
                     'z_abs_err', 'sn_1', 'sn_2', 'vel_disp1', 'vel_disp2',
                     'delta_chi2_line1', 'delta_chi2_line2', 'pure_redchi2'}
+
         result = _build_result(
             [0], [0], [[0]*6], [[0]*6], [0], [0], [0],
-            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
+            [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0])
         self.assertEqual(set(result.keys()), expected)
 
     def test_values_are_passed_through_unchanged(self):
