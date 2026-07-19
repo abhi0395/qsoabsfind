@@ -182,7 +182,6 @@ oscillator_parameters = {
 
 MIN_PIXELS_PER_PARAM = 2         # minimum pixels per free parameter required to constrain the double-Gaussian fit (min_pixels = MIN_PIXELS_PER_PARAM * nparam)
 CANDIDATE_VALIDATION_NPIX = 3   # pixels around a line minimum for candidate validation in find_valid_indices
-MAX_REDUCED_CHI2_FIT = 5.0          # maximum allowed reduced chi2 for a valid double-Gaussian fit
 SNR_DEFAULT_DPIX = 5             # fallback pixel window for SNR estimation when Gaussian sigma is unavailable
 SNR_NSIG = 3                     # Gaussian sigma multiplier for SNR integration window (~99.7% of flux)
 REDSHIFT_REFINE_WINDOW = 9       # pixel window for refining redshift by locating the flux minimum
@@ -205,7 +204,6 @@ SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the 
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
 ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
-NEAR_ABS_LAM_LIM = 50           # minimum allowed wavelength separation (Ang) between the two nearby absorbers
 
 # ==============================
 # User-overridable parameters
@@ -255,7 +253,6 @@ OVERRIDABLE_CONSTANTS = (
     'EW_FIT_WINDOW',
     'AODM_FLUX_CLIP_MIN',
     'ZABS_KNOWN_MAX_DV',
-    'NEAR_ABS_LAM_LIM',
     'QSO_EMISSION_LINES',
 )
 
