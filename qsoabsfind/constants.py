@@ -23,7 +23,7 @@ LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid 
 # Gaussian fit bound parameters
 # ==============================
 
-GAUSS_FIT_BD_CT = 1.0   # line-centre bound multiplier: allowed centre shift = BD_CT * d_pix
+GAUSS_FIT_BD_CT = 2.0   # line-centre bound multiplier: allowed centre shift = BD_CT * d_pix
 GAUSS_FIT_X_SEP = 30    # line-width upper cap: max sigma = X_SEP * del_sigma
 GAUSS_FIT_EDGE  = 0.1   # small numerical buffer on sigma bounds to avoid hard boundary at zero
 FIT_PARAM_SNR   = 1.0   # minimum fit-parameter SNR: each param must exceed its fitted error

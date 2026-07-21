@@ -484,24 +484,29 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
         index, double_gaussian, lam_fit, nmf_resi,
         error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
 
+
+    if np.all(np.isfinite(params)):
+        init_cond = params.copy()
+
     # ========== FIT IN OBSERVED FRAME FOR REDSHIFT ==========
     obs_init = [amp_first,
                 params[1] * (1 + z_k), params[2] * (1 + z_k),
                 amp_second,
                 params[4] * (1 + z_k), params[5] * (1 + z_k)]
+
     obs_params, obs_std, _, _, _, _ = double_curve_fit(
         index, double_gaussian, lam_fit * (1 + z_k), nmf_resi,
         error_fit=error_flux, bounds=None, init_cond=obs_init, maxefv=num_iter)
 
-    z_k, z_err = redshift_estimate(
-        obs_params[1], obs_params[4],
-        obs_std[1],    obs_std[4],
-        line_centre1, line_centre2)
-
-    # ========== SECOND REDSHIFT REFINEMENT ==========
-    z1 = find_z_from_minimum(wavelength, flux, line_centre1, z_k, window=window)
-    z2 = find_z_from_minimum(wavelength, flux, line_centre2, z_k, window=window)
-    z_k = 0.5 * (z1 + z2)
+    # Use fitted observed-frame centers for redshift.
+    # Do not jump back to pixel minima after this.
+    if np.all(np.isfinite(obs_params)) and np.all(np.isfinite(obs_std)):
+        z_k, z_err = redshift_estimate(
+            obs_params[1], obs_params[4],
+            obs_std[1],    obs_std[4],
+            line_centre1, line_centre2)
+    else:
+        z_err = 0.0
 
     # ========== SECOND FIT WITH REFINED REDSHIFT ==========
     lam_fit, nmf_resi, error_flux = _extract_rest_frame_spectrum(
@@ -510,6 +515,10 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
     params, std, ew1, ew2, ew_total, pcov = double_curve_fit(
         index, double_gaussian, lam_fit, nmf_resi,
         error_fit=error_flux, bounds=bound, init_cond=init_cond, maxefv=num_iter)
+
+
+    if np.all(np.isfinite(params)):
+        init_cond = params.copy()
 
     z_k, z_err = _z_from_rest_fit(params, std, z_k, line_centre1, line_centre2)
 

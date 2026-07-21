@@ -268,50 +268,79 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
         list: Best redshift from each contiguous group (minimum-flux weighted selection).
     """
 
-    # Ensure inputs are numpy arrays for easy manipulation
-    all_redshifts = np.array(redshifts)
-    fluxes = np.array(fluxes)
-    redshifts = []
-    for z in all_redshifts:
-        z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=_constants.REDSHIFT_REFINE_WINDOW)
-        z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=_constants.REDSHIFT_REFINE_WINDOW)
-        new_z = (line1 * z1 + line2 * z2) / (line1 + line2)
-        redshifts.append(new_z)
+    raw_z = np.asarray(redshifts, dtype=float)
+    fluxes = np.asarray(fluxes, dtype=float)
 
-    redshifts = np.array(redshifts)
+    good = np.isfinite(raw_z) & np.isfinite(fluxes)
 
-    # Check if redshifts array is empty
-    if len(redshifts) == 0:
+    raw_z = raw_z[good]
+    fluxes = fluxes[good]
+
+    if raw_z.size == 0:
         return []
 
-    # Initialize lists to store results
-    best_redshifts = []
+    order = np.argsort(raw_z)
+    raw_z = raw_z[order]
+    fluxes = fluxes[order]
 
-    # Sort redshifts and corresponding data
-    sorted_indices = np.argsort(redshifts)
-    redshifts = redshifts[sorted_indices]
-    fluxes = fluxes[sorted_indices]
+    groups = []
+    current = [0]
 
-    # Initialize the first group
-    current_group = [sorted_indices[0]]
-
-    # Group contiguous redshifts
-    for i in range(1, len(redshifts)):
-        if redshifts[i] - redshifts[i - 1] <= delta_z:
-            current_group.append(sorted_indices[i])
+    for i in range(1, raw_z.size):
+        if raw_z[i] - raw_z[i - 1] <= delta_z:
+            current.append(i)
         else:
-            # Select the redshift with the highest weight (i.e. minimum flux) in the current group
-            best_index = min(current_group, key=lambda idx: fluxes[idx])
-            best_redshifts.append(redshifts[best_index])
-            # Start a new group
-            current_group = [sorted_indices[i]]
+            groups.append(current)
+            current = [i]
 
-    # Select the best redshift in the last group
-    if current_group:
-        best_index = min(current_group, key=lambda idx: fluxes[idx])
-        best_redshifts.append(redshifts[best_index])
+    groups.append(current)
 
-    return best_redshifts
+    seeds = []
+
+    for group in groups:
+        group = np.asarray(group, dtype=int)
+
+        z_group = raw_z[group]
+        f_group = fluxes[group]
+
+        if z_group.size == 0:
+            continue
+
+        # 1. Deepest candidate pixel
+        z_deep = z_group[np.nanargmin(f_group)]
+
+        # 2. Median candidate location
+        z_med = np.nanmedian(z_group)
+
+        # 3. Absorption-depth weighted mean, safer than 1/residual**gamma
+        depth = 1.0 - f_group
+        depth = np.where(np.isfinite(depth) & (depth > 0.0), depth, 0.0)
+
+        if np.nansum(depth) > 0:
+            z_weight = np.nansum(z_group * depth) / np.nansum(depth)
+        else:
+            z_weight = z_med
+
+        for z in (z_deep, z_med, z_weight):
+            if np.isfinite(z):
+                seeds.append(z)
+
+    if len(seeds) == 0:
+        return []
+
+    # Remove very close duplicate seeds
+    seeds = np.sort(np.asarray(seeds, dtype=float))
+
+    cleaned = [seeds[0]]
+    min_sep = 0.10 * delta_z
+
+    for z in seeds[1:]:
+        if z - cleaned[-1] > min_sep:
+            cleaned.append(z)
+
+    return cleaned
+
+
 
 def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_constants.REDSHIFT_REFINE_WINDOW, log=False):
     """Estimate absorber redshift from the minimum flux near the expected line center.
@@ -748,21 +777,29 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
             - z_err (float): Estimated error in the corrected redshift.
     """
 
-    z1 = (fitted_obs_l1 / line1) - 1
-    # define from first line and redshift (more stable and correct)
-    fitted_obs_l2 = fitted_obs_l1 + (line2 - line1) * (1 + z1)
-    z2 = fitted_obs_l2 / line2 - 1
+    z1 = fitted_obs_l1 / line1 - 1.0
+    z2 = fitted_obs_l2 / line2 - 1.0
 
-    err1 = (std_fitted_obs_l1 / line1)
-    err2 = (std_fitted_obs_l2 / line2)
+    err1 = std_fitted_obs_l1 / line1
+    err2 = std_fitted_obs_l2 / line2
 
-    # New redshifts computed using line centers
-    # of the first and second Gaussian using a weighted mean
+    if (
+        np.isfinite(err1)
+        and np.isfinite(err2)
+        and err1 > 0.0
+        and err2 > 0.0
+    ):
+        w1 = 1.0 / err1**2
+        w2 = 1.0 / err2**2
 
-    w1 = line1 / (line1 + line2)
-    w2 = line2 / (line1 + line2)
-    z_corr = w1 * z1 + w2 * z2
-    z_err = np.sqrt((w1 * err1)**2 + (w2 * err2)**2)
+        z_corr = (w1 * z1 + w2 * z2) / (w1 + w2)
+        z_err = np.sqrt(1.0 / (w1 + w2))
+    else:
+        w1 = line1 / (line1 + line2)
+        w2 = line2 / (line1 + line2)
+
+        z_corr = w1 * z1 + w2 * z2
+        z_err = 0.0
 
     return z_corr, z_err
 

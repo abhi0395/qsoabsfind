@@ -406,10 +406,24 @@ def _run_convolution_and_find_candidates(absorber, mult_resi, unmsk_residual, re
     combined_final_our_z = list(set(combined_final_our_z))
     if verbose:
         logger.debug("potential candidates before combining: %s", combined_final_our_z)
-    combined_final_our_z = median_selection_after_combining(combined_final_our_z, lam_obs,
-                                                            residual, d_pix=d_pix,
-                                                            use_kernel=absorber, delta_z=del_z)
-    combined_final_our_z = [x for x in combined_final_our_z if not np.isnan(x)]
+
+    combined_final_our_z = np.asarray(combined_final_our_z, dtype=float)
+    combined_final_our_z = combined_final_our_z[np.isfinite(combined_final_our_z)]
+
+    if combined_final_our_z.size == 0:
+        combined_final_our_z = []
+    else:
+        combined_final_our_z = np.sort(combined_final_our_z)
+
+        cleaned = [combined_final_our_z[0]]
+        min_sep = 0.10 * del_z
+
+        for z in combined_final_our_z[1:]:
+            if z - cleaned[-1] > min_sep:
+                cleaned.append(z)
+
+        combined_final_our_z = cleaned
+
     if verbose:
         logger.debug("potential candidates after combining: %s", combined_final_our_z)
     return combined_final_our_z
