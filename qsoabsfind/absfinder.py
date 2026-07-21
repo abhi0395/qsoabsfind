@@ -172,7 +172,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
                             "dv", "lam_red", "lam_blue",
-                            "snr_cut", "statistics", "mask_emline"]
+                            "snr_cut", "statistics", "mask_emline", "continuum_error_frac"]
 
     conv_kwargs = {}
     for key in kwargs.keys():
@@ -433,7 +433,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                          absorber, d_pix, f1, f2, resolution, line_ratio,
                          lower_del_lam, upper_del_lam, sn_line1, sn_line2,
                          logwave, use_covariance, nboot, conf_level, verbose,
-                         trapz_ew_sigma=None, continuum_error_frac=0.05, frac_continuum_required=0.90):
+                         trapz_ew_sigma=None):
     # For each candidate redshift, re-run the double-Gaussian fit, compute SNR,
     # velocity dispersion and doublet ratio, then keep only those that pass
     # check_absorber_selection.  All output arrays are indexed the same way as
@@ -441,7 +441,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     z_abs, _, fit_param, _, _, _, _, _, _, _, _, _ = measure_absorber_properties_double_gaussian(
         index=spec_index, wavelength=lam_obs, flux=residual, error=error,
         absorber_redshift=z_abs_candidates, bound=bound, use_kernel=absorber,
-        d_pix=d_pix, use_covariance=use_covariance, nboot=nboot, continuum_error_frac=continuum_error_frac)
+        d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
 
     n = len(z_abs)
     pure_z_abs = np.zeros(n)
@@ -471,7 +471,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
             z_new, z_new_error, fit_param_temp, fit_param_std_temp, EW_first_temp_mean, EW_second_temp_mean, EW_total_temp_mean, EW_first_error_temp, EW_second_error_temp, EW_total_error_temp, delta_chi2_line1, delta_chi2_line2 = measure_absorber_properties_double_gaussian(
                 index=spec_index, wavelength=lam_obs, flux=residual, error=error,
                 absorber_redshift=[z_abs[m]], bound=bound, use_kernel=absorber,
-                d_pix=d_pix, use_covariance=use_covariance, nboot=nboot, continuum_error_frac=continuum_error_frac)
+                d_pix=d_pix, use_covariance=use_covariance, nboot=nboot)
             z_new = float(z_new[0])
             z_new_error = float(z_new_error[0])
             delta_chi2_line1 = delta_chi2_line1[0]
@@ -491,7 +491,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                 # (inside check_absorber_selection) and the stored catalog values.
                 if trapz_ew_sigma is not None:
                     _tr = trapezoidal_ew(lam_obs, residual, error, z_new,
-                                        c0, c1, sig1, sig2, n_sigma=trapz_ew_sigma, continuum_error_frac=continuum_error_frac)
+                                        c0, c1, sig1, sig2, n_sigma=trapz_ew_sigma)
                     ew1_val      = _tr['ew1']      if np.isfinite(_tr['ew1'])      else 0.0
                     ew2_val      = _tr['ew2']      if np.isfinite(_tr['ew2'])      else 0.0
                     ew_total_val = _tr['ew_total'] if np.isfinite(_tr['ew_total']) else 0.0
@@ -575,7 +575,7 @@ def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residua
     return (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True, continuum_error_frac=0.05, frac_continuum_required=0.90):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -630,7 +630,6 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             ``res_val_start``. Default is ``None``.
         res_is_R (bool, optional): If ``True`` (default), ``res_val_*`` are resolving powers
             R = lambda / FWHM_lambda. If ``False``, they are ``sigma_v`` in km/s.
-        frac_continuum_required (float): Minimum fraction of pixels in the local continuum window
 
     Returns:
         dict: Contains lists of various parameters related to detected absorbers.
@@ -764,7 +763,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         spec_index, combined_final_our_z, lam_obs, residual, error, bound, absorber,
         d_pix, f1, f2, resolution, line_ratio, lower_del_lam, upper_del_lam,
         sn_line1, sn_line2, logwave, use_covariance, nboot, conf_level, verbose,
-        trapz_ew_sigma=trapz_ew_sigma, continuum_error_frac=continuum_error_frac, frac_continuum_required=frac_continuum_required)
+        trapz_ew_sigma=trapz_ew_sigma)
 
     if zabs_known_input is None:
         # convolution mode: discard failed candidates and remove false positives

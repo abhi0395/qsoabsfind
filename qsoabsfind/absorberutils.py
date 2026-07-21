@@ -554,11 +554,11 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         "physical_min_dr - dr_error <= dr <= physical_max_dr + dr_error"
         ),
 
-        (ew1_snr > sn_line1, f"{ew1_snr} > {sn_line1}",
-         f"ew1_snr > {sn_line1}"),
+        (ew1_snr > 1, f"{ew1_snr} > 1",
+         f"ew1_snr > 1"),
 
-        (ew2_snr > sn_line2, f"{ew2_snr} > {sn_line2}",
-         f"ew2_snr > {sn_line2}"),
+        (ew2_snr > 1, f"{ew2_snr} > 1",
+         f"ew2_snr > 1"),
 
          (delta_chi2_line1 > critical_value, f"{delta_chi2_line1} > {critical_value}",
          f"delta_chi2_line1 > {critical_value}"),
