@@ -3,7 +3,9 @@ Tests for utils.py
 """
 
 import os
+import tempfile
 import unittest
+from types import SimpleNamespace
 import numpy as np
 from qsoabsfind.utils import (
     convolution_fun,
@@ -20,6 +22,7 @@ from qsoabsfind.utils import (
     vel_dispersion,
     modify_units,
     match_order,
+    plot_absorber,
 )
 
 # Path to a real FITS file used for file-based tests
@@ -232,6 +235,36 @@ class TestMatchOrder(unittest.TestCase):
     def test_size_mismatch_raises(self):
         with self.assertRaises(AssertionError):
             match_order(np.array([1, 2]), np.array([1, 2, 3]))
+
+
+class TestPlotAbsorber(unittest.TestCase):
+
+    def test_continuum_dict_saves_plot(self):
+        spectra = SimpleNamespace(
+            wavelength=np.linspace(2790.0, 2820.0, 200),
+            flux=np.ones(200),
+            error=np.full(200, 0.01),
+        )
+        zabs = {
+            'Z_ABS': [0.5],
+            'GAUSS_FIT': [np.array([0.5, 2796.35, 2.0, 0.3, 2803.52, 2.0])],
+        }
+        continuum_dict = {
+            'flux': np.ones(200),
+            'continuum': np.ones(200) + 0.05,
+            'cont_legend': 'NMF continuum',
+        }
+
+        with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
+            plot_absorber(
+                spectra,
+                'MgII',
+                zabs,
+                plot_filename=tmp.name,
+                continuum_dict=continuum_dict,
+                title='Test absorber',
+            )
+            self.assertTrue(os.path.exists(tmp.name))
 
 
 class TestVelDispersion(unittest.TestCase):

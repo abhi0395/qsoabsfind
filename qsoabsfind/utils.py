@@ -17,7 +17,7 @@ import re
 from importlib.metadata import version, PackageNotFoundError
 
 # Constants
-from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys, amplitude_dict
+from .constants import lines, speed_of_light, doublet_keys, amplitude_dict, QSO_EMISSION_LINES
 from . import constants as _constants
 
 def get_package_versions():
@@ -530,7 +530,7 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     return corr_del_v1, corr_del_v2
 
 
-def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):
+def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, continuum_dict=None, **kwargs):
     """
     Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along
     with its Gaussian fit in the current working directory or in the user-defined
@@ -543,6 +543,9 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
             'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.
+        continuum_dict (dict or None): Optional dictionary with 'flux' and
+            'continuum' arrays, plus an optional 'cont_legend' label and
+            'ylabel' override.
         **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
                   xlabel (str): The label for the x-axis.
                   ylabel (str): The label for the y-axis.
@@ -556,6 +559,7 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
     fontsize = kwargs.pop('fontsize', 16)
     ls = kwargs.pop('ls', '-')
     lw = kwargs.pop('lw', 1.5)
+    panel_color = kwargs.pop('panel_color', kwargs.pop('color', 'black'))
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
     if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
@@ -575,47 +579,168 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
 
-    fig = plt.figure(figsize=(13.5, 8))
+    has_continuum = continuum_dict is not None
+    continuum_zoom = bool(continuum_dict.get('zoom', False)) if has_continuum else False
+    n_rows = 2 if (has_continuum and continuum_zoom) else (3 if has_continuum else 2)
+    fig = plt.figure(figsize=(13.5, 8 + 1.5 * int(has_continuum and not continuum_zoom)))
     fig.subplots_adjust(hspace=0.15, wspace=0.15)
-    fig.suptitle(title, fontsize=fontsize)
 
-    ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
-    ax_main.plot(lam, residual, ls=ls, lw=lw, label='residual', **kwargs)
-    if show_error:
-        ax_main.plot(lam, error, ls=ls, lw=lw, label='error', **kwargs)
+    if has_continuum:
+        flux_cont = continuum_dict.get('flux', None)
+        continuum_data = continuum_dict.get('continuum', None)
+        zqso = continuum_dict.get('zqso', None)
+        if continuum_zoom:
+            fig.suptitle(title, fontsize=fontsize)
+        else:
+            fig.suptitle('')
+    else:
+        fig.suptitle(title, fontsize=fontsize)
+
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
-    ax_main.set_xlim(xmin, xmax)
-    ax_main.legend(prop={'size':11})
-    for z in redshifts:
-        ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
-        ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
-    ax_main.set_xlabel(xlabel, fontsize=fontsize)
-    ax_main.set_ylabel(ylabel, fontsize=fontsize)
-    ax_main.grid(True)
-    ax_main.minorticks_on()
-    ylo = -1
-    yhi = np.nanpercentile(residual[ymask], 99)
-    ymargin = 0.5 * (yhi - ylo)
-    ax_main.set_ylim(ylo, yhi + ymargin)
-    ax_main.tick_params(axis='both', which='major', labelsize=13)
-    ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+
+    if has_continuum and not continuum_zoom:
+        if flux_cont is None or continuum_data is None:
+            raise ValueError("continuum_dict must contain 'flux' and 'continuum' arrays")
+        if flux_cont.shape != residual.shape or continuum_data.shape != residual.shape:
+            raise ValueError("continuum_dict arrays must match the shape of spectra.flux")
+
+        ax_top = plt.subplot2grid((n_rows, num_absorbers), (0, 0), colspan=num_absorbers)
+        ax_main = plt.subplot2grid((n_rows, num_absorbers), (1, 0), colspan=num_absorbers, sharex=ax_top)
+        ax_top.plot(lam, flux_cont, ls=ls, lw=lw, color=panel_color, label='flux', **kwargs)
+        ax_top.plot(lam, continuum_data, ls=ls, lw=lw, color='red', label=continuum_dict.get('cont_legend', 'NMF continuum'), **kwargs)
+        if zqso is not None:
+            obs_wave = {f'{line}':(1. + zqso) * wave for line, wave in QSO_EMISSION_LINES.items()
+                            if (1. + zqso) * wave >= xmin and (1. + zqso) * wave <= xmax}
+            for line, wave in obs_wave.items():
+                ax_top.axvline(x=wave, color='orange', ls='--', lw=1.5, alpha=0.7)
+                ax_top.text(wave+65, ax_top.get_ylim()[1] * 0.9, f'{line}', rotation=90, color='orange', fontsize=10, ha='center', va='top')
+
+        ax_top.set_xlim(xmin, xmax)
+        ax_top.set_title(title, fontsize=fontsize)
+        ax_top.set_ylabel(continuum_dict.get('ylabel', ylabel), fontsize=fontsize)
+        ax_top.grid(True)
+        ax_top.minorticks_on()
+        ax_top.tick_params(axis='both', which='major', labelsize=13)
+        ax_top.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+        ax_top.legend(prop={'size':11})
+        ax_top.tick_params(labelbottom=False)
+    else:
+        ax_main = plt.subplot2grid((n_rows, num_absorbers), (0, 0), colspan=num_absorbers)
+
+    if not has_continuum:
+        ax_main.plot(lam, residual, ls=ls, lw=lw, color=panel_color, label='residual', **kwargs)
+        if show_error:
+            ax_main.plot(lam, error, ls=ls, lw=lw, color='gray', label='error', **kwargs)
+        ax_main.set_xlim(xmin, xmax)
+        ax_main.legend(prop={'size':11})
+        for z in redshifts:
+            ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
+            ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
+        ax_main.set_xlabel(xlabel, fontsize=fontsize)
+        ax_main.set_ylabel(ylabel, fontsize=fontsize)
+        ax_main.grid(True)
+        ax_main.minorticks_on()
+        ylo = -0.25
+        yhi = np.nanpercentile(residual[ymask], 99)
+        ymargin = 0.5 * (yhi - ylo)
+        ax_main.set_ylim(ylo, yhi + ymargin)
+        ax_main.tick_params(axis='both', which='major', labelsize=13)
+        ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+    elif not continuum_zoom:
+        ax_main.plot(lam, residual, ls=ls, lw=lw, color=panel_color, label='residual', **kwargs)
+        if show_error:
+            ax_main.plot(lam, error, ls=ls, lw=lw, color='gray', label='error', **kwargs)
+        ax_main.set_xlim(xmin, xmax)
+        ax_main.legend(prop={'size':11})
+        for z in redshifts:
+            ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
+            ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
+        ax_main.set_xlabel(xlabel, fontsize=fontsize)
+        ax_main.set_ylabel(ylabel, fontsize=fontsize)
+        ax_main.grid(True)
+        ax_main.minorticks_on()
+        ylo = -1
+        yhi = np.nanpercentile(residual[ymask], 99)
+        ymargin = 0.5 * (yhi - ylo)
+        ax_main.set_ylim(ylo, yhi + ymargin)
+        ax_main.tick_params(axis='both', which='major', labelsize=13)
+        ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
     for idx, z in enumerate(redshifts):
         shift_z = 1 + z
-        ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
+        if has_continuum and continuum_zoom:
+            x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
+            mask = (lam > x1 - sep) & (lam < x2 + sep)
+            ax_top = plt.subplot2grid((n_rows, num_absorbers), (0, idx), sharex=None)
+            ax_top.plot(lam[mask], flux_cont[mask], ls=ls, lw=lw, color=panel_color, label='flux', **kwargs)
+            ax_top.plot(lam[mask], continuum_data[mask], ls=ls, lw=lw, color='red', label=continuum_dict.get('cont_legend', 'NMF continuum'), **kwargs)
+            ax_top.set_xlim([x1 - sep, x2 + sep])
+            ax_top.set_ylabel(continuum_dict.get('ylabel', ylabel), fontsize=fontsize)
+            ax_top.grid(True)
+            ax_top.minorticks_on()
+            ax_top.tick_params(axis='both', which='major', labelsize=13)
+            ax_top.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+            ax_top.legend(prop={'size':11})
+            ax_top.tick_params(labelbottom=False)
+
+            ax_zoom = plt.subplot2grid((n_rows, num_absorbers), (1, idx), sharex=ax_top)
+
+            if not show_error:
+                ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, color=panel_color, label='data', **kwargs)
+            else:
+                ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], ls="-", marker='o', markersize=5, color=panel_color, **kwargs)
+            ax_zoom.axvline(x=x1, color='r', ls='--')
+            ax_zoom.axvline(x=x2, color='r', ls='--')
+            ax_zoom.set_xlim([x1 - sep, x2 + sep])
+            zoom_y = residual[mask]
+            finite = zoom_y[np.isfinite(zoom_y)]
+            if finite.size:
+                y_min = np.nanpercentile(finite, 16)
+                y_max = np.nanpercentile(finite, 84)
+                y_margin = 0.2 * (y_max - y_min) if y_max > y_min else 0.2
+                ylo = max(0.1, y_min-0.15) #- y_margin
+                yhi = min(1.25, y_max+0.15) #+ y_margin
+                ax_zoom.set_ylim(ylo, yhi)
+            ax_zoom.minorticks_on()
+            ax_zoom.grid(True)
+            ax_zoom.set_xlabel(xlabel, fontsize=fontsize)
+            ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
+            ax_zoom.tick_params(axis='both', which='major', labelsize=13)
+            ax_zoom.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+            if fit_params is not None:
+                params = fit_params[idx]
+                lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
+                fit_curve = double_gaussian(
+                    lam_fit, params[0], shift_z * params[1], shift_z * params[2],
+                    params[3], shift_z * params[4], shift_z * params[5]
+                )
+                ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
+            ax_zoom.legend(prop={'size':11})
+            continue
+
+        zoom_row = 2 if has_continuum else 1
+        ax_zoom = plt.subplot2grid((n_rows, num_absorbers), (zoom_row, idx))
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
         mask = (lam > x1 - sep) & (lam < x2 + sep)
         if not show_error:
-            ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, label='data', **kwargs)
+            ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, color=panel_color, label='data', **kwargs)
         else:
-            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data', **kwargs)
+            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color=panel_color, markersize=6, label='data', **kwargs)
         ax_zoom.axvline(x=x1, color='r', ls='--')
         ax_zoom.axvline(x=x2, color='r', ls='--')
         ax_zoom.set_xlim([x1 - sep, x2 + sep])
-        y_min, y_max = max(0, np.nanmin(residual[mask])), np.nanmax(residual[mask])
-        y_margin = 0.2 * (y_max - y_min)
-        ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
+        zoom_y = residual[mask]
+        finite = zoom_y[np.isfinite(zoom_y)]
+        if finite.size:
+            y_min = np.nanpercentile(finite, 1)
+            y_max = np.nanpercentile(finite, 99)
+            y_margin = 0.2 * (y_max - y_min) if y_max > y_min else 0.2
+            ylo = max(0.0, y_min-0.1) #- y_margin
+            yhi = min(1.25, y_max+0.1) #+ y_margin
+            print('INFO: Zoomed y-limits for absorber {} at z={:.3f}: ylo={:.3f}, yhi={:.3f}'.format(absorber, z, ylo, yhi))
+            ax_zoom.set_ylim(ylo, yhi)
+
         ax_zoom.set_title(f'{absorber} at z={z:.3f}', fontsize=fontsize)
         ax_zoom.minorticks_on()
         ax_zoom.grid(True)
@@ -637,18 +762,12 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     # Save or display the plot
     if plot_filename is not None:
-        # Get the current working directory
         current_dir = os.getcwd()
-
-        # Define the full path for the plot
         plot_path = plot_filename
         if not os.path.isabs(plot_filename):
             plot_path = os.path.join(current_dir, plot_filename)
-
-        # Save the plot
         plt.savefig(plot_path)
         plt.close()
-
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
