@@ -1,12 +1,43 @@
 """
-This script contains functions to calculate column densities for absorbers
-using Apparent Optical Depth Method (AODM) of Savage & Sembach 1991
+Column-density measurements for absorption-line doublets using the
+Apparent Optical Depth Method (AODM; Savage & Sembach 1991).
 
-Paper link: https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract.
+Important conventions
+---------------------
+* ``velocity_range`` is a HALF-WIDTH: the integration interval is
+  [-velocity_range, +velocity_range] km/s around each transition.
+* Pixels at or below ``AODM_FLUX_CLIP_MIN`` are retained at the floor and
+  flagged as saturated/lower-limit pixels; they are never discarded.
+* Flux values above unity are NOT clipped. Their negative apparent optical
+  depth is retained so noise is not treated asymmetrically.
+* Statistical and continuum-placement uncertainties are propagated separately.
+  Continuum placement is treated as a correlated multiplicative systematic.
+* Unresolved saturation is diagnosed from the difference between the
+  velocity-integrated AOD columns of the weak and strong transitions.
 
-We adopt the inverse-variance weighted column density for doublets with DR > 2 - DR_error. For systems with DR <= 2 - DR_error.
-We also apply the Savage & Sembach (1991) correction to the weaker line when both transitions are measured.
-Otherwise, we adopt the weaker column density as a lower limit, or stronger line as a fallback if weaker line is unavailable.
+Flags:
+
+Total doublet AODM column.
+
+    SATURATION
+    ----------
+     0 : no significant AOD evidence for unresolved saturation
+     1 : unresolved saturation; S&S correction applied
+     2 : severe saturation / outside S&S calibration; lower limit
+     3 : saturation indeterminate because only one line is usable
+    -2 : inconsistent doublet (N_weak significantly < N_strong)
+    -1 : failed
+
+    fN
+    --
+     1 : inverse-variance weighted doublet
+     2 : line 1 only
+     3 : line 2 only
+     4 : S&S-corrected weak line
+     5 : lower limit from weak line
+     6 : lower limit from strong line
+     7 : inconsistent doublet
+    -1 : failed
 """
 
 import time
@@ -14,332 +45,652 @@ from multiprocessing import Pool
 import logging
 import numpy as np
 from astropy.table import Table, vstack
-from .absorberutils import calculate_doublet_ratio
 
 logger = logging.getLogger(__name__)
 
-# Constants
 from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys
 from . import constants as _constants
 
-def ss1991_correction(delta_logN):
+
+_SS_DELTA_LOGN = np.arange(0.00, 0.25, 0.01)
+
+_SS_CORRECTION = np.array([
+    0.000, 0.010, 0.020, 0.030, 0.040,
+    0.051, 0.061, 0.073, 0.085, 0.097,
+    0.111, 0.125, 0.140, 0.157, 0.175,
+    0.195, 0.217, 0.243, 0.273, 0.307,
+    0.348, 0.396, 0.453, 0.520, 0.600,
+], dtype=float)
+
+_AODM_NORM = 3.768e14
+
+
+def ss1991_correction(delta_logN, return_slope=False):
+    """Interpolate Savage & Sembach (1991) Table 4."""
+    if not np.isfinite(delta_logN) or delta_logN < 0.0 or delta_logN > 0.24:
+        return (np.nan, np.nan) if return_slope else np.nan
+
+    correction = float(np.interp(delta_logN, _SS_DELTA_LOGN, _SS_CORRECTION))
+
+    if not return_slope:
+        return correction
+
+    if delta_logN >= _SS_DELTA_LOGN[-1]:
+        i = len(_SS_DELTA_LOGN) - 2
+    else:
+        i = np.searchsorted(_SS_DELTA_LOGN, delta_logN, side="right") - 1
+        i = int(np.clip(i, 0, len(_SS_DELTA_LOGN) - 2))
+
+    slope = (
+        (_SS_CORRECTION[i + 1] - _SS_CORRECTION[i])
+        / (_SS_DELTA_LOGN[i + 1] - _SS_DELTA_LOGN[i])
+    )
+    return correction, float(slope)
+
+
+def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac=0.0):
     """
-    Interpolate Savage & Sembach (1991) Table 4 to get Delta_log N correction.
+    Apparent optical depth and statistical uncertainty.
 
-    Args:
-        delta_logN (float): difference between logN of first and second lines
-
-    Returns:
-        array: correction based on Savage & Sembach 1991 paper
+    continuum_error_frac is kept for API compatibility. Continuum-placement
+    uncertainty is handled coherently in single_column_density().
     """
-    delta_vals = np.array([
-        0.000, 0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090,
-        0.100, 0.110, 0.110, 0.120, 0.130, 0.140, 0.150, 0.160, 0.170, 0.180,
-        0.190, 0.200, 0.210, 0.220, 0.230, 0.240
-    ])
-    correction_vals = np.array([
-        0.000, 0.010, 0.020, 0.030, 0.040, 0.051, 0.061, 0.073, 0.085, 0.097,
-        0.111, 0.125, 0.125, 0.140, 0.157, 0.175, 0.195, 0.217, 0.243, 0.273,
-        0.307, 0.348, 0.396, 0.453, 0.520, 0.600
-    ])
-    correction = np.interp(delta_logN, delta_vals, correction_vals, left=0.0, right=0.0)
+    F_lambda = np.asarray(F_lambda, dtype=float)
+    sigma_F_lambda = np.asarray(sigma_F_lambda, dtype=float)
 
-    return correction
+    floor = float(_constants.AODM_FLUX_CLIP_MIN)
+    flux_use = np.maximum(F_lambda, floor)
 
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tau = -np.log(flux_use)
+        sigma_tau = sigma_F_lambda / flux_use
 
-def optical_depth(F_lambda, sigma_F_lambda, continuum_error_frac):
-
-    """ Function to calculate optical depth (tau) of absorption feature
-
-    Args:
-        F_lambda (array): continuum normalized flux
-        sigma_F_lambda (array): errors on continuum normalized flux
-        continuum_error_frac (float): assumed systematics on continuum normalized flux (default 5%)
-
-    Returns:
-        tuple: apparent optical depth array and corresponding error arrays
-    """
-    F_lambda = np.clip(F_lambda, _constants.AODM_FLUX_CLIP_MIN, 1)  # Avoid log(0) issues
-    tau = -np.log(F_lambda)
-    sigma_tau_cont = np.log(1 + continuum_error_frac * np.exp(tau))
-    sigma_F_lambda_inflated = np.sqrt(sigma_F_lambda**2 + sigma_tau_cont**2)
-    sigma_tau = sigma_F_lambda_inflated / (F_lambda)
     return tau, sigma_tau
 
-# Function to convert wavelength to velocity
 
 def velocity_from_wavelength(lambda_array, lambda_0, z, logwave=False):
-
-    """Function to convert wavelength into velocity pixels
-
-    Args:
-        lambda_array (array): observed wavelength (Angstrom)
-        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
-        z (float): redshift of absorber
-        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
-
-    Returns:
-        tuple: velocities (observed and in rest-frame, array in km/s)
     """
-    if not logwave:
-        d_lambda = np.mean(lambda_array[1:] - lambda_array[:-1])
-        d_lambda = np.ones(lambda_array.size) * d_lambda
+    Convert observed wavelength to velocity relative to lambda_0*(1+z).
+
+    Returns per-pixel velocity width and velocity coordinate, both in km/s.
+    """
+    lambda_array = np.asarray(lambda_array, dtype=float)
+
+    if lambda_array.size < 2:
+        nan = np.full(lambda_array.size, np.nan)
+        return nan.copy(), nan.copy()
+
+    lambda_obs = float(lambda_0) * (1.0 + float(z))
+    velocity = speed_of_light * (lambda_array / lambda_obs - 1.0)
+    dv_pixel = np.abs(np.gradient(velocity))
+
+    return dv_pixel, velocity
+
+
+def _empty_single_result():
+    return {
+        "N": np.nan,
+        "N_err": np.nan,
+        "N_err_stat": np.nan,
+        "N_err_cont": np.nan,
+        "N_cont_plus": np.nan,
+        "N_cont_minus": np.nan,
+        "logN": np.nan,
+        "err_logN": np.nan,
+        "flag": -1,
+        "is_lower_limit": False,
+        "n_saturated": 0,
+        "n_pixels": 0,
+    }
+
+
+def _integrated_aod_column(flux, dv_pixel, f, lambda_0):
+    floor = float(_constants.AODM_FLUX_CLIP_MIN)
+    flux_use = np.maximum(np.asarray(flux, dtype=float), floor)
+    tau = -np.log(flux_use)
+
+    k_norm = _AODM_NORM / (float(lambda_0) * float(f))
+    return k_norm * np.sum(tau * dv_pixel)
+
+
+def single_column_density(
+    F_lambda,
+    error,
+    wavelength,
+    z,
+    f,
+    lambda_0,
+    continuum_error_frac,
+    velocity_range,
+    logwave,
+):
+    """
+    Velocity-integrated AODM column for one transition.
+
+    velocity_range is the HALF-WIDTH in km/s.
+    """
+    F_lambda = np.asarray(F_lambda, dtype=float)
+    error = np.asarray(error, dtype=float)
+    wavelength = np.asarray(wavelength, dtype=float)
+
+    if not (
+        F_lambda.shape == error.shape == wavelength.shape
+        and F_lambda.ndim == 1
+        and wavelength.size >= 2
+        and np.isfinite(z)
+        and np.isfinite(f)
+        and f > 0
+        and np.isfinite(lambda_0)
+        and lambda_0 > 0
+        and np.isfinite(velocity_range)
+        and velocity_range > 0
+    ):
+        return _empty_single_result()
+
+    dv_pixel, velocity = velocity_from_wavelength(
+        wavelength, lambda_0, z, logwave=logwave
+    )
+
+    in_window = (velocity >= -velocity_range) & (velocity <= velocity_range)
+    good = (
+        in_window
+        & np.isfinite(F_lambda)
+        & np.isfinite(error)
+        & np.isfinite(dv_pixel)
+        & (error > 0)
+        & (dv_pixel > 0)
+    )
+
+    if np.count_nonzero(good) < 2:
+        return _empty_single_result()
+
+    flux = F_lambda[good]
+    err = error[good]
+    dv = dv_pixel[good]
+
+    floor = float(_constants.AODM_FLUX_CLIP_MIN)
+    saturated = flux <= floor
+    flux_use = np.maximum(flux, floor)
+
+    tau, sigma_tau_stat = optical_depth(flux_use, err, continuum_error_frac=0.0)
+
+    k_norm = _AODM_NORM / (float(lambda_0) * float(f))
+    N_line = k_norm * np.sum(tau * dv)
+    sig_N_stat = k_norm * np.sqrt(np.sum((sigma_tau_stat * dv) ** 2))
+
+    eps = 0.0 if continuum_error_frac is None else float(continuum_error_frac)
+    if not np.isfinite(eps) or eps < 0 or eps >= 1:
+        raise ValueError("continuum_error_frac must satisfy 0 <= value < 1")
+
+    if eps > 0:
+        flux_cont_plus = flux / (1.0 + eps)
+        flux_cont_minus = flux / (1.0 - eps)
+
+        N_cont_plus = _integrated_aod_column(flux_cont_plus, dv, f, lambda_0)
+        N_cont_minus = _integrated_aod_column(flux_cont_minus, dv, f, lambda_0)
+
+        sig_N_cont = max(
+            abs(N_cont_plus - N_line),
+            abs(N_cont_minus - N_line),
+        )
     else:
-        d_lambda = np.mean(np.log10(lambda_array[1:]) - np.log10(lambda_array[:-1]))
-        d_lambda = lambda_array * (10**d_lambda - 1)
+        N_cont_plus = N_line
+        N_cont_minus = N_line
+        sig_N_cont = 0.0
 
-    lambda_obs  = lambda_0 * (1 + z)
-    dv = (lambda_array - lambda_obs) / lambda_obs * speed_of_light
-    return speed_of_light * d_lambda / (lambda_obs), dv # Velocity in km/s
+    sig_N_line = np.sqrt(sig_N_stat**2 + sig_N_cont**2)
 
-# Function to calculate total column density integrated over velocity range
-
-def single_column_density(F_lambda, error, wavelength, z, f, lambda_0, continuum_error_frac, velocity_range, logwave):
-
-    """Function to calculate apparent column density for one line using Savage & Sembach 1991 method
-
-    Args:
-        F_lambda (array): continuum normalized flux
-        error (array): continuum normalized errors
-        wavelength (array): observed wavelength (Angstrom)
-        z (float): redshift of absorber
-        f (float): oscillator strength of line transition
-        lambda_0 (float): rest-frame wavelength of given absorber (Angstrom)
-        continuum_error_frac (float): systematics on continuum normalized flux
-        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
-        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
-
-    Returns:
-        dict: dictionary containing column density and error
-
-    """
-
-    # Step 1: Convert wavelength to velocity
-
-    v_array, dv_absorber = velocity_from_wavelength(wavelength, lambda_0, z, logwave)
-    velocity_filter = (dv_absorber >= -velocity_range) & (dv_absorber <= velocity_range)
-    F_lam = F_lambda[velocity_filter]
-    err_F_lam = error[velocity_filter]
-    sel = (~np.isnan(F_lam)) & (F_lam > _constants.AODM_FLUX_CLIP_MIN) & (F_lam < 1 + err_F_lam)
-    F_lam = F_lam[sel]
-    delta_dv_i = v_array[velocity_filter][sel]
-    err_F_lam = err_F_lam[sel]
-    tau, sigma_tau = optical_depth(F_lam, err_F_lam, continuum_error_frac)
-
-    k_norm = 10**14.5762 / (lambda_0 * f)
-
-    N_line = k_norm * np.nansum(tau* delta_dv_i)
-    sig_N_line = k_norm * np.sqrt(np.nansum((sigma_tau * delta_dv_i) ** 2))
-
-    if N_line > 0 and sig_N_line > 0 and not np.isnan(N_line):
+    if (
+        np.isfinite(N_line)
+        and N_line > 0
+        and np.isfinite(sig_N_line)
+        and sig_N_line >= 0
+    ):
         log_N = np.log10(N_line)
-        err_log_N = sig_N_line / (N_line * np.log(10))
+        err_log_N = sig_N_line / (N_line * np.log(10.0))
         flag = 1
     else:
-        flag = -1
-        N_line, sig_N_line = np.nan, np.nan
-        log_N, err_log_N = np.nan, np.nan
+        result = _empty_single_result()
+        result["is_lower_limit"] = bool(np.any(saturated))
+        result["n_saturated"] = int(np.sum(saturated))
+        result["n_pixels"] = int(flux.size)
+        return result
 
-    results = {'N':N_line, 'N_err':sig_N_line, 'logN':log_N, 'err_logN':err_log_N, 'flag':flag}
+    return {
+        "N": float(N_line),
+        "N_err": float(sig_N_line),
+        "N_err_stat": float(sig_N_stat),
+        "N_err_cont": float(sig_N_cont),
+        "N_cont_plus": float(N_cont_plus),
+        "N_cont_minus": float(N_cont_minus),
+        "logN": float(log_N),
+        "err_logN": float(err_log_N),
+        "flag": flag,
+        "is_lower_limit": bool(np.any(saturated)),
+        "n_saturated": int(np.sum(saturated)),
+        "n_pixels": int(flux.size),
+    }
 
-    return results
+
+def _combine_stat_and_cont_error(N, N_err_stat, N_cont_plus, N_cont_minus):
+    if not np.isfinite(N) or N <= 0 or not np.isfinite(N_err_stat):
+        return np.nan, np.nan
+
+    cont_terms = []
+    if np.isfinite(N_cont_plus):
+        cont_terms.append(abs(N_cont_plus - N))
+    if np.isfinite(N_cont_minus):
+        cont_terms.append(abs(N_cont_minus - N))
+
+    N_err_cont = max(cont_terms) if cont_terms else 0.0
+    N_err = np.sqrt(N_err_stat**2 + N_err_cont**2)
+    return float(N_err), float(N_err_cont)
 
 
-def total_column_density(F_lambda, error, wavelength, abs_cat, f1, f2, lambda1, lambda2, continuum_error_frac, velocity_range, logwave):
+def _single_line_output(result, line_number, is_weak):
+    if result["flag"] <= 0:
+        return np.nan, np.nan, -1, -1, 0
 
-    """Function to calculate total apparent column density (inverse-variance weighted) for a doublet using Savage & Sembach 1991 method
+    N = result["N"]
+    N_err = result["N_err"]
 
-    Args:
-        F_lambda (array): continuum normalized flux
-        error (array): continuum normalized errors
-        wavelength (array): observed wavelength (Angstrom)
-        abs_cat (table): absorber table for the individual absorber (must contain Z_ABS, {absorber}_line12_EW, and {absorber}_line12_EW_ERROR, e.g. CIV_1548_EW)
-        f1 (float): oscillator strength of first line
-        f2 (float): oscillator strength of second line
-        lambda1 (tuple): key and rest-frame wavelength of first line (Angstrom)
-        lambda2 (tuple): key and rest-frame wavelength of second line (Angstrom)
-        continuum_error_frac (float): systematics on continuum normalized flux
-        velocity_range (float): +/- velocity_range will be used for column density integration (km/s)
-        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
-
-    Returns:
-        dict: dictionary containing apparent column density and error
-        and flag showing if its saturated
-
-    Note:
-        for fN flag, description:
-        1: WEIGHTED, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak line is not available) -1: FAIL',
-
-    """
-
-    z = abs_cat["Z_ABS"]
-    l1, l2 = lambda1[1], lambda2[1]
-    ew1, ew2 = abs_cat[f"{lambda1[0].upper()}_EW"], abs_cat[f"{lambda2[0].upper()}_EW"]
-    err_ew1, err_ew2 = abs_cat[f"{lambda1[0].upper()}_EW_ERROR"], abs_cat[f"{lambda2[0].upper()}_EW_ERROR"]
-
-    dr, dr_error = calculate_doublet_ratio(ew1, ew2, err_ew1, err_ew2, f1, f2)
-    max_dr = max(f1, f2) / min(f1, f2)
-    unsaturated = dr > max_dr - dr_error
-    sflag = 0 if unsaturated else 1
-
-    results1 = single_column_density(F_lambda, error, wavelength, z, f1, l1,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range, logwave=logwave)
-    results2 = single_column_density(F_lambda, error, wavelength, z, f2, l2,continuum_error_frac=continuum_error_frac, velocity_range=velocity_range,logwave=logwave)
-
-    N1, N2 = results1["N"], results2["N"]
-    sig_N1, sig_N2 = results1["N_err"], results2["N_err"]
-    flag1, flag2 = results1["flag"], results2["flag"]
-
-    if f1 < f2: # in case second line is stronger theoretically
-        N1, N2 = results2["N"], results1["N"]
-        sig_N1, sig_N2 = results2["N_err"], results1["N_err"]
-        flag1, flag2 = results2["flag"], results1["flag"]
-
-    log_N, err_log_N = np.nan, np.nan
-
-    if unsaturated:
-        # Unsaturated
-        if flag1 > 0 and flag2 > 0:
-            w1, w2 = 1 / sig_N1**2, 1 / sig_N2**2
-            N_tot = (w1 * N1 + w2 * N2) / (w1 + w2)
-            N_tot_err = np.sqrt(1 / (w1 + w2))
-            val_flag = 1  # weighted
-        elif flag1 > 0:
-            N_tot, N_tot_err = N1, sig_N1
-            val_flag = 2  # first line only
-        elif flag2 > 0:
-            N_tot, N_tot_err = N2, sig_N2
-            val_flag = 3  # second line only
-        else:
-            N_tot = N_tot_err = np.nan
-            val_flag = -1
+    if result["is_lower_limit"]:
+        fN = 5 if is_weak else 6
+        saturation = 2
+        lower_limit = 1
     else:
-        # Saturated
-        if flag1 > 0 and flag2 > 0:
-            delta_logN = np.log10(N2) - np.log10(N1)
-            correction = ss1991_correction(delta_logN)
-            log_N = np.log10(N2) + correction
-            err_log_N = sig_N2 / (N2 * np.log(10))
-            N_tot = 10**log_N
-            N_tot_err = N_tot * err_log_N * np.log(10)
-            val_flag = 4  # S&S corrected weak line
-        elif flag2 > 0:
-            N_tot, N_tot_err = N2, sig_N2
-            val_flag = 5  # lower limit from first line
-        elif flag1 > 0:
-            N_tot, N_tot_err = N1, sig_N1
-            val_flag = 6  # lower limit from second line
-        else:
+        fN = 2 if line_number == 1 else 3
+        saturation = 3
+        lower_limit = 0
+
+    return N, N_err, saturation, fN, lower_limit
+
+
+def total_column_density(
+    F_lambda,
+    error,
+    wavelength,
+    abs_cat,
+    f1,
+    f2,
+    lambda1,
+    lambda2,
+    continuum_error_frac,
+    velocity_range,
+    logwave,
+):
+    """
+    Total doublet AODM column.
+
+    SATURATION
+    ----------
+     0 : no significant AOD evidence for unresolved saturation
+     1 : unresolved saturation; S&S correction applied
+     2 : severe saturation / outside S&S calibration; lower limit
+     3 : saturation indeterminate because only one line is usable
+    -2 : inconsistent doublet (N_weak significantly < N_strong)
+    -1 : failed
+
+    fN
+    --
+     1 : inverse-variance weighted doublet
+     2 : line 1 only
+     3 : line 2 only
+     4 : S&S-corrected weak line
+     5 : lower limit from weak line
+     6 : lower limit from strong line
+     7 : inconsistent doublet
+    -1 : failed
+    """
+    z = float(abs_cat["Z_ABS"])
+    l1, l2 = float(lambda1[1]), float(lambda2[1])
+
+    results1 = single_column_density(
+        F_lambda, error, wavelength, z, f1, l1,
+        continuum_error_frac=continuum_error_frac,
+        velocity_range=velocity_range,
+        logwave=logwave,
+    )
+    results2 = single_column_density(
+        F_lambda, error, wavelength, z, f2, l2,
+        continuum_error_frac=continuum_error_frac,
+        velocity_range=velocity_range,
+        logwave=logwave,
+    )
+
+    strength1 = float(f1) * l1
+    strength2 = float(f2) * l2
+
+    if strength1 >= strength2:
+        strong, weak = results1, results2
+        strong_line_number, weak_line_number = 1, 2
+    else:
+        strong, weak = results2, results1
+        strong_line_number, weak_line_number = 2, 1
+
+    valid1 = results1["flag"] > 0
+    valid2 = results2["flag"] > 0
+
+    delta_logN = np.nan
+    sig_delta_logN = np.nan
+    lower_limit = 0
+
+    if not valid1 and not valid2:
+        N_tot = N_tot_err = np.nan
+        saturation = -1
+        val_flag = -1
+
+    elif valid1 and not valid2:
+        is_weak = weak_line_number == 1
+        N_tot, N_tot_err, saturation, val_flag, lower_limit = _single_line_output(
+            results1, line_number=1, is_weak=is_weak
+        )
+
+    elif valid2 and not valid1:
+        is_weak = weak_line_number == 2
+        N_tot, N_tot_err, saturation, val_flag, lower_limit = _single_line_output(
+            results2, line_number=2, is_weak=is_weak
+        )
+
+    else:
+        Ns, Nw = strong["N"], weak["N"]
+        sigNs_stat = strong["N_err_stat"]
+        sigNw_stat = weak["N_err_stat"]
+
+        logNs = np.log10(Ns)
+        logNw = np.log10(Nw)
+
+        sig_logNs_stat = sigNs_stat / (Ns * np.log(10.0))
+        sig_logNw_stat = sigNw_stat / (Nw * np.log(10.0))
+
+        delta_logN = logNw - logNs
+        sig_delta_logN = np.sqrt(sig_logNw_stat**2 + sig_logNs_stat**2)
+
+        if weak["is_lower_limit"] or strong["is_lower_limit"]:
+            N_tot = Nw
+            N_tot_err = weak["N_err"]
+            saturation = 2
+            val_flag = 5
+            lower_limit = 1
+
+        elif delta_logN < -sig_delta_logN:
             N_tot = N_tot_err = np.nan
-            val_flag = -1
+            saturation = -2
+            val_flag = 7
 
-    if np.isnan(log_N):
-        log_N = np.log10(N_tot) if np.isfinite(N_tot) and N_tot > 0 else np.nan
-        err_log_N = N_tot_err / (N_tot * np.log(10)) if np.isfinite(N_tot) and N_tot > 0 else np.nan
+        elif delta_logN <= sig_delta_logN:
+            if sigNs_stat > 0 and sigNw_stat > 0:
+                ws = 1.0 / sigNs_stat**2
+                ww = 1.0 / sigNw_stat**2
 
-    results = Table({'LOG10N': [log_N], 'SIG_LOG10N': [err_log_N], 'SATURATION': [sflag], 'fN': [val_flag]})
+                N_tot = (ws * Ns + ww * Nw) / (ws + ww)
+                N_err_stat = np.sqrt(1.0 / (ws + ww))
 
-    return results
+                N_plus = (
+                    ws * strong["N_cont_plus"] + ww * weak["N_cont_plus"]
+                ) / (ws + ww)
+                N_minus = (
+                    ws * strong["N_cont_minus"] + ww * weak["N_cont_minus"]
+                ) / (ws + ww)
+
+                N_tot_err, _ = _combine_stat_and_cont_error(
+                    N_tot, N_err_stat, N_plus, N_minus
+                )
+
+                saturation = 0
+                val_flag = 1
+            else:
+                N_tot = N_tot_err = np.nan
+                saturation = -1
+                val_flag = -1
+
+        elif delta_logN <= 0.24:
+            correction, slope = ss1991_correction(
+                delta_logN, return_slope=True
+            )
+
+            if np.isfinite(correction) and np.isfinite(slope):
+                logN_corr = logNw + correction
+                N_tot = 10.0**logN_corr
+
+                sig_logN_stat = np.sqrt(
+                    (1.0 + slope)**2 * sig_logNw_stat**2
+                    + slope**2 * sig_logNs_stat**2
+                )
+                N_err_stat = N_tot * np.log(10.0) * sig_logN_stat
+
+                def _shifted_corrected_N(Nw_shift, Ns_shift):
+                    if (
+                        not np.isfinite(Nw_shift)
+                        or not np.isfinite(Ns_shift)
+                        or Nw_shift <= 0
+                        or Ns_shift <= 0
+                    ):
+                        return np.nan
+
+                    dlogw = np.log10(Nw_shift) - logNw
+                    dlogs = np.log10(Ns_shift) - logNs
+                    dlogcorr = (1.0 + slope) * dlogw - slope * dlogs
+
+                    return 10.0**(logN_corr + dlogcorr)
+
+                N_plus = _shifted_corrected_N(
+                    weak["N_cont_plus"], strong["N_cont_plus"]
+                )
+                N_minus = _shifted_corrected_N(
+                    weak["N_cont_minus"], strong["N_cont_minus"]
+                )
+
+                N_tot_err, _ = _combine_stat_and_cont_error(
+                    N_tot, N_err_stat, N_plus, N_minus
+                )
+
+                saturation = 1
+                val_flag = 4
+            else:
+                N_tot = Nw
+                N_tot_err = weak["N_err"]
+                saturation = 2
+                val_flag = 5
+                lower_limit = 1
+
+        else:
+            N_tot = Nw
+            N_tot_err = weak["N_err"]
+            saturation = 2
+            val_flag = 5
+            lower_limit = 1
+
+    if np.isfinite(N_tot) and N_tot > 0:
+        log_N = np.log10(N_tot)
+        err_log_N = (
+            N_tot_err / (N_tot * np.log(10.0))
+            if np.isfinite(N_tot_err) and N_tot_err >= 0
+            else np.nan
+        )
+    else:
+        log_N = np.nan
+        err_log_N = np.nan
+
+    return Table({
+        "LOG10N": [log_N],
+        "SIG_LOG10N": [err_log_N],
+        "SATURATION": [int(saturation)],
+        "fN": [int(val_flag)],
+        "LOWER_LIMIT": [int(lower_limit)],
+        "DELTA_LOGN": [delta_logN],
+        "SIG_DELTA_LOGN": [sig_delta_logN],
+        "NPIX_SAT_STRONG": [
+            int(strong["n_saturated"]) if valid1 and valid2 else -1
+        ],
+        "NPIX_SAT_WEAK": [
+            int(weak["n_saturated"]) if valid1 and valid2 else -1
+        ],
+    })
+
 
 def compute_single_column_density(args):
-    """Compute column density for a single absorber.
+    """Multiprocessing wrapper for one absorber."""
+    (
+        flux, error, wavelength, tt_row,
+        f1, f2, l1, l2,
+        continuum_error_frac, dv, logwave,
+    ) = args
 
-    Wrapper function for parallel processing that unpacks arguments and computes
-    the total column density for a single absorption system using the doublet method.
+    return total_column_density(
+        flux, error, wavelength, tt_row, f1, f2, l1, l2,
+        continuum_error_frac=continuum_error_frac,
+        velocity_range=dv,
+        logwave=logwave,
+    )
 
-    Args:
-        args (tuple): Packed arguments in the following order:
 
-            * **flux** (*numpy.ndarray*) -- Continuum-normalised flux spectrum.
-            * **error** (*numpy.ndarray*) -- Flux uncertainty array.
-            * **wavelength** (*numpy.ndarray*) -- Observed wavelength array (Angstrom).
-            * **tt_row** (*astropy.table.Row*) -- Table row containing absorber properties
-              (must include ``Z_ABS`` and EW columns).
-            * **f1** (*float*) -- Oscillator strength of the first line.
-            * **f2** (*float*) -- Oscillator strength of the second line.
-            * **l1** (*tuple*) -- ``(key, rest_wavelength)`` for the first line.
-            * **l2** (*tuple*) -- ``(key, rest_wavelength)`` for the second line.
-            * **continuum_error_frac** (*float*) -- Fractional continuum placement uncertainty.
-            * **dv** (*float*) -- Velocity range for integration (km/s).
-            * **logwave** (*bool*) -- Whether the wavelength array is log-spaced.
+def _sentinel_column_density_table():
+    return Table({
+        "LOG10N": [np.nan],
+        "SIG_LOG10N": [np.nan],
+        "SATURATION": [-1],
+        "fN": [-1],
+        "LOWER_LIMIT": [-1],
+        "DELTA_LOGN": [np.nan],
+        "SIG_DELTA_LOGN": [np.nan],
+        "NPIX_SAT_STRONG": [-1],
+        "NPIX_SAT_WEAK": [-1],
+    })
 
-    Returns:
-        dict: Column density measurements and uncertainties. Keys match the output
-        of :func:`total_column_density`: ``N``, ``N_err``, ``logN``, ``err_logN``,
-        ``flag``, and saturation diagnostics.
+
+def return_total_column_density_table(
+    spectra_fits,
+    absorber,
+    output,
+    continuum_error_frac=0.05,
+    dv=300,
+    logwave=False,
+    nproc=None,
+):
     """
-    flux, error, wavelength, tt_row, f1, f2, l1, l2, continuum_error_frac, dv, logwave = args
-    return total_column_density(flux, error, wavelength, tt_row, f1, f2, l1, l2,
-                                continuum_error_frac=continuum_error_frac,
-                                velocity_range=dv, logwave=logwave)
+    Calculate AODM column densities for all absorbers.
 
-
-def return_total_column_density_table(spectra_fits, absorber, output, continuum_error_frac=0.05, dv=300, logwave=False, nproc=None):
-
-    """ Function to calculate total column density of metal doublets using
-    apparent optical depth method
-
-    Args:
-        spectra_fits (str): input spectra file
-        absorber (str): absorber name (MgII, CIV, OVI, FeII, AlIII, SiIV, NV)
-        output (str): output absorber catalog filename
-        continuum_error_frac (float): systematics on continuum normalized flux (default: 0.05)
-        dv (float): maximum velocity range to be considered for optical depth calculation (default 300 km/s)
-        logwave (bool): If true, means wavelength pixels are on log scale (true for SDSS)
-        nproc (int): number of cpus for multiprocessing
-
-    Returns:
-        None: Appends a ``COLUMN_DENSITY`` BinTableHDU to the absorber catalog
-        FITS file specified by ``output``.
+    dv is the HALF-WIDTH of the integration interval in km/s.
     """
-
     from .datamodel import QSOSpecRead
+
     start = time.time()
 
     tt = Table.read(output, hdu="ABSORBER")
-    spectra = QSOSpecRead(spectra_fits, autoload=True, index=tt["INDEX_SPEC"])
-    F_lambda = spectra.flux
-    error_F_lambda = spectra.error
-    wavelength = spectra.wavelength
+    spectra = QSOSpecRead(
+        spectra_fits,
+        autoload=True,
+        index=tt["INDEX_SPEC"],
+    )
 
-    f1, f2 = oscillator_parameters[absorber + '_f1'], oscillator_parameters[absorber + '_f2']
+    F_lambda = np.asarray(spectra.flux)
+    error_F_lambda = np.asarray(spectra.error)
+    wavelength = np.asarray(spectra.wavelength)
+
+    f1 = oscillator_parameters[absorber + "_f1"]
+    f2 = oscillator_parameters[absorber + "_f2"]
+
     l1_key, l2_key = doublet_keys[absorber][0], doublet_keys[absorber][1]
-    l1, l2 = (l1_key, lines[l1_key]), (l2_key, lines[l2_key])
+    l1 = (l1_key, lines[l1_key])
+    l2 = (l2_key, lines[l2_key])
+
+    mean_lambda = 0.5 * (l1[1] + l2[1])
+    doublet_sep_kms = (
+        speed_of_light * abs(l2[1] - l1[1]) / mean_lambda
+    )
+
+    if 2.0 * dv >= doublet_sep_kms:
+        logger.warning(
+            "AODM integration windows overlap for %s: each line uses +/- %.1f km/s, "
+            "while the doublet separation is %.1f km/s. For NaI, +/-150 km/s "
+            "is safer than +/-300 km/s.",
+            absorber,
+            dv,
+            doublet_sep_kms,
+        )
 
     nabs = len(tt)
+    valid_mask = np.asarray(tt["Z_ABS"], dtype=float) > 0
+    sentinel = _sentinel_column_density_table()
 
-    # Rows where Z_ABS <= 0 are sentinel rows (not searchable or validation failed).
-    # Column density cannot be computed for them; fill with -1 to keep length aligned
-    # with the ABSORBER HDU.
-    sentinel = Table({'LOG10N': [-1.0], 'SIG_LOG10N': [-1.0], 'SATURATION': [-1], 'fN': [-1]})
-
-    valid_mask = np.array(tt['Z_ABS']) > 0
+    def _wave_for_row(i):
+        return wavelength[i] if wavelength.ndim == 2 else wavelength
 
     args_list = [
-        (F_lambda[i], error_F_lambda[i], wavelength, tt[i], f1, f2, l1, l2, continuum_error_frac, dv, logwave)
-        for i in range(nabs) if valid_mask[i]
+        (
+            F_lambda[i],
+            error_F_lambda[i],
+            _wave_for_row(i),
+            tt[i],
+            f1,
+            f2,
+            l1,
+            l2,
+            continuum_error_frac,
+            dv,
+            logwave,
+        )
+        for i in range(nabs)
+        if valid_mask[i]
     ]
 
-    logger.info("Starting column density calculation with %d processes", nproc)
+    logger.info(
+        "Starting column density calculation with %s processes",
+        nproc,
+    )
 
     if args_list:
         with Pool(nproc) as pool:
-            valid_results = pool.map(compute_single_column_density, args_list)
+            valid_results = pool.map(
+                compute_single_column_density,
+                args_list,
+            )
     else:
         valid_results = []
 
-    # Reassemble in original row order, inserting sentinels for skipped rows
     valid_iter = iter(valid_results)
-    ordered = [next(valid_iter) if v else sentinel for v in valid_mask]
-    N_table = vstack(ordered)
+    ordered = [
+        next(valid_iter) if valid else sentinel
+        for valid in valid_mask
+    ]
 
-    for col in N_table.colnames:
-        if "10N" in col:
-            N_table[col].unit = "cm-2" # cm^-2
-            N_table[col] = N_table[col].astype('float64')
-        else:
-            N_table[col] = N_table[col].astype('int32')
+    N_table = (
+        vstack(ordered)
+        if ordered
+        else _sentinel_column_density_table()[:0]
+    )
 
-    logger.info("Num of zeros = %d", np.sum(N_table["LOG10N"].data==0))
-    logger.info("Column density took = %.3f [sec]", time.time()-start)
+    for col in [
+        "LOG10N",
+        "SIG_LOG10N",
+        "DELTA_LOGN",
+        "SIG_DELTA_LOGN",
+    ]:
+        N_table[col] = N_table[col].astype("float64")
+
+    for col in [
+        "SATURATION",
+        "fN",
+        "LOWER_LIMIT",
+        "NPIX_SAT_STRONG",
+        "NPIX_SAT_WEAK",
+    ]:
+        N_table[col] = N_table[col].astype("int32")
+
+    N_table["LOG10N"].description = "log10[N/(cm^-2)]"
+    N_table["SIG_LOG10N"].description = "1-sigma uncertainty in log10 N (dex)"
+    N_table["DELTA_LOGN"].description = (
+        "log10(N_weak) - log10(N_strong) from AODM"
+    )
+    N_table["SIG_DELTA_LOGN"].description = (
+        "Statistical 1-sigma uncertainty on DELTA_LOGN (dex)"
+    )
+
+    logger.info(
+        "Column density calculation finished in %.3f sec for %d absorber rows",
+        time.time() - start,
+        nabs,
+    )
 
     return N_table

@@ -53,7 +53,7 @@ def _build_qso_info_hdu(input_file, spec_indices, results):
     # IS_QSO_AVAILABLE is True when the search could run (z_abs != -1),
     # regardless of whether an absorber was actually found. It is False
     # only when the spectrum had too few pixels or the doublet fell outside
-    # the wavelength coverage (sentinel value -1).
+    # the wavelength coverage (default value -1) or snr cut was not satisfied in case snr_cut was passed in kwargs argument.
     unsearchable = set(results.get('unsearchable_indices', []))
     is_available = np.array([int(idx) not in unsearchable for idx in spec_arr], dtype=bool)
     snr_qso_map = results.get('snr_qso_map', {})

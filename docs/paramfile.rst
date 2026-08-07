@@ -32,7 +32,7 @@ A minimal example for the ``constants.py``
     # ==============================
 
     search_parameters = {
-        'ker_width_pixels':[3, 4, 5, 6, 7, 8], # Gaussian kernel widths (in pixels) for convolution
+        'ker_fwhm_pixels':[3, 4, 5, 6, 7, 8], # Gaussian kernel FWHM (in pixels) for convolution
         'pm_pixel': 200, # Window size around feature for threshold calculation for convolved array
         'coeff_sigma': 2, # for convolution the SNR cut
         'mult_resi': 1, # Multiplication factor for residual spectrum (to shift the normalization up or down)

@@ -51,15 +51,19 @@ def run_convolution_method_absorber_finder_QSO_spectra(fits_file, spec_index, ab
         dict: Detected absorber details from single-spectrum run.
 
     """
-    return read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, **kwargs)
+    constant_file = kwargs.pop('constant_file', None)
 
+    return read_single_spectrum_and_find_absorber(fits_file, spec_index,
+                                absorber,
+                                constant_file=constant_file,
+                                **kwargs)
 
 def _run_single_job(params):
     """Unpack tuple params for imap-based iteration."""
     return run_convolution_method_absorber_finder_QSO_spectra(*params)
 
 def parallel_convolution_search(
-    fits_file, spec_indices, absorber, n_jobs, warnings_file=None, zabs_known_map=None, **kwargs
+    fits_file, spec_indices, absorber, n_jobs, warnings_file=None, zabs_known_map=None, constant_file=None, **kwargs
 ):
     """
     Run convolution_method_absorber_finder_in_QSO_spectra in parallel using
@@ -75,6 +79,7 @@ def parallel_convolution_search(
             redshifts. When provided, the convolution search is skipped for those spectra and
             only Gaussian fitting and selection are run at the supplied redshifts. Spectra that
             do not appear in the map are searched in the normal way. Default is None.
+        constant_file (str): constant file for the search parameters (*.py), default is None
         **kwargs: Search parameters as described in qsoabsfind.constants().
 
     Returns:
@@ -85,6 +90,7 @@ def parallel_convolution_search(
             ``vel_disp1``, ``vel_disp2``, ``delta_chi2_line1``, ``delta_chi2_line2``.
     """
 
+
     if zabs_known_map is not None:
         params_list = []
         for spec_index in spec_indices:
@@ -94,6 +100,8 @@ def parallel_convolution_search(
                 spec_kwargs['zabs_known'] = zk
             params_list.append((fits_file, spec_index, absorber, spec_kwargs))
     else:
+        if constant_file is not None:
+            kwargs['constant_file'] = constant_file
         params_list = [(fits_file, spec_index, absorber, kwargs) for spec_index in spec_indices]
 
     # Run jobs in parallel with live progress bar (ordered, streamed results).
@@ -396,10 +404,11 @@ def main():
             logger.info('Running only on %d spectra listed in the known-redshift file', len(spec_indices))
 
     # Run the convolution method in parallel
+
     results = parallel_convolution_search(
         args.input_fits_file, spec_indices, absorber=args.absorber,
         n_jobs=n_jobs, warnings_file=warnings_file,
-        zabs_known_map=zabs_known_map, **user_constants.search_parameters
+        zabs_known_map=zabs_known_map, constant_file=const_path, **user_constants.search_parameters
     )
 
     # only save absorber file if there at least one absorber is detected

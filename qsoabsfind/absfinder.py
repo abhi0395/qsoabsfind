@@ -8,10 +8,9 @@ import time
 import logging
 import numpy as np
 from astropy.table import Table
-from .utils import convolution_fun, vel_dispersion
+from .utils import convolution_fun, vel_dispersion, snr_of_spectra
 from .absorberutils import (
     estimate_local_sigma_conv_array,
-    median_selection_after_combining,
     remove_Mg_falsely_come_from_Fe_absorber,
     z_abs_from_same_metal_absorber,
     contiguous_pixel_remover,
@@ -128,20 +127,6 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     lam_obs, residual, error = lam_obs[non_nan_indices], residual[non_nan_indices], error[non_nan_indices]
 
     zabs_known = kwargs.get("zabs_known", None)
-    snr_val = -1.0  # per-spectrum SNR in the search window; -1.0 if not computed
-
-    # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
-    # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
-    snr_cut = kwargs.get("snr_cut")
-    if snr_cut is not None:
-        stat = kwargs.get("statistics")
-        if stat == "median":
-            snr_val = np.nanmedian(residual / error)
-        elif stat == "mean":
-            snr_val = np.nanmean(residual / error)
-        elif isinstance(stat, (int, float)):
-            pixel_snr = residual / error
-            snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
 
     if zabs_known is not None:
         # Known-redshift mode: skip absorber search window entirely.
@@ -151,15 +136,18 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         unmsk_residual = None
         if verbose:
             logger.info("zabs_known provided, skipping search window for spec index = %s", spec_index)
+        snr_val, stat = snr_of_spectra(residual, error, **kwargs)
     else:
         # Identify the wavelength region for searching the specified absorber
         lam_search, unmsk_residual, unmsk_error = absorber_search_window(
             lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose, mask_emline=kwargs.get("mask_emline", False))
+            dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose, qso_dv_mask_emline=kwargs.get("qso_dv_mask_emline", None))
 
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-        if snr_val < snr_cut:
+        snr_cut = kwargs.get("snr_cut")
+        snr_val, stat = snr_of_spectra(unmsk_residual, unmsk_error, **kwargs)
+        if snr_cut is not None and snr_val < snr_cut:
             if verbose:
                 logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f), spec index = %s",
                             snr_val, snr_cut, spec_index)
@@ -167,12 +155,12 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
                 [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
                 [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
             )
-            result['snr_qso'] = snr_val
+            result[f'{stat}_snr_{absorber}_window'] = snr_val
             return result
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
                             "dv", "lam_red", "lam_blue",
-                            "snr_cut", "statistics", "mask_emline", "continuum_error_frac"]
+                            "snr_cut", "statistics", "qso_dv_mask_emline", "continuum_error_frac"]
 
     conv_kwargs = {}
     for key in kwargs.keys():
@@ -194,7 +182,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         **conv_kwargs,
     )
 
-    result['snr_qso'] = snr_val
+    result[f'{stat}_snr_{absorber}_window'] = snr_val
     if verbose:
         logger.info("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
 
@@ -257,89 +245,58 @@ def _compute_resolution(lam_search, lam_obs, line1, logwave,
                         res_wave_start=None, res_val_start=None,
                         res_wave_end=None,   res_val_end=None,
                         res_is_R=True):
-    """Compute the per-pixel wavelength step and per-pixel LSF sigma in velocity.
-
-    When the four ``res_*`` anchor parameters are supplied, the instrumental
-    resolution is modelled as a linear function of observed wavelength between
-    ``(res_wave_start, res_val_start)`` and ``(res_wave_end, res_val_end)``,
-    evaluated at every pixel in ``lam_obs``. This produces a
-    wavelength-dependent ``sigma_v`` rather than a flat pixel-spacing proxy.
-
-    Falls back to the pixel-spacing proxy (DESI-style, where one pixel
-    approximately equals one LSF sigma) when no anchors are provided.
+    """Compute wavelength sampling and instrumental LSF sigma in velocity.
 
     Args:
-        lam_search (numpy.ndarray): Observed wavelength array of the search
-            window (Angstrom). Used to derive the per-pixel step size.
-        lam_obs (numpy.ndarray): Full observed wavelength array (Angstrom).
-            Used to evaluate the wavelength-dependent resolution model.
-        line1 (float): Rest-frame wavelength of the first doublet line
-            (Angstrom). Used to convert ``sigma_v`` to a rest-frame sigma in
+        lam_search (numpy.ndarray): Observed wavelength array used for the
+            absorber search.
+        lam_obs (numpy.ndarray): Full observed wavelength array in Angstrom.
+        line1 (float): Rest-frame wavelength of the first doublet line in
             Angstrom.
-        logwave (bool): If ``True``, the wavelength grid is log10-spaced
-            (e.g. SDSS); if ``False``, it is linearly spaced (e.g. DESI).
-        res_wave_start (float, optional): Observed wavelength of the blue
-            anchor point for the resolution model (Angstrom). Default is
-            ``None``.
-        res_val_start (float, optional): Resolution value at
-            ``res_wave_start``. Interpreted as resolving power R if
-            ``res_is_R=True``, or as ``sigma_v`` in km/s otherwise. Default
-            is ``None``.
-        res_wave_end (float, optional): Observed wavelength of the red anchor
-            point for the resolution model (Angstrom). Default is ``None``.
-        res_val_end (float, optional): Resolution value at ``res_wave_end``.
-            Same units as ``res_val_start``. Default is ``None``.
-        res_is_R (bool, optional): If ``True`` (default), ``res_val_*`` are
-            resolving powers R = lambda / FWHM_lambda, and the LSF sigma is
-            computed as ``sigma_v = c / (2.355 * R)``. If ``False``,
-            ``res_val_*`` are already ``sigma_v`` in km/s and are
-            interpolated directly.
+        logwave (bool): Whether the wavelength grid is uniform in log10(lambda).
+        res_wave_start (float, optional): Blue wavelength anchor in Angstrom.
+        res_val_start (float, optional): Resolution value at the blue anchor.
+        res_wave_end (float, optional): Red wavelength anchor in Angstrom.
+        res_val_end (float, optional): Resolution value at the red anchor.
+        res_is_R (bool, optional): If True, res_val_start and res_val_end are
+            resolving powers R. If False, they are Gaussian sigma_v values
+            in km/s.
 
     Returns:
-        tuple: A four-element tuple ``(wave_res, resolution, median_resolution,
-        del_sigma)`` where:
-
-        - **wave_res** (*float*): Per-pixel step size — delta-lambda in
-          Angstrom for linear grids, or delta-log10(lambda) for log grids.
-        - **resolution** (*numpy.ndarray*): Per-pixel LSF sigma in velocity
-          (km/s), one value per element of ``lam_obs``.
-        - **median_resolution** (*float*): Median of ``resolution`` across
-          all pixels.
-        - **del_sigma** (*numpy.ndarray*): Per-pixel LSF sigma in the
-          rest frame (Angstrom), i.e.
-          ``resolution * line1 / speed_of_light``.
+        tuple: ``(wave_res, resolution, median_resolution, del_sigma)``.
+            ``wave_res`` is Angstrom/pixel for a linear grid and dex/pixel
+            for a log10 grid. ``resolution`` is the instrumental Gaussian
+            sigma_v in km/s at each wavelength in ``lam_obs``.
+            ``median_resolution`` is the median sigma_v over the search
+            wavelength range. ``del_sigma`` is the corresponding rest-frame
+            Gaussian sigma in Angstrom for ``line1``.
     """
-    # --- per-pixel step, unchanged provenance ---
+    lam_search = np.asarray(lam_search, dtype=float)
+    lam_obs = np.asarray(lam_obs, dtype=float)
+
     if not logwave:
         wave_res = np.nanmedian(np.diff(lam_search))
+        dv_pix = speed_of_light * np.abs(np.gradient(lam_obs)) / lam_obs
     else:
         wave_res = np.nanmedian(np.diff(np.log10(lam_search)))
+        dv_pix = np.full_like(lam_obs, speed_of_light * np.log(10.0) * wave_res, dtype=float)
 
-    have_anchors = None not in (res_wave_start, res_val_start,
-                                res_wave_end, res_val_end)
+    have_anchors = None not in (res_wave_start, res_val_start, res_wave_end, res_val_end)
 
     if have_anchors:
-        # linear model of the resolution quantity vs observed wavelength
         slope = (res_val_end - res_val_start) / (res_wave_end - res_wave_start)
         res_val = res_val_start + slope * (lam_obs - res_wave_start)
-        if res_is_R:
-            resolution = speed_of_light / (2.355 * res_val)   # sigma_v [km/s]
-        else:
-            resolution = res_val                              # already sigma_v
+        resolution = speed_of_light / (2.355 * res_val) if res_is_R else np.asarray(res_val, dtype=float)
     else:
-        # fallback: pixel-spacing proxy (DESI-style, where pixel ~ sigma_lambda)
-        if not logwave:
-            resolution = wave_res / lam_obs * speed_of_light
-        else:
-            resolution = (10 ** wave_res - 1) * speed_of_light
-            resolution = np.full_like(np.atleast_1d(lam_obs),
-                                      resolution, dtype=float)
+        logger.warning('No instrumental-resolution anchors supplied; using one spectral pixel as a proxy for sigma_v.')
+        resolution = dv_pix
 
-    median_resolution = np.nanmedian(resolution)
-    # del_sigma in Angstrom: sigma_v is ALREADY 1-sigma, so no 2.355 here.
+    search_mask = (lam_obs >= np.nanmin(lam_search)) & (lam_obs <= np.nanmax(lam_search)) & np.isfinite(resolution)
+    median_resolution = np.nanmedian(resolution[search_mask]) if np.any(search_mask) else np.nanmedian(resolution)
     del_sigma = median_resolution * line1 / speed_of_light
 
     return wave_res, resolution, median_resolution, del_sigma
+
 
 
 def _compute_fit_bounds(line1, line2, line_sep, d_pix, del_sigma):
@@ -373,7 +330,7 @@ def _compute_fit_bounds(line1, line2, line_sep, d_pix, del_sigma):
 def _run_convolution_and_find_candidates(absorber, mult_resi, unmsk_residual, residual,
                                          lam_search, lam_obs, width_kernel, pm_pixel,
                                          coeff_sigma, line_ratio, line1, line2, del_z,
-                                         logwave, wave_res, f1, f2, d_pix, spec_index, verbose):
+                                         logwave, wave_res, f1, f2, spec_index, verbose):
     # Run the matched-filter convolution for every requested kernel width and collect
     # raw candidate redshifts.  After the loop the lists are merged, deduplicated and
     # thinned by median_selection_after_combining so the output is a clean list of
@@ -575,7 +532,7 @@ def _apply_false_positive_filters(pure_z_abs, sn1_all, sn2_all, lam_obs, residua
     return (match_abs1 == -1) & (match_abs2 == -1) & (ind_z == -1)
 
 
-def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_width_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True):
+def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII', lam_obs=None, residual=None, error=None, lam_search=None, unmsk_residual=None, ker_fwhm_pixels=5, coeff_sigma=2.5, mult_resi=1, d_pix=0.6, pm_pixel=200, sn_line1=3, sn_line2=2, use_covariance=False, logwave=True, verbose=True, nboot=None, conf_level=0.95, zabs_known=None, max_dv_known=None, trapz_ew_sigma=None, res_wave_start=None, res_val_start=None, res_wave_end=None, res_val_end=None, res_is_R=True):
     """
     Detect absorbers with doublet properties in SDSS quasar spectra using a
     convolution method. This function identifies potential absorbers based on
@@ -591,7 +548,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         error (numpy.array): error on residuals
         lam_search (numpy.array): search observed wavelength array (i.e. region where absorber will be looked for).
         unmsk_residual (numpy.array): search residual array (residuals at search wavelength pixels)
-        ker_width_pixels (int or list): Kernel width(s) in pixels. Default is 5.
+        ker_fwhm_pixels (int or list): Kernel FWHM width(s) in pixels. Default is 5.
         coeff_sigma (float): Coefficient for sigma to apply threshold in the convolved array. Default is 2.5.
         mult_resi (float): Factor to shift the residual up or down. Default is 1.
         d_pix (float): Pixel distance for line separation during Gaussian fitting. Default is 0.6.
@@ -741,13 +698,20 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         combined_final_our_z = searchable
         zabs_known_input = np.array(searchable)
     else:
-        if isinstance(ker_width_pixels, int):
-            ker_width_pixels = [ker_width_pixels]
-        width_kernel = np.array([ker * mean_resolution * ((f1 * line1 + f2 * line2) / (f1 + f2)) / (speed_of_light * 2.355) for ker in ker_width_pixels])
+        if isinstance(ker_fwhm_pixels, (int, float, np.integer, np.floating)):
+            ker_fwhm_pixels = [ker_fwhm_pixels]
+        ker_fwhm_pixels = np.asarray(ker_fwhm_pixels, dtype=float)
+        ker_sigma_pixels = ker_fwhm_pixels / 2.355
+        line_centre_weighted = (f1 * line1 + f2 * line2) / (f1 + f2)
+        width_kernel = ker_sigma_pixels * wave_res if not logwave else line_centre_weighted * (10 ** (ker_sigma_pixels * wave_res) - 1.0)
+
+        if verbose:
+            logger.debug("kernel FWHM [pixels] = %s, kernel sigma [pixels] = %s, kernel sigma [Ang] = %s", ker_fwhm_pixels, ker_sigma_pixels, width_kernel)
+
         combined_final_our_z = _run_convolution_and_find_candidates(
             absorber, mult_resi, unmsk_residual, residual, lam_search, lam_obs, width_kernel,
             pm_pixel, coeff_sigma, line_ratio, line1, line2, del_z, logwave, wave_res, f1, f2,
-            d_pix, spec_index, verbose)
+            spec_index, verbose)
         if len(combined_final_our_z) == 0:
             return _build_result(
                 [spec_index], [0], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],

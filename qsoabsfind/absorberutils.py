@@ -945,7 +945,7 @@ def get_qso_emission_mask(wavelength, zqso, dv=10000.0, qso_emission_lines=None)
     return allowed
 
 
-def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, mask_emline=False, verbose=False):
+def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, qso_dv_mask_emline=None, verbose=False):
     """
     Wrapper function to return the most basic wavelength window for absorber
     search.
@@ -963,7 +963,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
         logwave (bool, optional): If True, wavelength pixels are on a fixed log-scale (e.g. SDSS/DESI). Used to report pixel count. Default is False.
-        mask_emline (bool, optional): If True, will mask pixels within +/- dv km/s of major QSO emission lines. Default is False.
+        qso_dv_mask_emline (float, optional): If provided, will mask pixels within +/- dv km/s of major QSO emission lines. Default is None.
         verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
@@ -1007,11 +1007,11 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     error_residual = error_residual[~rmv_lam0]
 
     # Mask QSO emission-line regions if requested
-    if mask_emline:
+    if qso_dv_mask_emline is not None:
         emline_allowed = get_qso_emission_mask(
             lam_search,
             zqso,
-            dv=float(dv/2)
+            dv=qso_dv_mask_emline
         )
 
         lam_search = lam_search[emline_allowed]

@@ -50,6 +50,7 @@ absorber was detected. Columns:
 - ``INDEX_SPEC``: (*int*), Spectrum index in the input file.
 - ``Z_QSO``: (*float*), QSO redshift from the input metadata.
 - ``IS_QSO_AVAILABLE``: (*bool*), ``True`` if the search could be attempted (doublet wavelengths fall inside the spectrum's wavelength coverage and enough pixels were available); ``False`` when the spectrum was unsearchable.
+- ``SNR_QSO``: (*float*), Signal-to-noise ratio of the QSO spectrum in the absorber search window (using statistics passed by user, mean, median or weighted, HDU0 will have the information.).
 
 **5) COLUMN_DENSITY** HDU is optional:
 
@@ -58,7 +59,53 @@ following `Savage & Sembach (1991) <https://ui.adsabs.harvard.edu/abs/1991ApJ...
 
 This optional HDU will contain:
 
-- ``LOG10N``: (*float*), log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
-- ``SIG_LOG10N``: (*float*), uncertainty on log of **total column density** (in cm\ :sup:`-2`), calculated from apparent optical depth method.
-- ``SATURATION``: (*int*), saturation flag, 1: saturated, 0: unsaturated
-- ``fN``: (*int*), Column density measurement method, 1: WEIGHTED MEAN, 2: FIRST, 3: SECOND, 4: Corrected weak line (partial saturation), 5: Lower limit from weak line (strong saturation), 6: Lower limit from strong (strong saturation and weak is not available) -1: FAIL.
+- ``LOG10N``: (*float*), logarithm of the total column density,
+  :math:`\log_{10}[N/(\mathrm{cm}^{-2})]`, measured using the apparent optical
+  depth method.
+
+- ``SIG_LOG10N``: (*float*), 1-\ :math:`\sigma` uncertainty on ``LOG10N``,
+  in dex.
+
+- ``SATURATION``: (*int*), saturation-status flag:
+
+  - ``0``: no significant evidence for unresolved saturation.
+  - ``1``: unresolved saturation detected; Savage & Sembach (1991)
+    correction applied.
+  - ``2``: strong/floor saturation, or saturation outside the calibrated
+    correction range; reported column density is a lower limit.
+  - ``3``: saturation cannot be determined because only one transition has
+    a usable column-density measurement.
+  - ``-2``: inconsistent doublet, where the weaker transition gives a
+    significantly smaller apparent column density than the stronger
+    transition.
+  - ``-1``: column-density measurement failed.
+
+- ``fN``: (*int*), column-density measurement method:
+
+  - ``1``: inverse-variance weighted mean of both transitions.
+  - ``2``: first transition only.
+  - ``3``: second transition only.
+  - ``4``: weaker transition corrected for unresolved saturation using
+    Savage & Sembach (1991).
+  - ``5``: lower limit from the weaker transition.
+  - ``6``: lower limit from the stronger transition when the weaker
+    transition is unavailable.
+  - ``7``: inconsistent doublet.
+  - ``-1``: column-density measurement failed.
+
+- ``LOWER_LIMIT``: (*int*), lower-limit flag. ``1`` indicates that the
+  reported column density is a lower limit, while ``0`` indicates a finite
+  column-density measurement.
+
+- ``DELTA_LOGN``: (*float*), difference between the apparent column
+  densities measured from the weaker and stronger transitions,
+  :math:`\log_{10}N_{\mathrm{weak}}-\log_{10}N_{\mathrm{strong}}`, in dex.
+
+- ``SIG_DELTA_LOGN``: (*float*), statistical 1-\ :math:`\sigma` uncertainty
+  on ``DELTA_LOGN``, in dex.
+
+- ``NPIX_SAT_STRONG``: (*int*), number of pixels in the stronger transition
+  whose normalized flux reaches or falls below the adopted AODM flux floor.
+
+- ``NPIX_SAT_WEAK``: (*int*), number of pixels in the weaker transition
+  whose normalized flux reaches or falls below the adopted AODM flux floor.

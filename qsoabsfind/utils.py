@@ -79,7 +79,7 @@ def update_header(args, user_constants):
 
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
-        'KERWIDTH': {"value": str(user_constants.search_parameters["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
+        'KERWIDTH': {"value": str(user_constants.search_parameters["ker_fwhm_pixels"]), "comment": 'Kernel width in pixels (ker_fwhm_pixels)'},
         'COEFFSIG': {"value": user_constants.search_parameters["coeff_sigma"], "comment": 'sigma threshold (coeff_sigma)'},
         'MULTRE': {"value": user_constants.search_parameters["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
         'D_PIX': {"value": user_constants.search_parameters["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
@@ -101,6 +101,13 @@ def update_header(args, user_constants):
         'RES_IS_R': {"value": user_constants.search_parameters["res_is_R"], "comment": 'if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values'},
     })
 
+    if 'trap_ew_sigma' in args:
+        headers['TRAP_EW'] = {"value": args.trap_ew_sigma, "comment": 'sigma threshold for trapezoidal EW error (trap_ew_sigma)'}
+    if 'snr_cut' in user_constants.search_parameters:
+        headers['SNR_CUT'] = {"value": user_constants.search_parameters["snr_cut"], "comment": 'S/N cut for spectra (snr_cut)'}
+        headers['SNR_STAT'] =  {"value": user_constants.search_parameters["statistics"], "comment": 'statistics for SNR of QSO in search window'}
+    if 'qso_dv_mask_emline' in user_constants.search_parameters:
+        headers['DV_EML'] = {"value": user_constants.search_parameters["qso_dv_mask_emline"], "comment": 'mask emission lines in search window within +/- of this value (qso_dv_mask_emline)'}
     return headers
 
 def parse_qso_sequence(qso_sequence):
@@ -131,6 +138,23 @@ def parse_qso_sequence(qso_sequence):
     # If none of the conditions matched, raise an error
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
+
+def snr_of_spectra(residual, error, **kwargs):
+
+    # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
+    # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
+    snr_val = - 1.0 # if not computed
+    snr_cut = kwargs.get("snr_cut")
+    if snr_cut is not None:
+        stat = kwargs.get("statistics")
+        if stat == "median":
+            snr_val = np.nanmedian(residual / error)
+        elif stat == "mean":
+            snr_val = np.nanmean(residual / error)
+        elif isinstance(stat, (int, float)):
+            pixel_snr = residual / error
+            snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
+    return snr_val, stat
 
 def gauss_two_lines_kernel(x, a):
     """
