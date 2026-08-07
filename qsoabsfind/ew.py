@@ -3,6 +3,8 @@ This script contains a function to fit a given absorption profile
 with a double gaussian and measure equivalent widths.
 """
 
+from random import uniform
+
 import numpy as np
 try:
     from numpy import trapezoid as _trapezoid
@@ -254,10 +256,16 @@ def bootstrap_fitting_and_ew(index, nboot, z, wavelength, flux, error, ix0, ix1,
         else:
             amp1, amp2 = amp_first_nmf, amp_second_nmf
             if bound is not None:
-                sigma1 = np.random.uniform(bound[0][2], bound[1][2])
-                sigma2 = np.random.uniform(bound[0][5], bound[1][5])
+                sigma1_min = max(_constants.GAUSS_SIGMA_INIT_MIN, bound[0][2])
+                sigma1_max = min(_constants.GAUSS_SIGMA_INIT_MAX, bound[1][2])
+                sigma2_min = max(_constants.GAUSS_SIGMA_INIT_MIN, bound[0][5])
+                sigma2_max = min(_constants.GAUSS_SIGMA_INIT_MAX, bound[1][5])
             else:
-                sigma1 = sigma2 = np.random.uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
+                sigma1_min = sigma2_min = _constants.GAUSS_SIGMA_INIT_MIN
+                sigma1_max = sigma2_max = _constants.GAUSS_SIGMA_INIT_MAX
+
+            sigma1 = uniform(sigma1_min, sigma1_max)
+            sigma2 = uniform(sigma2_min, sigma2_max)
 
         init_cond = [amp1, line1, sigma1, amp2, line2, sigma2]
         fit_params[i], _, ew1_array[i], ew2_array[i], ew_total_array[i], _ = double_curve_fit(
@@ -450,11 +458,19 @@ def _fit_single_absorber(index, z_init, wavelength, flux, error,
     amp_first  = max(_constants.GAUSS_AMP_MIN, 1 - np.nanmin(nmf_resi))
     amp_second = min(_constants.GAUSS_AMP_MAX, amp_ratio * amp_first)
     uniform = np.random.uniform
+
     if bound is not None:
-        sigma1 = uniform(bound[0][2], bound[1][2])
-        sigma2 = uniform(bound[0][5], bound[1][5])
+        sigma1_min = max(_constants.GAUSS_SIGMA_INIT_MIN, bound[0][2])
+        sigma1_max = min(_constants.GAUSS_SIGMA_INIT_MAX, bound[1][2])
+        sigma2_min = max(_constants.GAUSS_SIGMA_INIT_MIN, bound[0][5])
+        sigma2_max = min(_constants.GAUSS_SIGMA_INIT_MAX, bound[1][5])
     else:
-        sigma1 = sigma2 = uniform(_constants.GAUSS_SIGMA_INIT_MIN, _constants.GAUSS_SIGMA_INIT_MAX)
+        sigma1_min = sigma2_min = _constants.GAUSS_SIGMA_INIT_MIN
+        sigma1_max = sigma2_max = _constants.GAUSS_SIGMA_INIT_MAX
+
+    sigma1 = uniform(sigma1_min, sigma1_max)
+    sigma2 = uniform(sigma2_min, sigma2_max)
+
     init_cond = [amp_first, line_centre1, sigma1, amp_second, line_centre2, sigma2]
 
     params, std, ew1, ew2, ew_total, _ = double_curve_fit(
