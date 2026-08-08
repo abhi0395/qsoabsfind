@@ -14,8 +14,8 @@ Usage:
 
 speed_of_light = 299792.458   # Speed of light in km/s
 
-LARGE_WAVE = 1e6  # observed-frame hard upper wavelength limit (Ang); default 1e10 = no restriction
-SMALL_WAVE = 10.0   # observed-frame hard lower wavelength limit (Ang); default 0 = no restriction
+LARGE_WAVE = 1e6  # observed-frame hard upper wavelength limit (Ang); default 1e6 = no restriction
+SMALL_WAVE = 100.0   # observed-frame hard lower wavelength limit (Ang); default 100 = no restriction
 MIN_NPIXEL = 100 # minimum number of pixels required for a valid search region
 LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid confusion with Silicon forest)
 
@@ -203,6 +203,7 @@ GAUSS_SIGMA_INIT_MAX = 5.0       # upper bound (Ang) for sigma draw when no boun
 SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the absorption check in quick_significance_test
 EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
 AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
+AODM_INCONSISTENT_SIGMA = 2.0  # sigma threshold for flagging inconsistent AODM measurements
 ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
 
 # ==============================
@@ -252,6 +253,7 @@ OVERRIDABLE_CONSTANTS = (
     'SIGNIFICANCE_N_PIXELS',
     'EW_FIT_WINDOW',
     'AODM_FLUX_CLIP_MIN',
+    'AODM_INCONSISTENT_SIGMA',
     'ZABS_KNOWN_MAX_DV',
     'QSO_EMISSION_LINES',
 )

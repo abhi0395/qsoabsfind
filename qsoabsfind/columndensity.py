@@ -413,7 +413,7 @@ def total_column_density(
             val_flag = 5
             lower_limit = 1
 
-        elif delta_logN < -sig_delta_logN:
+        elif delta_logN < -_constants.AODM_INCONSISTENT_SIGMA * sig_delta_logN:
             N_tot = N_tot_err = np.nan
             saturation = -2
             val_flag = 7

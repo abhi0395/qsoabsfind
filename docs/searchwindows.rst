@@ -50,11 +50,11 @@ By default, the code uses the built-in search windows defined below for built-in
 
 .. math::
 
-    \lambda_{\mathrm{start}} = \max\{\lambda_{\mathrm{min}},\, \lambda_{\rm start}(1 + z_{\mathrm{QSO}} + \Delta z)\} + \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{start}} = \max\,\{\lambda_{\mathrm{obs,\,min}},\,\, \lambda_{\mathrm{start}}\,\cdot\,(1 + z_{\mathrm{QSO}} + \Delta z),\, \text{constants.SMALL\_WAVE}\}  + \Delta\lambda_{\mathrm{edge}}
 
 .. math::
 
-    \lambda_{\mathrm{end}} = \min\{\lambda_{\mathrm{max}},\, \lambda_{\rm end}(1 + z_{\mathrm{QSO}} - \Delta z)\} - \Delta\lambda_{\mathrm{edge}}
+    \lambda_{\mathrm{end}} = \min\,\{\lambda_{\mathrm{obs,\,max}},\,\, \lambda_{\mathrm{end}}\,\cdot\,(1 + z_{\mathrm{QSO}} - \Delta z),\, \text{constants.LARGE\_WAVE}\} - \Delta\lambda_{\mathrm{edge}}
 
 
 Default search window for built-in absorbers

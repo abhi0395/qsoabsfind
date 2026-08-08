@@ -43,7 +43,7 @@ A minimal example for the ``constants.py``
         'logwave': False,  # Assume DESI-style linear scale by default
         'lam_edge_sep': 50, # Wavelength cut from spectrum edges (in Ang)
         'conf_level':0.95, # 95 percent confidence level for absorber selection
-        'verbose': True, # for printing statements for debugging
+        'verbose': False, # for printing statements for debugging
         'dv': 5000,  # velocity offset from quasars redshift in km/s
         'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
         'end_rest_wave':None, # red end of rest-frame quasar wavelength, None --> default
