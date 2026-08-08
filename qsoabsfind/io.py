@@ -102,6 +102,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         sn_1, sn_2 = f'SN_{l1}', f'SN_{l2}'
         EW_1, EW_2 = f'{l1}_EW', f'{l2}_EW'
         VDISP1, VDISP2 = f'{l1}_VDISP', f'{l2}_VDISP'
+        VDISP1_ERR, VDISP2_ERR = f'{l1}_VDISP_ERR', f'{l2}_VDISP_ERR'
         DCHI2_1, DCHI2_2 = f'DELTA_CHI2_{l1}', f'DELTA_CHI2_{l2}'
         REDCHI2 = f'REDCHI2_FIT'
 
@@ -121,6 +122,8 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         fits.Column(name=sn_2, format='D', array=np.array(results['sn_2'])),
         fits.Column(name=VDISP1, format='D', unit='km s-1', array=np.array(results['vel_disp1'])),
         fits.Column(name=VDISP2, format='D', unit='km s-1', array=np.array(results['vel_disp2'])),
+        fits.Column(name=VDISP1_ERR, format='D', unit='km s-1', array=np.array(results['vel_disp1_err'])),
+        fits.Column(name=VDISP2_ERR, format='D', unit='km s-1', array=np.array(results['vel_disp2_err'])),
         fits.Column(name=DCHI2_1, format='D', array=np.array(results['delta_chi2_line1'])),
         fits.Column(name=DCHI2_2, format='D', array=np.array(results['delta_chi2_line2'])),
         fits.Column(name=REDCHI2, format='D', array=np.array(results['pure_redchi2'])),

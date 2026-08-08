@@ -192,7 +192,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
 def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_mean,
                   ew_total_mean, ew_1_error, ew_2_error, ew_total_error,
                   z_abs_err, sn_1, sn_2, vel_disp1, vel_disp2,
-                  delta_chi2_line1, delta_chi2_line2, pure_redchi2, zabs_known=None):
+                  delta_chi2_line1, delta_chi2_line2, pure_redchi2,
+                  vel_disp1_err=None, vel_disp2_err=None, zabs_known=None):
     result = {
         'index_spec': index_spec,
         'z_abs': z_abs,
@@ -209,6 +210,8 @@ def _build_result(index_spec, z_abs, gauss_fit, gauss_fit_std, ew_1_mean, ew_2_m
         'sn_2': sn_2,
         'vel_disp1': vel_disp1,
         'vel_disp2': vel_disp2,
+        'vel_disp1_err': vel_disp1_err if vel_disp1_err is not None else [0] * len(vel_disp1),
+        'vel_disp2_err': vel_disp2_err if vel_disp2_err is not None else [0] * len(vel_disp2),
         'delta_chi2_line1': delta_chi2_line1,
         'delta_chi2_line2': delta_chi2_line2,
         'pure_redchi2': pure_redchi2
@@ -415,6 +418,8 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     sn2_all = np.zeros(n)
     vel_disp1 = np.zeros(n)
     vel_disp2 = np.zeros(n)
+    vel_disp1_err = np.zeros(n)
+    vel_disp2_err = np.zeros(n)
     delta_chi2_line1_array = np.zeros(n)
     delta_chi2_line2_array = np.zeros(n)
     pure_redchi2_array = np.zeros(n)
@@ -436,13 +441,17 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
 
             if len(fit_param_temp[0]) > 0 and not np.all(np.isnan(fit_param_temp[0])):
                 gaussian_parameters = np.array(fit_param_temp[0])
+                gaussian_parameters_std = np.array(fit_param_std_temp[0])
                 lam_rest = lam_obs / (1 + z_new)
                 c0 = gaussian_parameters[1]
                 c1 = gaussian_parameters[4]
                 sig1, sig2 = gaussian_parameters[2], gaussian_parameters[5]
                 sn1, sn2 = estimate_snr_for_lines(c0, c1, sig1, sig2, lam_rest, residual, error, logwave)
-                disp_vel1, disp_vel2 = vel_dispersion(c0, c1, gaussian_parameters[2], gaussian_parameters[5],
-                                            resolution, z_new, lam_obs)
+                disp_vel1, disp_vel2, disp_vel1_err, disp_vel2_err = vel_dispersion(c0, c1, gaussian_parameters[2],
+                                        gaussian_parameters[5],
+                                        gaussian_parameters_std[2], gaussian_parameters_std[5],
+                                        resolution, z_new, lam_obs)
+
                 # Use trapezoidal EWs if requested, otherwise fall back to Gaussian analytic EWs.
                 # The same EW values are used consistently for doublet ratio, ew_snr cuts
                 # (inside check_absorber_selection) and the stored catalog values.
@@ -504,6 +513,8 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                     sn2_all[m] = sn2
                     vel_disp1[m] = disp_vel1
                     vel_disp2[m] = disp_vel2
+                    vel_disp1_err[m] = disp_vel1_err
+                    vel_disp2_err[m] = disp_vel2_err
                     delta_chi2_line1_array[m] = delta_chi2_line1
                     delta_chi2_line2_array[m] = delta_chi2_line2
                     pure_redchi2_array[m] = redchi2_doublet
@@ -511,7 +522,7 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
     return (pure_z_abs, pure_gauss_fit, pure_gauss_fit_std,
             pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
             pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
-            redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
+                    redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, vel_disp1_err, vel_disp2_err,
             delta_chi2_line1_array, delta_chi2_line2_array, pure_redchi2_array)
 
 
@@ -722,7 +733,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
     (pure_z_abs, pure_gauss_fit, pure_gauss_fit_std,
      pure_ew_first_line_mean, pure_ew_second_line_mean, pure_ew_total_mean,
      pure_ew_first_line_error, pure_ew_second_line_error, pure_ew_total_error,
-     redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2,
+      redshift_err, sn1_all, sn2_all, vel_disp1, vel_disp2, vel_disp1_err, vel_disp2_err,
      delta_chi2_line1_array, delta_chi2_line2_array, pure_redchi2_array) = _validate_candidates(
         spec_index, combined_final_our_z, lam_obs, residual, error, bound, absorber,
         d_pix, f1, f2, resolution, line_ratio, lower_del_lam, upper_del_lam,
@@ -746,6 +757,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         sn2_all = sn2_all[valid_indices]
         vel_disp1 = vel_disp1[valid_indices]
         vel_disp2 = vel_disp2[valid_indices]
+        vel_disp1_err = vel_disp1_err[valid_indices]
+        vel_disp2_err = vel_disp2_err[valid_indices]
         delta_chi2_line1_array = delta_chi2_line1_array[valid_indices]
         delta_chi2_line2_array = delta_chi2_line2_array[valid_indices]
         pure_redchi2_array = pure_redchi2_array[valid_indices]
@@ -770,6 +783,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = sn2_all[sel_indices]
             vel_disp1 = vel_disp1[sel_indices]
             vel_disp2 = vel_disp2[sel_indices]
+            vel_disp1_err = vel_disp1_err[sel_indices]
+            vel_disp2_err = vel_disp2_err[sel_indices]
             delta_chi2_line1_array = delta_chi2_line1_array[sel_indices]
             delta_chi2_line2_array = delta_chi2_line2_array[sel_indices]
             pure_redchi2_array = pure_redchi2_array[sel_indices]
@@ -782,6 +797,7 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             pure_ew_first_line_error = pure_ew_second_line_error = pure_ew_total_error = np.array([0])
             sn1_all = sn2_all = np.array([0])
             vel_disp1 = vel_disp2 = np.array([0])
+            vel_disp1_err = vel_disp2_err = np.array([0])
             delta_chi2_line1_array = np.array([0])
             delta_chi2_line2_array = np.array([0])
             pure_redchi2_array = np.array([0])
@@ -821,6 +837,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
             sn2_all = np.concatenate([sn2_all, np.zeros(n_oor)])
             vel_disp1 = np.concatenate([vel_disp1, np.zeros(n_oor)])
             vel_disp2 = np.concatenate([vel_disp2, np.zeros(n_oor)])
+            vel_disp1_err = np.concatenate([vel_disp1_err, np.zeros(n_oor)])
+            vel_disp2_err = np.concatenate([vel_disp2_err, np.zeros(n_oor)])
             delta_chi2_line1_array = np.concatenate([delta_chi2_line1_array, np.zeros(n_oor)])
             delta_chi2_line2_array = np.concatenate([delta_chi2_line2_array, np.zeros(n_oor)])
             pure_redchi2_array = np.concatenate([pure_redchi2_array, np.zeros(n_oor)])
@@ -844,6 +862,8 @@ def convolution_method_absorber_finder_in_QSO_spectra(spec_index, absorber='MgII
         sn2_all.tolist(),
         vel_disp1.tolist(),
         vel_disp2.tolist(),
+        vel_disp1_err.tolist(),
+        vel_disp2_err.tolist(),
         delta_chi2_line1_array.tolist(),
         delta_chi2_line2_array.tolist(),
         pure_redchi2_array.tolist(),

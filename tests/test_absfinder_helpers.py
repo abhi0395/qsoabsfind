@@ -201,15 +201,16 @@ class TestBuildResult(unittest.TestCase):
         result = _build_result(
             [0], [0.5], [[0]*6], [[0]*6], [1.0], [0.5], [1.5],
             [0.1], [0.1], [0.2], [0.01], [5.0], [3.0], [30.0], [30.0],
-            [10.0], [10.0],[10.0])
+            [10.0], [10.0], [10.0])
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 18)
+        self.assertEqual(len(result), 20)
 
     def test_all_expected_keys_present(self):
         expected = {'index_spec', 'z_abs', 'gauss_fit', 'gauss_fit_std',
                     'ew_1_mean', 'ew_2_mean', 'ew_total_mean',
                     'ew_1_error', 'ew_2_error', 'ew_total_error',
                     'z_abs_err', 'sn_1', 'sn_2', 'vel_disp1', 'vel_disp2',
+                    'vel_disp1_err', 'vel_disp2_err',
                     'delta_chi2_line1', 'delta_chi2_line2', 'pure_redchi2'}
 
         result = _build_result(
@@ -250,7 +251,7 @@ class TestZabsKnown(unittest.TestCase):
             lam_search=None, unmsk_residual=None,
             logwave=False, verbose=False, zabs_known=z)
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 19)
+        self.assertEqual(len(result), 21)
         self.assertIn('zabs_known', result)
 
     def test_list_input_runs_without_error(self):
@@ -286,7 +287,7 @@ class TestZabsKnown(unittest.TestCase):
             logwave=False, verbose=False, zabs_known=[z_good, z_bad])
         # result should be a valid dict regardless of whether a detection was made
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 19)
+        self.assertEqual(len(result), 21)
         self.assertIn('zabs_known', result)
 
     def test_all_out_of_range_returns_empty_result(self):
@@ -325,7 +326,7 @@ class TestZabsKnown(unittest.TestCase):
             lam_search=lam_obs, unmsk_residual=flux,
             logwave=False, verbose=False, zabs_known=None)
         self.assertIsInstance(result, dict)
-        self.assertEqual(len(result), 18)
+        self.assertEqual(len(result), 20)
 
     def test_max_dv_known_param_accepted(self):
         # max_dv_known should be accepted without TypeError

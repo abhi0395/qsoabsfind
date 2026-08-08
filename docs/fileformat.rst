@@ -38,6 +38,7 @@ when using ``--zabs-known-file``). Columns:
 - ``GAUSS_FIT_STD``: (*float array[6]*), Uncertainties on the Gaussian fit parameters.
 - ``SN_${METAL}_${LINE}``: (*float*), Signal-to-noise ratio of each doublet line.
 - ``${METAL}_${LINE}_VDISP``: (*float*), Instrumental-resolution-corrected rest-frame velocity dispersion of each line in km/s. Zero for unresolved lines.
+- ``${METAL}_${LINE}_VDISP_ERR``: (*float*), Uncertainty on the rest-frame velocity dispersion of each line in km/s.
 - ``DELTA_CHI2``: (*float*), Improvement in chi2 between the double-Gaussian model and a flat continuum (null hypothesis).
 - ``ZABS_KNOWN``: (*float*, **only present when** ``--zabs-known-file`` **is used**), the input known redshift supplied for validation.
 

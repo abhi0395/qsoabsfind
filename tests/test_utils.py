@@ -271,22 +271,29 @@ class TestVelDispersion(unittest.TestCase):
 
     def test_scalar_resolution(self):
         obs = np.linspace(2796, 2900, 100)
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 10.0, 0.5, obs)
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 0.1, 0.1, 10.0, 0.5, obs)
         self.assertTrue(np.isfinite(v1) or np.isnan(v1))
         self.assertTrue(np.isfinite(v2) or np.isnan(v2))
+        self.assertTrue(np.isfinite(v1_err) or np.isnan(v1_err))
+        self.assertTrue(np.isfinite(v2_err) or np.isnan(v2_err))
 
     def test_array_resolution(self):
         obs = np.linspace(2796, 2900, 100)
         res_arr = np.full(100, 10.0)
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, res_arr, 0.5, obs)
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 0.1, 0.1, res_arr, 0.5, obs)
         self.assertTrue(np.isfinite(v1) or np.isnan(v1))
+        self.assertTrue(np.isfinite(v1_err) or np.isnan(v1_err))
+        self.assertTrue(np.isfinite(v2) or np.isnan(v2))
+        self.assertTrue(np.isfinite(v2_err) or np.isnan(v2_err))
 
     def test_narrow_line_below_resolution_gives_nan(self):
         obs = np.linspace(2796, 2900, 100)
         # sigma = 0.1 Ang -> v_sigma << instrumental 200 km/s -> unresolved -> NaN
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 0.1, 0.1, 200.0, 0.5, obs)
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 0.1, 0.1, 0.05, 0.05, 200.0, 0.5, obs)
         self.assertTrue(np.isnan(v1))
         self.assertTrue(np.isnan(v2))
+        self.assertTrue(np.isnan(v1_err))
+        self.assertTrue(np.isnan(v2_err))
 
 
 class TestFitsFileHelpers(unittest.TestCase):

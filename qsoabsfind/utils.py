@@ -505,7 +505,7 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
         print(f"ERROR: Size mismatch detected in spec_index {spec_index}")
     return bad_conv
 
-def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
+def vel_dispersion(c1, c2, sigma1, sigma2, sigma1_err, sigma2_err, resolution, z, obs_wave):
     """
     Instrumental-resolution-corrected velocity dispersion via Gaussian quadrature.
 
@@ -551,7 +551,17 @@ def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
     corr_del_v1 = np.sqrt(del_v1_sq) if del_v1_sq >= 0 else np.nan
     corr_del_v2 = np.sqrt(del_v2_sq) if del_v2_sq >= 0 else np.nan
 
-    return corr_del_v1, corr_del_v2
+    if np.isfinite(corr_del_v1) and corr_del_v1 > 0:
+        del_v1_err = v1_sig / corr_del_v1 * speed_of_light / c1 * sigma1_err
+    else:
+        del_v1_err = np.nan
+
+    if np.isfinite(corr_del_v2) and corr_del_v2 > 0:
+        del_v2_err = v2_sig / corr_del_v2 * speed_of_light / c2 * sigma2_err
+    else:
+        del_v2_err = np.nan
+
+    return corr_del_v1, corr_del_v2, del_v1_err, del_v2_err
 
 
 def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, continuum_dict=None, **kwargs):
