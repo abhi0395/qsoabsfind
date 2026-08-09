@@ -149,13 +149,13 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         snr_val, stat = snr_of_spectra(unmsk_residual, unmsk_error, **kwargs)
         if snr_cut is not None and snr_val < snr_cut:
             if verbose:
-                logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f), spec index = %s",
-                            snr_val, snr_cut, spec_index)
+                logger.info("SNR check failed (%s snr_val=%.2f < snr_cut=%.2f), spec index = %s",
+                            stat, snr_val, snr_cut, spec_index)
             result = _build_result(
                 [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
                 [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]
             )
-            result[f'{stat}_snr_{absorber}_window'] = snr_val
+            result[f'snr_qso'] = snr_val
             return result
 
     not_allowed_args = ["lam_edge_sep", "start_rest_wave", "end_rest_wave",
@@ -182,7 +182,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         **conv_kwargs,
     )
 
-    result[f'{stat}_snr_{absorber}_window'] = snr_val
+    result[f'snr_qso'] = snr_val
     if verbose:
         logger.info("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
 

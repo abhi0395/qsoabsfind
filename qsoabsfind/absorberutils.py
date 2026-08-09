@@ -1029,7 +1029,7 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
 
     return lam_search, residual, error_residual
 
-def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs):
+def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, constant_file=None, **kwargs):
     """Check if an absorber can be searched in a given QSO spectrum.
 
     This function loads a single QSO spectrum from a spec.QSOSpecRead object,
@@ -1039,6 +1039,9 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     Args:
         spectra (object): spec.QSOSpecRead object
         absorber (str): Absorber name (e.g., 'MgII', 'CIV', 'OVI', etc.).
+        constant_file (str, optional): Path to a user constants file. When provided, the file
+            is loaded, global constants are patched in-place, and ``search_parameters`` from
+            the file are merged into ``kwargs`` as defaults (explicit ``kwargs`` take precedence).
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
@@ -1053,6 +1056,22 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     start_time = time.time()
 
     snr_val = -1
+
+    if constant_file is not None:
+        from .config import load_constants
+        _user_constants = load_constants(constant_file)
+        # Patch global constants in-place with any overrides from the user constants file.
+        for _name in _constants.OVERRIDABLE_CONSTANTS:
+            _user_val = getattr(_user_constants, _name, None)
+            if _user_val is not None:
+                setattr(_constants, _name, _user_val)
+        # Merge search_parameters as base; explicit kwargs take precedence.
+        _merged = dict(_user_constants.search_parameters)
+        _merged.update(kwargs)
+        kwargs = _merged
+
+    from .utils import snr_of_spectra
+    verbose = kwargs.get("verbose", False)
 
     spectra.metadata = Table(spectra.metadata)  # in case spectra.metadata is a Row
 
@@ -1074,7 +1093,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     lam_obs = lam_obs.astype('float64')
 
     # Remove NaN values from the arrays
-    non_nan_indices = ~np.isnan(residual)
+    non_nan_indices = np.isfinite(residual)
     lam_obs = lam_obs[non_nan_indices]
     residual = residual[non_nan_indices]
     error = error[non_nan_indices]
@@ -1084,35 +1103,28 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave,
         lam_edge_sep=kwargs["lam_edge_sep"],
         start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-        dv=kwargs["dv"], logwave=kwargs.get("logwave", False), verbose=kwargs["verbose"]
+        dv=kwargs["dv"], logwave=kwargs.get("logwave", False),
+        qso_dv_mask_emline=kwargs.get("qso_dv_mask_emline", None),
+        verbose=verbose
     )
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, \
         "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    if kwargs.get("verbose", False):
+    if verbose:
         logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
     if lam_search.size <= _constants.MIN_NPIXEL:
         return int(0), snr_val
 
-    if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
-        if "statistics" in kwargs and kwargs["statistics"] is not None:
-            stat = kwargs["statistics"]
-            if stat == "median":
-                snr_val = np.nanmedian(unmsk_residual / unmsk_error)
-            elif stat == "mean":
-                snr_val = np.nanmean(unmsk_residual / unmsk_error)
-            elif isinstance(stat, (int, float)):
-                # stat is a percentile (0-100): fraction `stat`% of pixels must have SNR > snr_cut
-                pixel_snr = unmsk_residual / unmsk_error
-                snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
+    snr_val, _ = snr_of_spectra(unmsk_residual, unmsk_error, **kwargs)
 
-            if kwargs.get("verbose", False):
-                logger.info('Checking SNR in the wavelength search region %s SNR = %.2f, threshold = %s)', snr_val, kwargs["snr_cut"], stat)
-        if snr_val < kwargs["snr_cut"]:
-            return int(0), snr_val
+    snr_cut = kwargs.get("snr_cut")
+    if snr_cut is not None and snr_val < snr_cut:
+        if verbose:
+            logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f)", snr_val, snr_cut)
+        return int(0), snr_val
 
     return int(1), snr_val
 
@@ -1120,10 +1132,15 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
 def _check_searchable_one(params):
     """Worker helper for find_searchable_qsos -- must be module-level to be picklable."""
     from .datamodel import QSOSpecRead
-    fits_file, idx, absorber, kwargs = params
+    fits_file, idx, absorber, constant_file, kwargs = params
     spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
-    is_good_qso, snr_val = return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs)
-    return idx, is_good_qso, snr_val
+    spec.metadata = Table(spec.metadata)
+    if 'Z' in spec.metadata.colnames:
+        spec.metadata.rename_column('Z', 'Z_QSO')
+    z_qso = float(np.asarray(spec.metadata['Z_QSO']).ravel()[0])
+    is_good_qso, snr_val = return_if_absorber_can_be_detected_in_a_spectrum(
+        spec, absorber, constant_file=constant_file, **kwargs)
+    return idx, z_qso, is_good_qso, snr_val
 
 
 def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None):
@@ -1146,12 +1163,14 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
             spectra in the file are checked.
 
     Returns:
-        astropy.table.Table: Table with two columns:
+                astropy.table.Table: Table with columns:
 
         - ``QSO_INDEX`` (int): Spectrum index in the FITS file.
-        - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in
+                - ``Z_QSO`` (float): QSO emission redshift from the metadata.
+                - ``IS_QSO_AVAILABLE`` (bool): ``True`` if the absorber can be searched in
           that spectrum, ``False`` otherwise.
-        - ``SNR`` (float): SNR value in the absorber search region (if snr_cut added, otherwise snr value = -1)
+                - ``SNR_QSO_{stat}`` (float): SNR value in the absorber search
+                    region, where ``{stat}`` is the configured ``statistics`` value.
     """
     import os
     import multiprocessing
@@ -1182,7 +1201,7 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
         n_qso = read_nqso_from_header(fits_file)
     spec_indices = parse_qso_sequence(str(n_qso))
 
-    params_list = [(fits_file, idx, absorber, search_params) for idx in spec_indices]
+    params_list = [(fits_file, idx, absorber, const_path, search_params) for idx in spec_indices]
     n_jobs = min(ncpus, max(1, multiprocessing.cpu_count() - 1))
     print('INFO: Checking searchability of %d spectra for %s absorber using %d CPUs' % (
                 len(spec_indices), absorber, n_jobs))
@@ -1197,14 +1216,21 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
             )
         )
 
-    qso_indices, is_good_qso, snr_val = zip(*results) if results else ([], [], [])
+    qso_indices, z_qso, is_good_qso, snr_val = zip(*results) if results else ([], [], [], [])
+
+    stat = search_params.get('statistics', 'median')
+    if stat is None:
+        stat = 'median'
+    stat_label = str(stat).replace(' ', '_').replace('.', 'p')
+    snr_col = f'SNR_QSO_{stat_label}'
 
     out = Table()
     out['QSO_INDEX'] =  np.asarray(list(qso_indices), dtype=np.int32)
-    out['IS_GOOD'] = np.asarray([bool(v) for v in is_good_qso], dtype=bool)
-    out['SNR'] = np.asarray(snr_val, dtype=np.float32)
+    out['Z_QSO'] = np.asarray(z_qso, dtype=np.float64)
+    out['IS_QSO_AVAILABLE'] = np.asarray([bool(v) for v in is_good_qso], dtype=bool)
+    out[snr_col] = np.asarray(snr_val, dtype=np.float32)
 
-    n_good = sum(out['IS_GOOD'])
+    n_good = sum(out['IS_QSO_AVAILABLE'])
     print('INFO: %d / %d QSOs have a searchable %s window' % (n_good, len(out), absorber))
 
     return out

@@ -144,9 +144,9 @@ def snr_of_spectra(residual, error, **kwargs):
     # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
     # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
     snr_val = - 1.0 # if not computed
-    snr_cut = kwargs.get("snr_cut")
-    if snr_cut is not None:
-        stat = kwargs.get("statistics")
+    snr_cut = kwargs.get("snr_cut", None)
+    stat = kwargs.get("statistics", None)
+    if (snr_cut is not None) and (stat is not None):
         if stat == "median":
             snr_val = np.nanmedian(residual / error)
         elif stat == "mean":
