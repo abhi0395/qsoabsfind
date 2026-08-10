@@ -14,12 +14,19 @@ Usage:
 
 speed_of_light = 299792.458   # Speed of light in km/s
 
-LARGE_WAVE = 9800.0 # for SDSS/DESI observed wave
-SMALL_WAVE = 500.0 # for SDSS/DESI observed wave
-
+LARGE_WAVE = 1e6  # observed-frame hard upper wavelength limit (Ang); default 1e6 = no restriction
+SMALL_WAVE = 100.0   # observed-frame hard lower wavelength limit (Ang); default 100 = no restriction
 MIN_NPIXEL = 100 # minimum number of pixels required for a valid search region
-
 LAM_CIV_MIN = 1310.0 # minimum wavelength to search for CIV absorbers (to avoid confusion with Silicon forest)
+
+# ==============================
+# Gaussian fit bound parameters
+# ==============================
+
+GAUSS_FIT_BD_CT = 2.0   # line-centre bound multiplier: allowed centre shift = BD_CT * d_pix
+GAUSS_FIT_X_SEP = 30    # line-width upper cap: max sigma = X_SEP * del_sigma
+GAUSS_FIT_EDGE  = 0.1   # small numerical buffer on sigma bounds to avoid hard boundary at zero
+FIT_PARAM_SNR   = 1.0   # minimum fit-parameter SNR: each param must exceed its fitted error
 
 # ===================
 # Supported absorbers
@@ -36,6 +43,23 @@ doublet_keys = {
         'CaII': ('CaII_3934', 'CaII_3969'),
         'NaI': ('NaI_5891', 'NaI_5897')
     }
+
+# =============================
+# Major emission lines in QSOs
+# =============================
+
+QSO_EMISSION_LINES = {
+            "LyA": 1215.67,
+            "NV": 1240.81,
+            "SiIV_OIV": 1400.0,
+            "CIV": 1549.0,
+            "CIII": 1908.7,
+            "MgII": 2798.0,
+            "OII_3727": 3727.0,
+            "Hbeta": 4861.33,
+            "OIII": 5007.0,
+            "Halpha": 6562.8,
+        }
 
 # ==============================
 # Absorption Line Wavelengths (in Ang)
@@ -148,6 +172,91 @@ oscillator_parameters = {
     'NaI_f2': 0.3199      # 5897.566
 }
 
+
+# ==============================
+# Some Algorithmic parameters
+# (Do not affect the overall search of absorbers,
+# but can be changed if user wants to explore.
+# Though I would suggest to not change much)
+# ==============================
+
+MIN_PIXELS_PER_PARAM = 2         # minimum pixels per free parameter required to constrain the double-Gaussian fit (min_pixels = MIN_PIXELS_PER_PARAM * nparam)
+CANDIDATE_VALIDATION_NPIX = 3   # pixels around a line minimum for candidate validation in find_valid_indices
+SNR_DEFAULT_DPIX = 5             # fallback pixel window for SNR estimation when Gaussian sigma is unavailable
+SNR_NSIG = 3                     # Gaussian sigma multiplier for SNR integration window (~99.7% of flux)
+REDSHIFT_REFINE_WINDOW = 9       # pixel window for refining redshift by locating the flux minimum
+MEDIAN_WEIGHT_GAMMA = 4          # power-law exponent for 1/lambda^gamma weighting in median_selection_after_combining
+CANDIDATE_DEDUP_CT = 2           # pixel tolerance multiplier for deduplicating close candidates
+MAX_VEL_DISPERSION = 50         # maximum allowed velocity difference between doublet components (km/s)
+CONV_KERNEL_EXTENT = 10          # convolution kernel half-extent: +/-N x sigma from line centre
+FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier: d_pix * N Ang on each side
+GAUSS_FIT_NUM_ITER = 500         # maximum curve_fit iterations for double-Gaussian fitting
+GAUSS_FIT_FINAL_ITER_FACTOR = 2  # multiplier applied to num_iter for the final fitting pass
+GAUSS_FIT_BOOT_ITER_FACTOR = 0.4 # fraction of num_iter used per bootstrap fit
+GAUSS_FIT_BOOT_WARM_SPREAD = 0.1 # fractional std for initial perturbation of best-fit params in bootstrap
+GAUSS_FIT_FTOL = 1e-4            # function convergence tolerance for scipy curve_fit
+GAUSS_FIT_XTOL = 1e-4            # parameter convergence tolerance for scipy curve_fit
+GAUSS_AMP_MIN = 0.025             # minimum amplitude floor for Gaussian initial conditions
+GAUSS_AMP_MAX = 0.975             # maximum amplitude cap for Gaussian initial conditions
+GAUSS_SIGMA_INIT_MIN = 0.2       # lower bound (Ang) for sigma draw when no bounds are supplied
+GAUSS_SIGMA_INIT_MAX = 5.0       # upper bound (Ang) for sigma draw when no bounds are supplied
+SIGNIFICANCE_N_PIXELS = 2        # pixel window around each line centre for the absorption check in quick_significance_test
+EW_FIT_WINDOW = 5                # pixel window for redshift refinement during EW measurement
+AODM_FLUX_CLIP_MIN = 0.005       # minimum flux clipped before log computation in AODM to avoid log(0)
+AODM_INCONSISTENT_SIGMA = 2.0  # sigma threshold for flagging inconsistent AODM measurements
+ZABS_KNOWN_MAX_DV = 500          # maximum allowed velocity offset (km/s) between fitted and seed redshift in known-z mode
+
+# ==============================
+# User-overridable parameters
+# All scalar parameters listed here can be overridden by a user-provided constants file.
+# True physical constants (speed_of_light, lines, oscillator_parameters) and
+# dict-type absorber registries (doublet_keys, amplitude_dict) are excluded.
+# ==============================
+OVERRIDABLE_CONSTANTS = (
+
+    # Instrument / survey wavelength limits and search thresholds
+
+    'SMALL_WAVE',
+    'LARGE_WAVE',
+    'MIN_NPIXEL',
+    'LAM_CIV_MIN',
+
+    # Gaussian fit bound parameters
+
+    'GAUSS_FIT_BD_CT',
+    'GAUSS_FIT_X_SEP',
+    'GAUSS_FIT_EDGE',
+    'FIT_PARAM_SNR',
+
+    # Algorithmic parameters
+
+    'MIN_PIXELS_PER_PARAM',
+    'CANDIDATE_VALIDATION_NPIX',
+    'SNR_DEFAULT_DPIX',
+    'SNR_NSIG',
+    'REDSHIFT_REFINE_WINDOW',
+    'MEDIAN_WEIGHT_GAMMA',
+    'CANDIDATE_DEDUP_CT',
+    'MAX_VEL_DISPERSION',
+    'CONV_KERNEL_EXTENT',
+    'FIT_WINDOW_HALF_WIDTH',
+    'GAUSS_FIT_NUM_ITER',
+    'GAUSS_FIT_FINAL_ITER_FACTOR',
+    'GAUSS_FIT_BOOT_ITER_FACTOR',
+    'GAUSS_FIT_BOOT_WARM_SPREAD',
+    'GAUSS_FIT_FTOL',
+    'GAUSS_FIT_XTOL',
+    'GAUSS_AMP_MIN',
+    'GAUSS_AMP_MAX',
+    'GAUSS_SIGMA_INIT_MIN',
+    'GAUSS_SIGMA_INIT_MAX',
+    'SIGNIFICANCE_N_PIXELS',
+    'EW_FIT_WINDOW',
+    'AODM_FLUX_CLIP_MIN',
+    'AODM_INCONSISTENT_SIGMA',
+    'ZABS_KNOWN_MAX_DV',
+    'QSO_EMISSION_LINES',
+)
 
 # ==============================
 # Notes:

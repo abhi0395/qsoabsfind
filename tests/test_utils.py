@@ -3,7 +3,9 @@ Tests for utils.py
 """
 
 import os
+import tempfile
 import unittest
+from types import SimpleNamespace
 import numpy as np
 from qsoabsfind.utils import (
     convolution_fun,
@@ -20,6 +22,7 @@ from qsoabsfind.utils import (
     vel_dispersion,
     modify_units,
     match_order,
+    plot_absorber,
 )
 
 # Path to a real FITS file used for file-based tests
@@ -79,7 +82,7 @@ class TestDoubleAndSingleGaussian(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(y)))
 
     def test_double_gaussian_at_continuum(self):
-        # Far from line centers the function should be ≈ 1
+        # Far from line centers the function should be ~ 1
         x = np.array([2700.0, 2900.0])
         y = double_gaussian(x, 0.5, 2796.35, 2.0, 0.3, 2803.52, 2.0)
         np.testing.assert_allclose(y, 1.0, atol=1e-3)
@@ -118,7 +121,7 @@ class TestConvolutionFun(unittest.TestCase):
 
     def test_unsupported_absorber_raises(self):
         with self.assertRaises(ValueError):
-            convolution_fun('Unobtainium', self.residual, 3.0, True, 0.0001, None, 0.5, 0.25)
+            convolution_fun('MnII', self.residual, 3.0, True, 0.0001, None, 0.5, 0.25)
 
 
 class TestValidateSizes(unittest.TestCase):
@@ -234,26 +237,63 @@ class TestMatchOrder(unittest.TestCase):
             match_order(np.array([1, 2]), np.array([1, 2, 3]))
 
 
+class TestPlotAbsorber(unittest.TestCase):
+
+    def test_continuum_dict_saves_plot(self):
+        spectra = SimpleNamespace(
+            wavelength=np.linspace(2790.0, 2820.0, 200),
+            flux=np.ones(200),
+            error=np.full(200, 0.01),
+        )
+        zabs = {
+            'Z_ABS': [0.5],
+            'GAUSS_FIT': [np.array([0.5, 2796.35, 2.0, 0.3, 2803.52, 2.0])],
+        }
+        continuum_dict = {
+            'flux': np.ones(200),
+            'continuum': np.ones(200) + 0.05,
+            'cont_legend': 'NMF continuum',
+        }
+
+        with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
+            plot_absorber(
+                spectra,
+                'MgII',
+                zabs,
+                plot_filename=tmp.name,
+                continuum_dict=continuum_dict,
+                title='Test absorber',
+            )
+            self.assertTrue(os.path.exists(tmp.name))
+
+
 class TestVelDispersion(unittest.TestCase):
 
     def test_scalar_resolution(self):
         obs = np.linspace(2796, 2900, 100)
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 10.0, 0.5, obs)
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 0.1, 0.1, 10.0, 0.5, obs)
         self.assertTrue(np.isfinite(v1) or np.isnan(v1))
         self.assertTrue(np.isfinite(v2) or np.isnan(v2))
+        self.assertTrue(np.isfinite(v1_err) or np.isnan(v1_err))
+        self.assertTrue(np.isfinite(v2_err) or np.isnan(v2_err))
 
     def test_array_resolution(self):
         obs = np.linspace(2796, 2900, 100)
         res_arr = np.full(100, 10.0)
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, res_arr, 0.5, obs)
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 3.0, 3.0, 0.1, 0.1, res_arr, 0.5, obs)
         self.assertTrue(np.isfinite(v1) or np.isnan(v1))
+        self.assertTrue(np.isfinite(v1_err) or np.isnan(v1_err))
+        self.assertTrue(np.isfinite(v2) or np.isnan(v2))
+        self.assertTrue(np.isfinite(v2_err) or np.isnan(v2_err))
 
     def test_narrow_line_below_resolution_gives_nan(self):
         obs = np.linspace(2796, 2900, 100)
-        # sigma = 0.1 Ang → v_sigma << instrumental 200 km/s → unresolved → NaN
-        v1, v2 = vel_dispersion(2796.35, 2803.52, 0.1, 0.1, 200.0, 0.5, obs)
+        # sigma = 0.1 Ang -> v_sigma << instrumental 200 km/s -> unresolved -> NaN
+        v1, v2, v1_err, v2_err = vel_dispersion(2796.35, 2803.52, 0.1, 0.1, 0.05, 0.05, 200.0, 0.5, obs)
         self.assertTrue(np.isnan(v1))
         self.assertTrue(np.isnan(v2))
+        self.assertTrue(np.isnan(v1_err))
+        self.assertTrue(np.isnan(v2_err))
 
 
 class TestFitsFileHelpers(unittest.TestCase):

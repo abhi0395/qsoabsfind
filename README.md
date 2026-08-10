@@ -18,39 +18,45 @@
 
 ## qsoabsfind: Quasar Absorber Finder
 
-`qsoabsfind` is a Python module designed to detect absorbers with doublet properties in like low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies potential absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a series of rigorous checks to eliminate false positives.
+`qsoabsfind` is a Python module for detecting absorbers with doublet properties (absorbers with two close lines) in low-resolution quasar spectra (e.g. SDSS, DESI, MUSE, 4MOST, WAVES, WEAVE etc.). It identifies absorption systems using a convolution-based, adaptive signal-to-noise approach, followed by Gaussian fitting and a set of selection checks to eliminate false positives.
 
-The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). The code offers flexibility to run with either default search parameters or user-provided custom search parameters.
+The module also calculates rest-frame equivalent widths (EWs), FWHM and line centers using a double-Gaussian model. Optionally, it can calculate the total column densities of metal absorbers using the apparent optical depth method (AODM). It can run with either the default search parameters or user-provided custom ones.
 
+It also provides the ability to search for additional absorber systems at the redshifts of known absorbers. This is useful for constructing multi-line absorber catalogs and for validating detections using multiple transitions.
 
-### Supported Metal Doublets Systems
+### Default Metal Doublet Systems
 
-| Absorber | Line 1 (Å)  | Line 2 (Å) |
-|----------|--------|------------|
-| O VI (O⁵⁺)    | 1031.93    | 1037.62     |
-| N V (N⁴⁺)    | 1238.82    | 1242.80     |
-| Si IV (Si³⁺)   | 1393.76    | 1402.77     |
-| C IV (C³⁺)   | 1548.20    | 1550.77     |
-| Al III (Al²⁺)   | 1854.72     | 1862.79    |
-| Fe II (Fe⁺)  | 2586.65     | 2600.17     |
-| Mg II (Mg⁺)   | 2796.35    | 2803.52     |
-| CaII (Ca⁺) | 3934.78 | 3969.59 |
-| NaI (Na)   | 5891.58    | 5897.57     |
+| Absorber | Line 1 (Ang)  | Line 2 (Ang) | Comments |
+|----------|--------|------------|----------|
+| O VI (O⁵⁺)    | 1031.93    | 1037.62     | Lines fall inside the Ly-alpha forest; makes detection and confirmation difficult |
+| N V (N⁴⁺)    | 1238.82    | 1242.80     | Lies near the red edge of the Ly-alpha forest; avoiding the forest leaves a very short absorber path length, but detection is feasible |
+| Si IV (Si³⁺)   | 1393.76    | 1402.77     | Searching outside the Ly-alpha forest; relatively clean spectral region, easier to detect and confirm |
+| C IV (C³⁺)   | 1548.20    | 1550.77     | Searching outside the Ly-alpha forest; one of the strongest UV doublets, easy to detect and confirm |
+| Al III (Al²⁺)   | 1854.72     | 1862.79    | Searching outside the Ly-alpha forest; clean region |
+| Fe II (Fe⁺)  | 2586.65     | 2600.17     | Searching outside the Ly-alpha forest; clean region; large line separation, easy to detect and confirm |
+| Mg II (Mg⁺) | 2796.35    | 2803.52     | Searching outside the Ly-alpha forest; large line separation, easy to detect and confirm |
+| CaII (Ca⁺) | 3934.78 | 3969.59 | Searching outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
+| NaI (Na⁰)   | 5891.58    | 5897.57     | Searching outside the Ly-alpha forest; though can lie in sky line region, which may make it difficult |
 
+**Note on Absorbers:** The pipeline is generic. Users can supply a custom constants file with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds (see [Parameter File](https://qsoabsfind.readthedocs.io/en/latest/paramfile.html)), and the pipeline will search for it. Custom systems are functional but not as *thoroughly tested as the default ones*.
 
 
 Key Features
 --------
 - **Automated and Flexible Search Window**: The code can dynamically define the observed-frame wavelength search window for each absorber system. Detailed definitions are provided in the [Search Window Documentation](https://qsoabsfind.readthedocs.io/en/latest/searchwindows.html). Additionally, user can also provide the wavelength boundaries to search for metal systems through the search parameter constants file.
-- **Flexible Search Parameters:** Supports both default settings and user-provided custom search parameters for metal absorber detection. Please use the constant file format as described in ``data/${survey}`` folder.
+- **9 built-in doublet systems**: Automatic search-window calculation and line properties are pre-configured for MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, and NaI. **OVI** is very hard as it lies in the Ly-alpha forest. So use with caution.
+- **Extensible to any doublet**: The pipeline is generic. Users can supply a custom constants file (see `data/${survey}` folder) with your doublet's rest-frame wavelengths, oscillator strengths, and search bounds, and the pipeline will search for it. *(Custom systems are functional but not as thoroughly tested as the built-ins.)*
 - **Adaptive S/N convolution**: Detects doublet absorbers in low-resolution quasar spectra using a convolution-based, adaptive signal-to-noise method.
-- **Gaussian profile fitting**: Accurately models absorption lines to extract parameters like equivalent width, FWHM, and central wavelength.
-- **Rigorous selection criteria**: Identifies the best absorber candidates based on physically motivated thresholds and doublet properties. Optionally uses chi2 statistics to get the confidence level of the selected candidates.
-- **Instrumental resolution correction**: Corrects measured line widths for instrumental resolution to infer intrinsic properties.
-- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)).
-- **Parallel processing**: Supports fast and efficient computation across large datasets using Python's `multiprocessing` module.
-- **Comprehensive Output**: Detailed catalogs with redshifts, equivalent widths, S/N ratios, and more.
-- **Descriptive Verbose**: Optionally prints the steps in great detail for debugging.
+- **Gaussian profile fitting**: Fits absorption lines with a double-Gaussian model to extract equivalent width, FWHM, and central wavelength.
+- **Selection criteria**: Identifies absorber candidates based on S/N thresholds and doublet properties. Optionally uses $\chi^2$ statistics to get the confidence level of the selected candidates.
+- **Pixel resolution correction**: Corrects measured line widths for observed pixel resolution to infer intrinsic properties, assuming linear relation between spectral resolution and wavelength. Users can provide the linear relation parameters.
+- **Known-redshift validation**: When a prior absorber catalog (e.g. from another survey or absorber finder or catalog built from `qsoabsfind`) is available, `--zabs-known-file` skips the convolution search and runs Gaussian fitting and selection only at the supplied redshifts, allowing quick validation of known systems.
+- **Column Densities**: Optionally estimates total column densities of detected absorbers using the apparent optical depth method (AODM; [Savage & Sembach 1991](https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract)). Can be turned on via ``--coldens-dv`` to specify the velocity range for integration.
+- **Parallel processing**: Runs across large datasets using Python's `multiprocessing` module.
+- **Detailed output**: Catalogs with redshifts, equivalent widths, S/N ratios, and more.
+- **Verbose mode**: Optionally prints each processing step for debugging.
+- **Trapezoidal EW measurement**: In addition to Gaussian-model EWs, the module computes rest-frame equivalent widths via direct trapezoidal integration (provided via `--trapz-ew-sigma`) over a per-line window of $\pm n \cdot \sigma_{\rm line}$ centred on each Gaussian-fit line centre. For close doublets (e.g. C IV), the integration windows are automatically clipped at the doublet midpoint to prevent double-counting. Measurement windows and integrated areas can be visualised with `plot_trapezoidal_ew_windows`. EW errors also account for the systematic uncertainity in continuum placement.
+- **Visualization**: Plot the full spectrum with all detected absorber systems marked, plus zoomed panels around each detection, using `plot_multiple_metal_systems`.
 
 
 **qsoabsfind** is suitable for
@@ -65,234 +71,13 @@ Documentation
 
 The full documentation is available at [https://qsoabsfind.readthedocs.io](https://qsoabsfind.readthedocs.io).
 
-## Installation
-
-### Prerequisites
-
-- Python 3.10 or higher
-- `numpy`
-- `scipy`
-- `astropy`
-- `numba`
-- `matplotlib`
-- `tqdm` (for progress bar)
-- `pyyaml`
-
-### 1. Clone the Repository
-```bash
-
-git clone https://github.com/abhi0395/qsoabsfind.git
-cd qsoabsfind
-```
-
-### 2. Set Up Environment
-
-#### Option 1: Using Conda (Recommended, python>=3.10)
-
-```bash
-conda create -n qsoabsfind python=3.10
-conda activate qsoabsfind
-
-# Install dependencies
-conda install numpy scipy astropy numba matplotlib
-conda install -c conda-forge pytest
-```
-
-#### Option 2: Using pip with virtual environment
-
-```bash
-python -m venv qsoabsfind-env
-source qsoabsfind-env/bin/activate  
-
-# Install dependencies
-pip install numpy scipy astropy numba matplotlib pytest
-
-# Install a tagged version (stable and reproducible). Replace vX.Y.Z with the desired Git tag (for example v2.0.1).
-pip install --upgrade "git+https://github.com/abhi0395/qsoabsfind.git@vX.Y.Z"
-
-# For developers (editable mode installation or directly from main branch):
-pip install -e .
-
-```
-
-### 3. Run Unit tests
-
-```bash
-python -m unittest discover -s tests
-```
-
-### 4. Quick installation test
-```bash
-python -c "import qsoabsfind; print(qsoabsfind.__version__)"
-python -c "from qsoabsfind.parallel_convolution import parallel_convolution_search; print('Installation successful!')"
-```
-
-Description
------------
-
-```sh
-qsoabsfind --help
-```
-
-Important Instructions
--------------
-
-- Before running the module, please read the [datamodel](https://github.com/abhi0395/qsoabsfind/blob/main/data/datamodel.rst). The instructions for the input and output files are provided there.
-- I have also provided two example QSO spectra files:
-  -  `data/sdss/qso_test_spectra.fits` : 100 continuum-normalized spectra from [SDSS DR16](https://www.sdss4.org/dr17/algorithms/qso_catalog/)
-  -  `data/desi/qso_test_spectra.fits` : 100 continuum-normalized spectra from [DESI DR1](https://data.desi.lbl.gov/doc/releases/dr1/)
-- These folders also have their own constants files. You can use these files to test example runs as described below.
-
-**Pre-filtering searchable QSOs**
----------------------
-
-Before running the full absorber search you can quickly flag which spectra actually have a usable wavelength window for the absorber of interest.  `qsoabsfind.absorberutils.find_searchable_qsos` which runs spectra in parallel over the whole file and returns a two-column table (`QSO_INDEX`, `IS_GOOD`) that you can use to build a parent sample:
-
-```python
-from qsoabsfind.absorberutils import find_searchable_qsos
-
-parent = find_searchable_qsos(
-    fits_file='spectra.fits',
-    absorber='MgII',
-    constant_file='my_constants.py',
-    ncpus=8,          # parallel workers
-    n_qso=None,       # None = all spectra; or '1-5000', '500', '1-5000:2' etc.
-    verbose=False,
-)
-
-# keep only searchable QSOs
-good = parent[parent['IS_GOOD']]
-print(f"{len(good)} / {len(parent)} QSOs have a searchable MgII window")
-```
-
-The function applies the same overridable-constants logic as the main pipeline, so the result is consistent with what the full search would use.
-
-**Running as bash script:**
----------------------------
-
-**SDSS DR16 Spectra (without column densities)**
-
-```sh
-qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-           --absorber MgII \
-           --output test_MgII.fits \
-           --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-           --ncpus 4 \
-           --constant-file data/sdss/sdss_constants.py
-```
-
-**DESI DR1 Spectra (without column densities)**
-
-```sh
-qsoabsfind --input-fits-file data/desi/qso_test_spectra.fits \
-           --absorber MgII \
-           --output test_MgII.fits \
-           --headers SURVEY=DESI AUTHOR=YOUR_NAME \
-           --ncpus 4 \
-           --constant-file data/desi/desi_constants.py
-```
-
-**SDSS DR16 Spectra (with column densities)**
-
-```sh
-qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-           --absorber MgII \
-           --output test_MgII.fits \
-           --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-           --ncpus 4 \
-           --constant-file data/sdss/sdss_constants.py
-           --coldens
-           --dv 300
-```
-
-Running with a YAML config file
--------------------------------
-
-Instead of passing all arguments on the command line, you can store them in a YAML config file and pass it with `--config`. Any argument also given on the command line will override the YAML value.
-
-```sh
-qsoabsfind --config example_config.yaml
-```
-
-CLI flags always take priority, so you can override individual values without editing the file:
-
-```sh
-# override absorber and enable verbose on the fly
-qsoabsfind --config example_config.yaml --absorber CIV --verbose
-```
-
-A fully annotated template is provided at `data/example_config.yaml`.
-
-**Reading output catalogs**
----------------------------
-
-After running the absorber search, you can load the output FITS catalog using the `AbsorberData` class:
-
-```python
-from qsoabsfind.datamodel import AbsorberData
-
-catalog = AbsorberData('test_MgII.fits', autoload=True)
-
-print(catalog.catalog)        # absorber table (ABSORBER HDU)
-print(catalog.metadata)       # QSO metadata (METADATA HDU)
-print(catalog.column_density) # column densities if present, else None
-```
-
-**Plotting a random absorber**
-------------------------------
-
-Once you have loaded the spectra and the output catalog, you can visualise a randomly selected absorber using `plot_absorber` from `qsoabsfind.utils`:
-
-```python
-import numpy as np
-from qsoabsfind.datamodel import QSOSpecRead, AbsorberData
-from qsoabsfind.utils import plot_absorber
-
-# Load the output absorber catalog
-catalog = AbsorberData('/path/to/your/absorber.fits', autoload=True)
-
-# Pick a random absorber from the catalog
-rng = np.random.default_rng()
-idx = rng.integers(len(catalog.catalog))
-row = catalog.catalog[idx]
-
-# Load the corresponding QSO spectrum
-spectra = QSOSpecRead('/path/to/your/spectra.fits',
-                      index=int(row['INDEX_SPEC']),
-                      autoload=True)
-
-# Plot the absorber (full spectrum + zoomed-in doublet view)
-plot_absorber(spectra, absorber='MgII', zabs=row,
-              title=f"MgII absorber at z={row['Z_ABS']:.4f}")
-```
-
-Pass `show_error=True` to overlay the error spectrum, or `plot_filename='absorber.png'` to save the figure to disk instead of displaying it interactively.
-
-
-Useful notes:
--------------
-
-Parallel mode can be memory-intensive if the input FITS file is large in size. As the code accesses the FITS file to read QSO spectra when running in parallel, it can become a bottleneck for memory, and the code may fail. Currently, I suggest the following:
-
-- **Divide your file into smaller chunks:** Split the FITS file into several smaller files, each containing approximately `N` spectra. Then run the code on these smaller files.
-
-- **Use a rule of thumb for file size:** Ensure that the size of each individual file is no larger than `total_memory/ncpu` of your node or system. Based on this idea you can decide your `N`. I would suggest `N = 1000`.
-
-- **Merge results at the end:** After processing, you can merge your results using `qsoabsfind.utils.combine_fits_files`.
-
-In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
-
-Example catalog runs
---------------------
-
-SDSS and DESI [example jupyter notebooks](https://github.com/abhi0395/qsoabsfind/blob/main/nb/) are also available.
 
 Citation 
 --------
 
 If you use this code in your analysis, please cite [Anand, Nelson & Kauffmann 2021](https://arxiv.org/abs/2103.15842) and [Anand et al. 2025](https://arxiv.org/abs/2504.20299). The BibTeX entries for these papers can be found [here (2021 paper)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.504...65A/exportcitation) and [here (2025 paper)](https://ui.adsabs.harvard.edu/abs/2025arXiv250420299A/exportcitation).
 
-Additionally, please also cite the associated [Zenodo record](https://zenodo.org/records/15685771). Additionally, consider starring the repository if you find it useful or use it in your work.
+Please also cite the associated [Zenodo record](https://zenodo.org/records/15685771). Consider starring the repository if you find it useful.
 
 You can also copy the BibTeX entry directly from below.
 
@@ -351,12 +136,17 @@ You can also copy the BibTeX entry directly from below.
 Contribution
 ------------
 
-Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas. If you have any questions/suggestions, please feel free to write to **abhijeetanand2011@gmail.com** or, preferably, open a GitHub issue.
+Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas or if you find any bugs. If you have any questions or suggestions, write to **abhijeetanand2011@gmail.com** or open a GitHub issue.
 
 Acknowledgements
 ----------------
 
-The first crude version of the codebase was developed and written by me during my PhD with lots of suggestions from my PhD supervisors [Prof. Dr. Guinevere Kauffmann](https://www.mpa-garching.mpg.de/person/44092) and [Dr. Dylan Nelson](https://nelson.tng-project.org/). Over the years, it has evolved from a specialized script into the generic, community-ready framework it is today. I would like to extend my thanks to the VS Code AI agents, which were instrumental in refining the codebase. They provided invaluable assistance in documenting functions, loggers, optimizing logic, and expanding unit test coverage. They helped ensure the code is both robust and maintainable. The project logo was created from a absorber example generated by me, with assistance from ChatGPT-5.
+The first crude version of the codebase was developed and written by me during my PhD with lots of suggestions from my PhD supervisors [Prof. Dr. Guinevere Kauffmann](https://www.mpa-garching.mpg.de/person/44092) and [Dr. Dylan Nelson](https://nelson.tng-project.org/). Over the years, it has grown from a simple script into a general-purpose tool. I thank the VS Code AI agents for their help in improving the codebase — they helped with documenting functions, optimizing logic, and expanding unit test coverage. The project logo was created from a absorber example generated by me, with assistance from ChatGPT-5.
+
+Disclaimer
+----------
+
+Like any software, this code may contain bugs or unintended behavior. It is provided "as is" without warranty of any kind. Users are encouraged to test the code on a small sample before applying it to large datasets. If you find any issues, please report them via GitHub.
 
 License
 -------

@@ -4,6 +4,10 @@ This script contains some utility functions.
 
 import time
 import numpy as np
+try:
+    from numpy import trapezoid as _trapezoid
+except ImportError:          # NumPy < 2.0
+    from numpy import trapz as _trapezoid
 from scipy import signal
 import matplotlib.pyplot as plt
 import os
@@ -13,7 +17,8 @@ import re
 from importlib.metadata import version, PackageNotFoundError
 
 # Constants
-from .constants import lines, oscillator_parameters, speed_of_light, doublet_keys, amplitude_dict
+from .constants import lines, speed_of_light, doublet_keys, amplitude_dict, QSO_EMISSION_LINES
+from . import constants as _constants
 
 def get_package_versions():
     """
@@ -74,7 +79,7 @@ def update_header(args, user_constants):
 
     headers.update({
         'ABSORBER': {"value": args.absorber, "comment": 'Absorber name'},
-        'KERWIDTH': {"value": str(user_constants.search_parameters["ker_width_pixels"]), "comment": 'Kernel width in pixels (ker_width_pixels)'},
+        'KERWIDTH': {"value": str(user_constants.search_parameters["ker_fwhm_pixels"]), "comment": 'Kernel width in pixels (ker_fwhm_pixels)'},
         'COEFFSIG': {"value": user_constants.search_parameters["coeff_sigma"], "comment": 'sigma threshold (coeff_sigma)'},
         'MULTRE': {"value": user_constants.search_parameters["mult_resi"], "comment": 'Multiplicative factor for residuals (mult_resi)'},
         'D_PIX': {"value": user_constants.search_parameters["d_pix"], "comment": 'tolerance for line separation (in Ang) (d_pix)'},
@@ -88,8 +93,21 @@ def update_header(args, user_constants):
         'RED_LAM': {"value": user_constants.search_parameters["lam_red"], "comment": 'red end of quasar-rest frame (Ang) for search'},
         'CONTERR': {"value": user_constants.search_parameters["continuum_error_frac"], "comment": 'fractional error in continuum normalization'},
         'CONFLEV': {"value": user_constants.search_parameters["conf_level"], "comment": 'minimum confidence level for selection'},
+        'DV_QSO': {"value": user_constants.search_parameters["dv"], "comment": 'qso velocity separation from absorber (km/s)'},
+        'RWSTART': {"value": user_constants.search_parameters["res_wave_start"], "comment": 'start wavelength for resolution curve (Ang)'},
+        'RVSTART': {"value": user_constants.search_parameters["res_val_start"], "comment": 'resolution value at start wavelength'},
+        'RWEND': {"value": user_constants.search_parameters["res_wave_end"], "comment": 'end wavelength for resolution curve (Ang)'},
+        'RVEND': {"value": user_constants.search_parameters["res_val_end"], "comment": 'resolution value at end wavelength'},
+        'RES_IS_R': {"value": user_constants.search_parameters["res_is_R"], "comment": 'if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values'},
     })
 
+    if 'trap_ew_sigma' in args:
+        headers['TRAP_EW'] = {"value": args.trap_ew_sigma, "comment": 'sigma threshold for trapezoidal EW error (trap_ew_sigma)'}
+    if 'snr_cut' in user_constants.search_parameters:
+        headers['SNR_CUT'] = {"value": user_constants.search_parameters["snr_cut"], "comment": 'S/N cut for spectra (snr_cut)'}
+        headers['SNR_STAT'] =  {"value": user_constants.search_parameters["statistics"], "comment": 'statistics for SNR of QSO in search window'}
+    if 'qso_dv_mask_emline' in user_constants.search_parameters:
+        headers['DV_EML'] = {"value": user_constants.search_parameters["qso_dv_mask_emline"], "comment": 'mask emission lines in search window within +/- of this value (qso_dv_mask_emline)'}
     return headers
 
 def parse_qso_sequence(qso_sequence):
@@ -121,21 +139,22 @@ def parse_qso_sequence(qso_sequence):
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
 
-def elapsed(start, msg):
-    """
-    Prints the elapsed time since `start`.
+def snr_of_spectra(residual, error, **kwargs):
 
-    Args:
-        start (float): The start time.
-        msg (str): The message to print with the elapsed time.
-
-    Returns:
-        float: The current time.
-    """
-    end = time.time()
-    if start is not None:
-        print(f"{msg} {end - start:.2f} seconds")
-    return end
+    # SNR check on the search window: mirrors return_if_absorber_can_be_detected_in_a_spectrum.
+    # Spectra that fail are returned with z=-1 so they appear as IS_QSO_AVAILABLE=False.
+    snr_val = - 1.0 # if not computed
+    snr_cut = kwargs.get("snr_cut", None)
+    stat = kwargs.get("statistics", None)
+    if (snr_cut is not None) and (stat is not None):
+        if stat == "median":
+            snr_val = np.nanmedian(residual / error)
+        elif stat == "mean":
+            snr_val = np.nanmean(residual / error)
+        elif isinstance(stat, (int, float)):
+            pixel_snr = residual / error
+            snr_val = np.nanpercentile(pixel_snr, 100.0 - stat)
+    return snr_val, stat
 
 def gauss_two_lines_kernel(x, a):
     """
@@ -203,12 +222,17 @@ def convolution_fun(absorber, residual_arr_after_mask, width, log, wave_res, ind
     Returns:
         numpy.ndarray: The convolved residual array.
     """
-    if absorber not in amplitude_dict:
-        raise ValueError(f"Unsupported absorber type. Available types are: {list(amplitude_dict.keys())}")
-
-    A_main = amplitude_dict[absorber]
+    if absorber not in doublet_keys:
+        raise ValueError(
+            f"Absorber '{absorber}' not found in doublet_keys. "
+            f"Built-in absorbers: {list(doublet_keys.keys())}. "
+            "To use a custom doublet, register it in your constants file "
+            "(see the paramfile docs for the required format)."
+        )
+    # Fall back to 0.5 for custom absorbers not listed in amplitude_dict.
+    A_main = amplitude_dict.get(absorber, 0.5)
     A_main, A_secondary = compute_doublet_amplitudes(A_main, f1, f2)
-    ct = 10
+    ct = _constants.CONV_KERNEL_EXTENT
     # extract lambdas for the doublet
     lambda1, lambda2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
 
@@ -481,62 +505,66 @@ def validate_sizes(conv_arr, unmsk_residual, spec_index):
         print(f"ERROR: Size mismatch detected in spec_index {spec_index}")
     return bad_conv
 
-def vel_dispersion(c1, c2, sigma1, sigma2, resolution, z, obs_wave):
+def vel_dispersion(c1, c2, sigma1, sigma2, sigma1_err, sigma2_err, resolution, z, obs_wave):
     """
-    Calculates and corrects velocity dispersion using Gaussian quadrature.
+    Instrumental-resolution-corrected velocity dispersion via Gaussian quadrature.
 
     Args:
-        c1 (float): rest-frame fitted line center 1 (in Ang).
-        c2 (float): rest-frame fitted line center 2 (in Ang).
-        sigma1 (float): rest-frame fitted width 1 (in Ang).
-        sigma2 (float): rest-frame fitted width 2 (in Ang).
-        resolution (float or np.array): instrumental true resolution (in km/s), see note.
-        z (float): redshift of absorber
-        obs_wave (np.array): observed wavelength in Angstroms
+        c1, c2       : fitted line centers (Ang), rest or observed frame (must be
+                       consistent with sigma1/sigma2).
+        sigma1, sigma2: fitted Gaussian widths (Ang), same frame as c1/c2.
+        resolution   : instrumental 1-sigma dispersion in km/s (already FWHM/2.355).
+                       Scalar, or array sampled on the obs_wave grid.
+        z            : redshift of absorber.
+        obs_wave     : observed wavelength grid (Ang), aligned with `resolution`
+                       when `resolution` is an array.
 
     Returns:
-        tuple: A tuple ``(vel1, vel2)`` where each element is a float giving the
-            instrumental-resolution-corrected velocity dispersion (km/s) for the
-            respective line. Returns ``numpy.nan`` for a line whose fitted width
-            is smaller than the instrumental resolution.
+        (vel1, vel2): corrected velocity dispersions (km/s), or NaN for a line
+                      whose fitted width is below the instrumental resolution or
+                      falls off the resolution grid.
 
     Note:
-        - resolution must be the true one, not the FWHM, usually R = lambda/delta_lambda is in FWHM unit, so first divide by 2.355 and then provide here. This is important.
+        resolution is the TRUE 1-sigma dispersion. Do NOT divide by 2.355 again.
     """
-
+    # velocities are frame-independent: c*sigma_lambda/lambda is the same in any frame
     v1_sig = sigma1 / c1 * speed_of_light
     v2_sig = sigma2 / c2 * speed_of_light
 
-    lam_obs1 = (1 + z) * c1
-    lam_obs2 = (1 + z) * c2
+    lam_obs1 = (1.0 + z) * c1
+    lam_obs2 = (1.0 + z) * c2
 
-    # Get per-line instrumental sigma_v (km/s)
     if np.isscalar(resolution):
         res1 = float(resolution)
         res2 = float(resolution)
     else:
-        # Interpolate instrumental sigma_v at the exact observed wavelengths
-        # Assumes obs_wave is monotonic and same length as resolution.
-        res1 = float(np.interp(lam_obs1, obs_wave, resolution))
-        res2 = float(np.interp(lam_obs2, obs_wave, resolution))
+        # sigma_v at each line's OBSERVED wavelength; NaN if off-grid (e.g. blue edge)
+        res1 = float(np.interp(lam_obs1, obs_wave, resolution,
+                               left=np.nan, right=np.nan))
+        res2 = float(np.interp(lam_obs2, obs_wave, resolution,
+                               left=np.nan, right=np.nan))
 
-    #Gaussian quadrature correction
     del_v1_sq = v1_sig**2 - res1**2
     del_v2_sq = v2_sig**2 - res2**2
 
-    is_resolved1 = del_v1_sq >= 0
-    is_resolved2 = del_v2_sq >= 0
+    # NaN comparisons are False, so off-grid or unresolved -> NaN, as intended
+    corr_del_v1 = np.sqrt(del_v1_sq) if del_v1_sq >= 0 else np.nan
+    corr_del_v2 = np.sqrt(del_v2_sq) if del_v2_sq >= 0 else np.nan
 
-    # Correct for instrumental resolution
-    # Set to NaN if the fitted  width is less than rest-frame instrumental width
-    # One line may resolved and one may be not, so this condition is a little relaxed
-    corr_del_v1_sq = np.sqrt(del_v1_sq) if is_resolved1 else np.nan
-    corr_del_v2_sq = np.sqrt(del_v2_sq) if is_resolved2 else np.nan
+    if np.isfinite(corr_del_v1) and corr_del_v1 > 0:
+        del_v1_err = v1_sig / corr_del_v1 * speed_of_light / c1 * sigma1_err
+    else:
+        del_v1_err = np.nan
 
-    return corr_del_v1_sq, corr_del_v2_sq
+    if np.isfinite(corr_del_v2) and corr_del_v2 > 0:
+        del_v2_err = v2_sig / corr_del_v2 * speed_of_light / c2 * sigma2_err
+    else:
+        del_v2_err = np.nan
+
+    return corr_del_v1, corr_del_v2, del_v1_err, del_v2_err
 
 
-def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, **kwargs):
+def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None, continuum_dict=None, **kwargs):
     """
     Saves a plot of spectra with absorber(s) (full spectrum + zoomed version) along
     with its Gaussian fit in the current working directory or in the user-defined
@@ -544,10 +572,14 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
 
     Args:
         spectra (object): spectra class, output of QSOSpecRead()
-        absorber (str): Type of absorber, e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII
-        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and 'GAUSS_FIT' columns, if not float.
+        absorber (str): Type of absorber, e.g., 'MgII', 'CIV', 'OVI', 'NV', 'SiIV', 'AlIII', 'FeII', 'CaII', 'NaI'.
+        zabs (Table, Row, dict, np.ndarray or float): Must have 'Z_ABS' and
+            'GAUSS_FIT' columns, if not float.
         show_error (bool): if error bars should be shown (default False)
         plot_filename (str): If provided, will save the plot to the given filename.
+        continuum_dict (dict or None): Optional dictionary with 'flux' and
+            'continuum' arrays, plus an optional 'cont_legend' label and
+            'ylabel' override.
         **kwargs: Additional keyword arguments for matplotlib plot functions, such as:
                   xlabel (str): The label for the x-axis.
                   ylabel (str): The label for the y-axis.
@@ -555,14 +587,15 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
                   fontsize (int): Font size for the title and labels.
     """
 
-    # Extract common plot parameters from kwargs or set to default values
     xlabel = kwargs.pop('xlabel', 'obs wave (ang)')
     ylabel = kwargs.pop('ylabel', 'residual')
     title = kwargs.pop('title', 'QSO')
     fontsize = kwargs.pop('fontsize', 16)
+    ls = kwargs.pop('ls', '-')
+    lw = kwargs.pop('lw', 1.5)
+    panel_color = kwargs.pop('panel_color', kwargs.pop('color', 'black'))
 
     lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
-    # If zabs is a Table or structured array, extract redshifts and fit parameters
     if isinstance(zabs, (Table, Row, dict, np.ndarray)) and ('Z_ABS' in zabs.keys() and 'GAUSS_FIT' in zabs.keys()):
         redshifts = zabs['Z_ABS']
         fit_params = zabs['GAUSS_FIT']
@@ -576,65 +609,171 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
             fit_params = [fit_params]
 
     num_absorbers = len(redshifts)
+    sep = 25
 
-    sep = 25  # Set separation for zoomed plot ranges
+    l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
 
-    # Create a grid with 2 rows: 1 for the main plot and 1 for zoomed plots
-    fig = plt.figure(figsize=(13.5, 8))
-    fig.subplots_adjust(hspace=0.15, wspace=0.15)  # Adjust space between plots
+    has_continuum = continuum_dict is not None
+    continuum_zoom = bool(continuum_dict.get('zoom', False)) if has_continuum else False
+    n_rows = 2 if (has_continuum and continuum_zoom) else (3 if has_continuum else 2)
+    fig = plt.figure(figsize=(13.5, 8 + 1.5 * int(has_continuum and not continuum_zoom)))
+    fig.subplots_adjust(hspace=0.15, wspace=0.15)
 
-    # Super title for the entire figure
-    fig.suptitle(title, fontsize=fontsize)
+    if has_continuum:
+        flux_cont = continuum_dict.get('flux', None)
+        continuum_data = continuum_dict.get('continuum', None)
+        zqso = continuum_dict.get('zqso', None)
+        if continuum_zoom:
+            fig.suptitle(title, fontsize=fontsize)
+        else:
+            fig.suptitle('')
+    else:
+        fig.suptitle(title, fontsize=fontsize)
 
-    # Create the main plot in the first row
-    ax_main = plt.subplot2grid((2, num_absorbers), (0, 0), colspan=num_absorbers)
-    ax_main.plot(lam, residual, ls='-', lw=1.5, label='residual', **kwargs)
-    if show_error:
-        ax_main.plot(lam, error, ls='-', lw=1.5, label='error', **kwargs)
     ymask = ~np.isnan(residual)
     xmin, xmax = lam[ymask].min(), lam[ymask].max()
-    ax_main.set_xlim(xmin, xmax)
-    ax_main.legend(prop={'size':11})
 
-    # Determine the absorber line labels
+    if has_continuum and not continuum_zoom:
+        if flux_cont is None or continuum_data is None:
+            raise ValueError("continuum_dict must contain 'flux' and 'continuum' arrays")
+        if flux_cont.shape != residual.shape or continuum_data.shape != residual.shape:
+            raise ValueError("continuum_dict arrays must match the shape of spectra.flux")
 
-    if absorber not in doublet_keys:
-        raise ValueError(f"Unsupported absorber type: {absorber}")
+        ax_top = plt.subplot2grid((n_rows, num_absorbers), (0, 0), colspan=num_absorbers)
+        ax_main = plt.subplot2grid((n_rows, num_absorbers), (1, 0), colspan=num_absorbers, sharex=ax_top)
+        ax_top.plot(lam, flux_cont, ls=ls, lw=lw, color=panel_color, label='flux', **kwargs)
+        ax_top.plot(lam, continuum_data, ls=ls, lw=lw, color='red', label=continuum_dict.get('cont_legend', 'NMF continuum'), **kwargs)
+        if zqso is not None:
+            obs_wave = {f'{line}':(1. + zqso) * wave for line, wave in QSO_EMISSION_LINES.items()
+                            if (1. + zqso) * wave >= xmin and (1. + zqso) * wave <= xmax}
+            for line, wave in obs_wave.items():
+                ax_top.axvline(x=wave, color='orange', ls='--', lw=1.5, alpha=0.7)
+                ax_top.text(wave+65, ax_top.get_ylim()[1] * 0.9, f'{line}', rotation=90, color='orange', fontsize=10, ha='center', va='top')
+
+        ax_top.set_xlim(xmin, xmax)
+        ax_top.set_title(title, fontsize=fontsize)
+        ax_top.set_ylabel(continuum_dict.get('ylabel', ylabel), fontsize=fontsize)
+        ax_top.grid(True)
+        ax_top.minorticks_on()
+        ax_top.tick_params(axis='both', which='major', labelsize=13)
+        ax_top.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+        ax_top.legend(prop={'size':11})
+        ax_top.tick_params(labelbottom=False)
     else:
-        l1, l2 = doublet_keys[absorber][0], doublet_keys[absorber][1]
+        ax_main = plt.subplot2grid((n_rows, num_absorbers), (0, 0), colspan=num_absorbers)
 
-    # Plot vertical lines for the absorber lines in the main plot
-    for z in redshifts:
-        x1, x2 = lines[l1] * (1 + z), lines[l2] * (1 + z)
-        ax_main.axvline(x=x1, color='r', ls='--')
-        ax_main.axvline(x=x2, color='r', ls='--')
+    if not has_continuum:
+        ax_main.plot(lam, residual, ls=ls, lw=lw, color=panel_color, label='residual', **kwargs)
+        if show_error:
+            ax_main.plot(lam, error, ls=ls, lw=lw, color='gray', label='error', **kwargs)
+        ax_main.set_xlim(xmin, xmax)
+        ax_main.legend(prop={'size':11})
+        for z in redshifts:
+            ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
+            ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
+        ax_main.set_xlabel(xlabel, fontsize=fontsize)
+        ax_main.set_ylabel(ylabel, fontsize=fontsize)
+        ax_main.grid(True)
+        ax_main.minorticks_on()
+        ylo = -0.25
+        yhi = np.nanpercentile(residual[ymask], 99)
+        ymargin = 0.5 * (yhi - ylo)
+        ax_main.set_ylim(ylo, yhi + ymargin)
+        ax_main.tick_params(axis='both', which='major', labelsize=13)
+        ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+    elif not continuum_zoom:
+        ax_main.plot(lam, residual, ls=ls, lw=lw, color=panel_color, label='residual', **kwargs)
+        if show_error:
+            ax_main.plot(lam, error, ls=ls, lw=lw, color='gray', label='error', **kwargs)
+        ax_main.set_xlim(xmin, xmax)
+        ax_main.legend(prop={'size':11})
+        for z in redshifts:
+            ax_main.axvline(x=lines[l1] * (1 + z), color='r', ls='--')
+            ax_main.axvline(x=lines[l2] * (1 + z), color='r', ls='--')
+        ax_main.set_xlabel(xlabel, fontsize=fontsize)
+        ax_main.set_ylabel(ylabel, fontsize=fontsize)
+        ax_main.grid(True)
+        ax_main.minorticks_on()
+        ylo = -1
+        yhi = np.nanpercentile(residual[ymask], 99)
+        ymargin = 0.5 * (yhi - ylo)
+        ax_main.set_ylim(ylo, yhi + ymargin)
+        ax_main.tick_params(axis='both', which='major', labelsize=13)
+        ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
 
-    ax_main.set_xlabel(xlabel, fontsize=fontsize)
-    ax_main.set_ylabel(ylabel, fontsize=fontsize)
-    ax_main.grid(True)
-    ax_main.minorticks_on()
-    ax_main.set_ylim(-1, 2)
-    ax_main.tick_params(axis='both', which='major', labelsize=13)
-    ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
-
-    # Add subplots for zoomed-in regions in the second row
     for idx, z in enumerate(redshifts):
         shift_z = 1 + z
-        ax_zoom = plt.subplot2grid((2, num_absorbers), (1, idx))
+        if has_continuum and continuum_zoom:
+            x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
+            mask = (lam > x1 - sep) & (lam < x2 + sep)
+            ax_top = plt.subplot2grid((n_rows, num_absorbers), (0, idx), sharex=None)
+            ax_top.plot(lam[mask], flux_cont[mask], ls=ls, lw=lw, color=panel_color, label='flux', **kwargs)
+            ax_top.plot(lam[mask], continuum_data[mask], ls=ls, lw=lw, color='red', label=continuum_dict.get('cont_legend', 'NMF continuum'), **kwargs)
+            ax_top.set_xlim([x1 - sep, x2 + sep])
+            ax_top.set_ylabel(continuum_dict.get('ylabel', ylabel), fontsize=fontsize)
+            ax_top.grid(True)
+            ax_top.minorticks_on()
+            ax_top.tick_params(axis='both', which='major', labelsize=13)
+            ax_top.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+            ax_top.legend(prop={'size':11})
+            ax_top.tick_params(labelbottom=False)
+
+            ax_zoom = plt.subplot2grid((n_rows, num_absorbers), (1, idx), sharex=ax_top)
+
+            if not show_error:
+                ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, color=panel_color, label='data', **kwargs)
+            else:
+                ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], ls="-", marker='o', markersize=5, color=panel_color, **kwargs)
+            ax_zoom.axvline(x=x1, color='r', ls='--')
+            ax_zoom.axvline(x=x2, color='r', ls='--')
+            ax_zoom.set_xlim([x1 - sep, x2 + sep])
+            zoom_y = residual[mask]
+            finite = zoom_y[np.isfinite(zoom_y)]
+            if finite.size:
+                y_min = np.nanpercentile(finite, 16)
+                y_max = np.nanpercentile(finite, 84)
+                y_margin = 0.2 * (y_max - y_min) if y_max > y_min else 0.2
+                ylo = max(0.1, y_min-0.15) #- y_margin
+                yhi = min(1.25, y_max+0.15) #+ y_margin
+                ax_zoom.set_ylim(ylo, yhi)
+            ax_zoom.minorticks_on()
+            ax_zoom.grid(True)
+            ax_zoom.set_xlabel(xlabel, fontsize=fontsize)
+            ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
+            ax_zoom.tick_params(axis='both', which='major', labelsize=13)
+            ax_zoom.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+            if fit_params is not None:
+                params = fit_params[idx]
+                lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
+                fit_curve = double_gaussian(
+                    lam_fit, params[0], shift_z * params[1], shift_z * params[2],
+                    params[3], shift_z * params[4], shift_z * params[5]
+                )
+                ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
+            ax_zoom.legend(prop={'size':11})
+            continue
+
+        zoom_row = 2 if has_continuum else 1
+        ax_zoom = plt.subplot2grid((n_rows, num_absorbers), (zoom_row, idx))
         x1, x2 = lines[l1] * shift_z, lines[l2] * shift_z
-        mask = (lam > x1 - sep) & (lam < x2 + sep)  # Define zoom range around the lines
+        mask = (lam > x1 - sep) & (lam < x2 + sep)
         if not show_error:
-            ax_zoom.plot(lam[mask], residual[mask], ls='-', lw=1.5, label='data', **kwargs)
+            ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw, color=panel_color, label='data', **kwargs)
         else:
-            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color='C0', markersize=6, label='data', **kwargs)
+            ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask], marker='o', color=panel_color, markersize=6, label='data', **kwargs)
         ax_zoom.axvline(x=x1, color='r', ls='--')
         ax_zoom.axvline(x=x2, color='r', ls='--')
         ax_zoom.set_xlim([x1 - sep, x2 + sep])
-
-        # Determine appropriate y-limits for the subplot based on data
-        y_min, y_max = max(0, np.nanmin(residual[mask])), np.nanmax(residual[mask])
-        y_margin = 0.2 * (y_max - y_min)  # Add a margin for better visibility
-        ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
+        zoom_y = residual[mask]
+        finite = zoom_y[np.isfinite(zoom_y)]
+        if finite.size:
+            y_min = np.nanpercentile(finite, 1)
+            y_max = np.nanpercentile(finite, 99)
+            y_margin = 0.2 * (y_max - y_min) if y_max > y_min else 0.2
+            ylo = max(0.0, y_min-0.1) #- y_margin
+            yhi = min(1.25, y_max+0.1) #+ y_margin
+            print('INFO: Zoomed y-limits for absorber {} at z={:.3f}: ylo={:.3f}, yhi={:.3f}'.format(absorber, z, ylo, yhi))
+            ax_zoom.set_ylim(ylo, yhi)
 
         ax_zoom.set_title(f'{absorber} at z={z:.3f}', fontsize=fontsize)
         ax_zoom.minorticks_on()
@@ -643,11 +782,8 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
         ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
         ax_zoom.tick_params(axis='both', which='major', labelsize=13)
         ax_zoom.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
-        # Add Gaussian fit
         if fit_params is not None:
             params = fit_params[idx]
-            # Adjust fit parameters for the redshift
-            # Plot the Gaussian fit
             lam_fit = np.linspace(x1 - sep, x2 + sep, 1000)
             fit_curve = double_gaussian(
                 lam_fit, params[0], shift_z * params[1], shift_z * params[2],
@@ -656,26 +792,169 @@ def plot_absorber(spectra, absorber, zabs, show_error=False, plot_filename=None,
             ax_zoom.plot(lam_fit, fit_curve, 'r-', label='Gaussian Fit', **kwargs)
         ax_zoom.legend(prop={'size':11})
 
-    # Use tight_layout to ensure there are no overlaps
-    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Reserve space for suptitle
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
 
     # Save or display the plot
     if plot_filename is not None:
-        # Get the current working directory
         current_dir = os.getcwd()
-
-        # Define the full path for the plot
         plot_path = plot_filename
         if not os.path.isabs(plot_filename):
             plot_path = os.path.join(current_dir, plot_filename)
-
-        # Save the plot
         plt.savefig(plot_path)
         plt.close()
-
         print(f"Plot saved as {plot_path}")
     else:
         plt.show()
+
+
+def plot_multiple_metal_systems(spectra, absorber_dict, zoom=True, show_error=False,
+                        plot_filename=None, **kwargs):
+    """
+    Plot a full spectrum with all known absorber systems marked, optionally
+    followed by one zoomed panel per absorber -- styled identically to
+    plot_absorber.
+
+    Args:
+        spectra (object): spectra class, output of QSOSpecRead().
+        absorber_dict (dict): Keys are absorber names (str, e.g. 'MgII'), values
+            are astropy Tables with 'Z_ABS' and 'GAUSS_FIT' columns.
+        zoom (bool): If True (default), append one zoomed panel per absorber
+            below the main spectrum panel.
+        show_error (bool): Plot error bars if True. Default False.
+        plot_filename (str): Save path, or None to display interactively.
+        **kwargs: xlabel, ylabel, title, fontsize, plus any matplotlib kwargs.
+    """
+
+    xlabel   = kwargs.pop('xlabel',   'obs wave (ang)')
+    ylabel   = kwargs.pop('ylabel',   'residual')
+    title    = kwargs.pop('title',    'QSO')
+    fontsize = kwargs.pop('fontsize', 16)
+    ls = kwargs.pop('ls', '-')
+    lw = kwargs.pop('lw', 1.5)
+
+
+    lam, residual, error = spectra.wavelength, spectra.flux, spectra.error
+    sep = 25
+
+    _colours = ['red', 'C1', 'green', 'blue', 'purple', 'brown']
+
+    # Collect per-absorber data -- same pattern as plot_absorber
+    absorber_info = []
+    for i, (name, zabs) in enumerate(absorber_dict.items()):
+        if name not in doublet_keys:
+            raise ValueError(f"Unsupported absorber type: '{name}'")
+        redshifts  = zabs['Z_ABS']
+        fit_params = zabs['GAUSS_FIT']
+        if isinstance(redshifts, float):
+            redshifts  = [redshifts]
+            fit_params = [fit_params]
+        l1, l2 = doublet_keys[name][0], doublet_keys[name][1]
+        colour  = _colours[i % len(_colours)]
+        absorber_info.append((name, l1, l2, redshifts, fit_params, colour))
+
+    num_panels = max(1, sum(len(r) for _, _, _, r, _, _ in absorber_info)) if zoom else 1
+    n_rows     = 2 if zoom else 1
+
+    fig = plt.figure(figsize=(13.5, 8))
+    fig.subplots_adjust(hspace=0.15, wspace=0.15)
+    fig.suptitle(title, fontsize=fontsize)
+
+    # -- Row 0: full spectrum ---------------------------------------------
+    ax_main = plt.subplot2grid((n_rows, num_panels), (0, 0), colspan=num_panels)
+    ax_main.plot(lam, residual, ls=ls, lw=lw, label='residual', **kwargs)
+    if show_error:
+        ax_main.plot(lam, error, ls=ls, lw=lw, label='error', **kwargs)
+    ymask = ~np.isnan(residual)
+    ax_main.set_xlim(lam[ymask].min(), lam[ymask].max())
+    ylo = -1
+    yhi = np.nanpercentile(residual[ymask], 99)
+    ymargin = 0.5 * (yhi - ylo)
+    ax_main.set_ylim(ylo, yhi + ymargin)
+
+    tick_base = 0.75   # axes fraction (bottom=0, top=1)
+    tick_h    = 0.10   # axes fraction
+    txt_gap   = 0.01   # axes fraction above tick top
+    trans     = ax_main.get_xaxis_transform()  # x: data, y: axes fraction
+
+    for name, l1, l2, redshifts, _, colour in absorber_info:
+        for z in redshifts:
+            if z <= 0:
+                continue
+            for wave in (lines[l1] * (1 + z), lines[l2] * (1 + z)):
+                ax_main.vlines(wave, tick_base, tick_base + tick_h,
+                               color=colour, lw=1.2, transform=trans)
+            wave_l1 = lines[l1] * (1 + z)
+
+            ax_main.text(wave_l1, tick_base + tick_h + txt_gap,
+                         f'{name}', color=colour, fontsize=7,
+                         rotation=90, va='bottom', ha='center',
+                         transform=trans)
+
+    ax_main.set_xlabel(xlabel, fontsize=fontsize)
+    ax_main.set_ylabel(ylabel, fontsize=fontsize)
+    ax_main.legend(prop={'size': 11})
+    ax_main.grid(True)
+    ax_main.minorticks_on()
+    ax_main.tick_params(axis='both', which='major', labelsize=13)
+    ax_main.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+
+    # -- Row 1: zoom panels -- one per absorber per system, same as plot_absorber
+    if zoom:
+        total_cols = max(1, sum(len(r) for _, _, _, r, _, _ in absorber_info))
+        col = 0
+        for name, l1, l2, redshifts, fit_params, colour in absorber_info:
+            for idx, z in enumerate(redshifts):
+                shift_z = 1 + z
+                ax_zoom = plt.subplot2grid((n_rows, total_cols), (1, col))
+                x1, x2  = lines[l1] * shift_z, lines[l2] * shift_z
+                mask     = (lam > x1 - sep) & (lam < x2 + sep)
+                if not show_error:
+                    ax_zoom.plot(lam[mask], residual[mask], ls=ls, lw=lw,
+                                 label='data', **kwargs)
+                else:
+                    ax_zoom.errorbar(lam[mask], residual[mask], yerr=error[mask],
+                                     marker='o', color='C0', markersize=6,
+                                     label='data', **kwargs)
+                ax_zoom.axvline(x=x1, color=colour, ls='--')
+                ax_zoom.axvline(x=x2, color=colour, ls='--')
+                ax_zoom.set_xlim([x1 - sep, x2 + sep])
+                y_min    = max(0, np.nanmin(residual[mask]))
+                y_max    = np.nanmax(residual[mask])
+                y_margin = 0.2 * (y_max - y_min)
+                ax_zoom.set_ylim(y_min - y_margin, y_max + y_margin)
+                ax_zoom.set_title(f'{name} at z={z:.3f}', fontsize=fontsize)
+                ax_zoom.minorticks_on()
+                ax_zoom.grid(True)
+                ax_zoom.set_xlabel(xlabel, fontsize=fontsize)
+                ax_zoom.set_ylabel(ylabel, fontsize=fontsize)
+                ax_zoom.tick_params(axis='both', which='major', labelsize=13)
+                ax_zoom.tick_params(axis='both', which='minor', length=2.5,
+                                    width=1, color='gray')
+                if fit_params is not None:
+                    params    = fit_params[idx]
+                    lam_fit   = np.linspace(x1 - sep, x2 + sep, 1000)
+                    fit_curve = double_gaussian(
+                        lam_fit,
+                        params[0], shift_z * params[1], shift_z * params[2],
+                        params[3], shift_z * params[4], shift_z * params[5]
+                    )
+                    ax_zoom.plot(lam_fit, fit_curve, color=colour, ls=ls,
+                                 label='Gaussian Fit', **kwargs)
+                ax_zoom.legend(prop={'size': 11})
+                col += 1
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    if plot_filename is not None:
+        current_dir = os.getcwd()
+        plot_path   = (plot_filename if os.path.isabs(plot_filename)
+                       else os.path.join(current_dir, plot_filename))
+        plt.savefig(plot_path)
+        plt.close()
+        print(f"Plot saved as {plot_path}")
+    else:
+        plt.show()
+
 
 def read_nqso_from_header(file_path, hdu_name='METADATA'):
     """
@@ -708,3 +987,182 @@ def read_nqso_from_header(file_path, hdu_name='METADATA'):
 
         except KeyError:
             raise ValueError(f"No '{hdu_name}' HDU found in {file_path}.")
+
+
+def plot_trapezoidal_ew_windows(wavelength, residual, error, z,
+                                line1, line2, sigma1, sigma2,
+                                n_sigma=3, show_error=True,
+                                plot_filename=None, **kwargs):
+    """
+    Plot zoomed panels around each of the two absorption lines showing the
+    pixels included in the trapezoidal EW integration.
+
+    For each line the panel shows:
+
+    * The normalised flux (and optionally ±1sigma error bars).
+    * A shaded column marking the integration window
+      ``[line_centre ± n_sigma * sigma]``, clipped at the doublet midpoint
+      when the two windows would otherwise overlap.
+    * A filled area between the flux and the continuum (y = 1) inside the
+      window, visualising the absorption being integrated.
+    * A dashed continuum line at y = 1.
+    * A vertical dotted line at the rest-frame line centre.
+
+    Args:
+        wavelength (numpy.ndarray): Observed wavelength array (Ang).
+        residual (numpy.ndarray): Normalised flux array.
+        error (numpy.ndarray): Per-pixel 1-sigma flux error array.
+        z (float): Absorber redshift used to convert to the rest frame.
+        line1 (float): Rest-frame wavelength of the first line (Ang).
+        line2 (float): Rest-frame wavelength of the second line (Ang).
+        sigma1 (float): Gaussian width (1-sigma) of the first line (Ang, rest
+            frame) used to define the integration window.
+        sigma2 (float): Gaussian width (1-sigma) of the second line (Ang, rest
+            frame) used to define the integration window.
+        n_sigma (float): Half-width of each integration window in units of
+            sigma.  Default is 3, matching ``trapezoidal_ew``.
+        show_error (bool): If ``True`` (default), plot error bars / error
+            envelope on each panel.
+        plot_filename (str or None): If given, save the figure to this path
+            instead of calling ``plt.show()``.
+        **kwargs: Extra keyword arguments forwarded to the flux ``plot`` call
+            (e.g. ``color``, ``lw``).  The following keys are also consumed
+            here and not forwarded: ``fontsize``, ``title``.
+    """
+    fontsize = kwargs.pop('fontsize', 15)
+    title    = kwargs.pop('title', f'Trapezoidal EW windows  (z = {z:.4f})')
+
+    rest_lam = wavelength / (1.0 + z)
+
+    # Compute integration windows with the same midpoint-clipping as trapezoidal_ew
+    w1_lo = line1 - n_sigma * sigma1
+    w1_hi = line1 + n_sigma * sigma1
+    w2_lo = line2 - n_sigma * sigma2
+    w2_hi = line2 + n_sigma * sigma2
+    windows_overlap = w1_hi > w2_lo
+    if windows_overlap:
+        midpoint = (line1 + line2) / 2.0
+        w1_hi = midpoint
+        w2_lo = midpoint
+
+    # Pre-compute EWs using the same (clipped) windows so they can appear in titles
+    def _quick_ew(lam, flux):
+        if lam.size < 2:
+            return np.nan
+        return _trapezoid(1.0 - flux, lam)
+
+    _mask1 = (rest_lam >= w1_lo) & (rest_lam <= w1_hi)
+    _mask2 = (rest_lam >= w2_lo) & (rest_lam <= w2_hi)
+    ew1_val = _quick_ew(rest_lam[_mask1], residual[_mask1])
+    ew2_val = _quick_ew(rest_lam[_mask2], residual[_mask2])
+
+    def _ew_str(val):
+        return f'{val:.3f} Ang' if np.isfinite(val) else 'NaN'
+
+    line_info = [
+        (line1, w1_lo, w1_hi, 'C0',
+         f'$\\lambda$={line1:.2f} Ang  |  EW = {_ew_str(ew1_val)}'),
+        (line2, w2_lo, w2_hi, 'C1',
+         f'$\\lambda$={line2:.2f} Ang  |  EW = {_ew_str(ew2_val)}'),
+    ]
+
+    # Extra context shown around each window (in rest-frame Ang)
+    context_pad = max(2 * sigma1, 2 * sigma2, 2)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    fig.suptitle(title, fontsize=fontsize, y=0.98)
+
+    legend_handles = []   # collect handles for the shared legend (first panel only)
+
+    for i, (ax, (lc, w_lo, w_hi, colour, label)) in enumerate(zip(axes, line_info)):
+
+        # Zoom range: window + padding
+        x_lo = w_lo - context_pad
+        x_hi = w_hi + context_pad
+        mask_zoom = (rest_lam >= x_lo) & (rest_lam <= x_hi)
+
+        lam_z   = rest_lam[mask_zoom]
+        flux_z  = residual[mask_zoom]
+        err_z   = error[mask_zoom]
+
+        if lam_z.size == 0:
+            ax.set_title(f'{label}\n(no data in range)', fontsize=fontsize - 2)
+            continue
+
+        # Shaded integration window -- label omits wavelength bounds
+        h_win = ax.axvspan(w_lo, w_hi, alpha=0.15, color=colour, label='integration window')
+        if i == 0:
+            legend_handles.append(h_win)
+        if windows_overlap:
+            h_mid = ax.axvline(midpoint, color='gray', ls='-.', lw=1.0, label='midpoint clip (blended)')
+            if i == 0:
+                legend_handles.append(h_mid)
+
+        # Flux
+        if show_error:
+            h_flux = ax.errorbar(lam_z, flux_z, yerr=err_z,
+                                 fmt='o', ms=4, lw=1.2, color=colour,
+                                 ecolor='gray', elinewidth=0.8, capsize=2,
+                                 label='flux ± error', **kwargs)
+        else:
+            h_flux, = ax.plot(lam_z, flux_z, '-o', ms=4, lw=1.2,
+                              color=colour, label='flux', **kwargs)
+        if i == 0:
+            legend_handles.append(h_flux)
+
+        # Filled net-absorbed area inside the (clipped) integration window
+        mask_win = (rest_lam >= w_lo) & (rest_lam <= w_hi)
+        lam_w  = rest_lam[mask_win]
+        flux_w = residual[mask_win]
+        if lam_w.size >= 2:
+            h_fill = ax.fill_between(lam_w, flux_w, 1.0,
+                                     where=(flux_w < 1.0),
+                                     interpolate=True,
+                                     color=colour, alpha=0.45,
+                                     label='absorbed area')
+            if i == 0:
+                legend_handles.append(h_fill)
+
+        # Continuum (no legend entry -- axis label is self-explanatory)
+        ax.axhline(1.0, color='k', ls='--', lw=1.0)
+        if i == 0:
+            from matplotlib.lines import Line2D
+            legend_handles.append(Line2D([0], [0], color='k', ls='--', lw=1.0, label='continuum'))
+
+        # Line centre -- no legend entry (wavelength shown in panel title)
+        ax.axvline(lc, color='k', ls=':', lw=1.2)
+
+        # Axes limits and decoration
+        ax.set_xlim(x_lo, x_hi)
+        finite = flux_z[np.isfinite(flux_z)]
+        if finite.size:
+            ylo = min(0.0, finite.min()) - 0.05
+            yhi = max(1.2, finite.max() + 0.05)
+        else:
+            ylo, yhi = -0.05, 1.25
+        ax.set_ylim(ylo, yhi)
+
+        ax.set_title(label, fontsize=fontsize - 1)
+        ax.set_xlabel('rest wavelength (Ang)', fontsize=fontsize - 1)
+        ax.set_ylabel('normalised flux', fontsize=fontsize - 1)
+        ax.grid(True, alpha=0.4)
+        ax.minorticks_on()
+        ax.tick_params(axis='both', which='major', labelsize=11)
+        ax.tick_params(axis='both', which='minor', length=2.5, width=1, color='gray')
+
+    # Single shared legend centred to the right of the second subplot
+    if legend_handles:
+        axes[-1].legend(handles=legend_handles, fontsize=10,
+                        loc='center left', bbox_to_anchor=(1.02, 0.5),
+                        borderaxespad=0, framealpha=0.8)
+
+    plt.tight_layout(rect=[0, 0, 0.85, 0.96])
+
+    if plot_filename is not None:
+        plot_path = (plot_filename if os.path.isabs(plot_filename)
+                     else os.path.join(os.getcwd(), plot_filename))
+        plt.savefig(plot_path)
+        plt.close()
+        print(f"Plot saved as {plot_path}")
+    else:
+        plt.show()

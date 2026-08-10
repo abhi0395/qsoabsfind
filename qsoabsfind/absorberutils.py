@@ -9,15 +9,16 @@ import time
 import logging
 from astropy.table import Table
 from scipy.stats import chi2
-from .utils import elapsed
+from scipy.signal import medfilt
 
-# Constants — imported via the module object so that startup-time patches
+
+# Constants -- imported via the module object so that startup-time patches
 # (applied in parallel_convolution.main) propagate here automatically.
 from .constants import lines, speed_of_light, doublet_keys
 from . import constants as _constants
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 @jit(nopython=True)
 def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, coeff_sigma, beta, line1, line2, logwave):
@@ -41,7 +42,7 @@ def find_valid_indices(our_z, residual_our_z, lam_search, conv_arr, sigma_cr, co
     """
     new_our_z = []
     new_res_arr = []
-    npix = 3 # number of pixels around a line minima
+    npix = _constants.CANDIDATE_VALIDATION_NPIX  # number of pixels around a line minima
     del_lam = line2 - line1
     line_centre = 0.5 * (line1 + line2)
 
@@ -124,63 +125,83 @@ def calculate_doublet_ratio(ew1, ew2, ew1_error, ew2_error, f1, f2):
 
     return doublet_ratio, doublet_ratio_error
 
+
 @jit(nopython=True)
 def estimate_snr_for_lines(l1, l2, sig1, sig2, lam_rest, residual, error, log):
     """
-    Estimate S/N of the doublet lines.
+    Estimate local integrated S/N around the two doublet lines.
 
-    Args:
-        l1 (float): First wavelength to check around.
-        l2 (float): Second wavelength to check around.
-        sig1 (float): fitted width of the first line
-        sig2 (float): fitted width of second line
-        lam_rest (numpy.ndarray): Rest-frame wavelengths.
-        residual (numpy.ndarray): Residual flux values.
-        error (numpy.ndarray): Error values corresponding to the residuals.
-        log (bool): if wavelength bins are on log scale
+    The pixel-selection logic is matched to trapezoidal_ew():
+
+      - same +/- n_sigma * sigma window
+      - same midpoint clipping if the two windows overlap
+      - same >= and <= boundary convention
 
     Returns:
-        tuple: Integrated signal-to-noise ratios (SNR) around the specified wavelengths.
-               Returns (mean_sn1, mean_sn2).
+        tuple: (mean_sn1, mean_sn2)
     """
+
     if sig1 is None or sig2 is None:
-        dpix = 5
+        dpix = _constants.SNR_DEFAULT_DPIX
+
         if log:
             delta1 = np.abs(l1 * (10**(dpix * 0.0001) - 1))
             delta2 = np.abs(l2 * (10**(dpix * 0.0001) - 1))
         else:
-            delta1 = dpix * (lam_rest[1]-lam_rest[0])
+            delta1 = dpix * (lam_rest[1] - lam_rest[0])
             delta2 = delta1
     else:
-        nsig = 3 # for gaussian more than 99.7 percentile data is within 4sigma
-        delta1, delta2 = nsig * sig1, nsig * sig2
+        nsig = _constants.SNR_NSIG
+        delta1 = nsig * sig1
+        delta2 = nsig * sig2
 
-    ind1 = np.where((lam_rest > l1 - delta1) & (lam_rest < l1 + delta1))[0]
-    ind2 = np.where((lam_rest > l2 - delta2) & (lam_rest < l2 + delta2))[0]
+    # Same window definition as trapezoidal_ew
+    w1_lo = l1 - delta1
+    w1_hi = l1 + delta1
+    w2_lo = l2 - delta2
+    w2_hi = l2 + delta2
 
-    resi1 = residual[ind1]
-    resi2 = residual[ind2]
+    # Same midpoint clipping as trapezoidal_ew
+    if w1_hi > w2_lo:
+        midpoint = 0.5 * (l1 + l2)
+        w1_hi = midpoint
+        w2_lo = midpoint
 
-    err1 = error[ind1]
-    err2 = error[ind2]
+    # Same >= <= convention as trapezoidal_ew
+    ind1 = np.where((lam_rest >= w1_lo) & (lam_rest <= w1_hi))[0]
+    ind2 = np.where((lam_rest >= w2_lo) & (lam_rest <= w2_hi))[0]
 
-    median = 1  # Assuming median residual value is 1, as it continuum-normalized
+    def _one_line_snr(ind):
+        if ind.size == 0:
+            return -1.0
 
-    diff1 = median - resi1
-    diff2 = median - resi2
+        resi = residual[ind]
+        err = error[ind]
 
-    sum_diff1 = np.nansum(diff1)
-    sum_diff2 = np.nansum(diff2)
-    sum_err1 = np.sqrt(np.nansum(err1**2))
-    sum_err2 = np.sqrt(np.nansum(err2**2))
+        good = (
+            np.isfinite(resi)
+            & np.isfinite(err)
+            & (err > 0)
+        )
 
-    mean_sn1, mean_sn2 = -1, -1 # in case failure
+        if np.count_nonzero(good) == 0:
+            return -1.0
 
-    if sum_err1 != 0 and sum_err2 !=0:
-        mean_sn1 = sum_diff1 / sum_err1
-        mean_sn2 = sum_diff2 / sum_err2
+        diff = 1.0 - resi[good]
+
+        sum_diff = np.nansum(diff)
+        sum_err = np.sqrt(np.nansum(err[good]**2))
+
+        if sum_err > 0 and np.isfinite(sum_err):
+            return sum_diff / sum_err
+
+        return -1.0
+
+    mean_sn1 = _one_line_snr(ind1)
+    mean_sn2 = _one_line_snr(ind2)
 
     return mean_sn1, mean_sn2
+
 
 def group_contiguous_pixel(data, resi, avg):
     """
@@ -247,52 +268,81 @@ def group_and_select_weighted_redshift(redshifts, fluxes, residual, lam_obs, lin
         list: Best redshift from each contiguous group (minimum-flux weighted selection).
     """
 
-    # Ensure inputs are numpy arrays for easy manipulation
-    all_redshifts = np.array(redshifts)
-    fluxes = np.array(fluxes)
-    redshifts = []
-    for z in all_redshifts:
-        z1 = find_z_from_minimum(lam_obs, residual, line1, z, window=9)
-        z2 = find_z_from_minimum(lam_obs, residual, line2, z, window=9)
-        new_z = (line1 * z1 + line2 * z2) / (line1 + line2)
-        redshifts.append(new_z)
+    raw_z = np.asarray(redshifts, dtype=float)
+    fluxes = np.asarray(fluxes, dtype=float)
 
-    redshifts = np.array(redshifts)
+    good = np.isfinite(raw_z) & np.isfinite(fluxes)
 
-    # Check if redshifts array is empty
-    if len(redshifts) == 0:
+    raw_z = raw_z[good]
+    fluxes = fluxes[good]
+
+    if raw_z.size == 0:
         return []
 
-    # Initialize lists to store results
-    best_redshifts = []
+    order = np.argsort(raw_z)
+    raw_z = raw_z[order]
+    fluxes = fluxes[order]
 
-    # Sort redshifts and corresponding data
-    sorted_indices = np.argsort(redshifts)
-    redshifts = redshifts[sorted_indices]
-    fluxes = fluxes[sorted_indices]
+    groups = []
+    current = [0]
 
-    # Initialize the first group
-    current_group = [sorted_indices[0]]
-
-    # Group contiguous redshifts
-    for i in range(1, len(redshifts)):
-        if redshifts[i] - redshifts[i - 1] <= delta_z:
-            current_group.append(sorted_indices[i])
+    for i in range(1, raw_z.size):
+        if raw_z[i] - raw_z[i - 1] <= delta_z:
+            current.append(i)
         else:
-            # Select the redshift with the highest weight (i.e. minimum flux) in the current group
-            best_index = min(current_group, key=lambda idx: fluxes[idx])
-            best_redshifts.append(redshifts[best_index])
-            # Start a new group
-            current_group = [sorted_indices[i]]
+            groups.append(current)
+            current = [i]
 
-    # Select the best redshift in the last group
-    if current_group:
-        best_index = min(current_group, key=lambda idx: fluxes[idx])
-        best_redshifts.append(redshifts[best_index])
+    groups.append(current)
 
-    return best_redshifts
+    seeds = []
 
-def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=False):
+    for group in groups:
+        group = np.asarray(group, dtype=int)
+
+        z_group = raw_z[group]
+        f_group = fluxes[group]
+
+        if z_group.size == 0:
+            continue
+
+        # 1. Deepest candidate pixel
+        z_deep = z_group[np.nanargmin(f_group)]
+
+        # 2. Median candidate location
+        z_med = np.nanmedian(z_group)
+
+        # 3. Absorption-depth weighted mean, safer than 1/residual**gamma
+        depth = 1.0 - f_group
+        depth = np.where(np.isfinite(depth) & (depth > 0.0), depth, 0.0)
+
+        if np.nansum(depth) > 0:
+            z_weight = np.nansum(z_group * depth) / np.nansum(depth)
+        else:
+            z_weight = z_med
+
+        for z in (z_deep, z_med, z_weight):
+            if np.isfinite(z):
+                seeds.append(z)
+
+    if len(seeds) == 0:
+        return []
+
+    # Remove very close duplicate seeds
+    seeds = np.sort(np.asarray(seeds, dtype=float))
+
+    cleaned = [seeds[0]]
+    min_sep = 0.10 * delta_z
+
+    for z in seeds[1:]:
+        if z - cleaned[-1] > min_sep:
+            cleaned.append(z)
+
+    return cleaned
+
+
+
+def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_constants.REDSHIFT_REFINE_WINDOW, log=False):
     """Estimate absorber redshift from the minimum flux near the expected line center.
 
     Given an initial redshift guess, this function identifies a symmetric window
@@ -314,34 +364,48 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=9, log=
         log (bool): if wavelenght ins log-scale (default False)
 
     Returns:
-        float: Refined redshift estimate computed as `(λ_min / line_rest) - 1`, where
-        `λ_min` is the observed-frame wavelength at the minimum residual within the
+        float: Refined redshift estimate computed as `(lambda_min / line_rest) - 1`, where
+        `lambda_min` is the observed-frame wavelength at the minimum residual within the
         search window. If no pixels fall within the window, returns `z_guess`.
 
     Note:
-        - If the search window contains only NaNs, `np.nanargmin` will raise a
-          `ValueError`. Consider pre-filtering `residual` or guarding with
-          `np.isfinite` if this is a possibility in your data.
         - The window is defined in **observed-frame** wavelength by converting the
-          pixel count to delta λ using the local pixel spacing.
+          pixel count to delta lambda using the local pixel spacing.
     """
-    lam_expected = line_rest * (1 + z_guess)
+    lam_expected = line_rest * (1.0 + z_guess)
+
+    if wavelength.size < 2:
+        return z_guess
+
     if log:
         del_log_lam = np.log10(wavelength[1]) - np.log10(wavelength[0])
-        delta = lam_expected * (10**(window * del_log_lam) - 1)
+        delta = lam_expected * (10**(window * del_log_lam) - 1.0)
     else:
-        delta_lam = (wavelength[1] - wavelength[0])
+        delta_lam = wavelength[1] - wavelength[0]
         delta = window * delta_lam
-    mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
 
-    if np.any(mask):
-        idx_min = np.nanargmin(residual[mask])
-        lam_min = wavelength[mask][idx_min]
-        return lam_min / line_rest - 1
-    else:
-        return z_guess  # fallback
+    mask = (
+        (wavelength > lam_expected - delta)
+        & (wavelength < lam_expected + delta)
+        & np.isfinite(wavelength)
+        & np.isfinite(residual)
+    )
 
-def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=9, gamma=4):
+    if not np.any(mask):
+        return z_guess
+
+    wave_win = wavelength[mask]
+    res_win = residual[mask]
+
+    idx_min = np.argmin(res_win)
+    lam_min = wave_win[idx_min]
+
+    if not np.isfinite(lam_min):
+        return z_guess
+
+    return lam_min / line_rest - 1.0
+
+def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=_constants.REDSHIFT_REFINE_WINDOW, gamma=_constants.MEDIAN_WEIGHT_GAMMA):
     """
     Perform grouping and weighted mean from the list of all potentially
     identified absorbers after combining from all the runs with different
@@ -352,7 +416,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
         lam_search (numpy.ndarray): Wavelength search array.
         residual (numpy.ndarray): Residual values corresponding to the absorbers.
         d_pix (float): Pixel separation tolerance in wavelength (default 0.6 Angstrom).
-        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV).
+        use_kernel (str): Kernel/absorber type (e.g. MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         delta_z (float): Maximum redshift difference to consider two candidates contiguous.
         window (int): window size for redshift estimate (default 9)
         gamma (int): power for lambda to use in 1/lam**gamma weighting scheme (default 4)
@@ -373,7 +437,7 @@ def median_selection_after_combining(combined_final_our_z, lam_search, residual,
     combined_final_our_z = new_z
 
     z_ind = []  # Final list of median redshifts for each spectrum
-    ct = 2
+    ct = _constants.CANDIDATE_DEDUP_CT
     if len(combined_final_our_z) > 1:
         abs_list = np.array(combined_final_our_z)
 
@@ -405,7 +469,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2, conf_level=0.95, vmax=120, verbose=False):
+                             delta_chi2_line1, delta_chi2_line2,
+                             fit_param_std=None,
+                             conf_level=None, vmax=10, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -431,11 +497,12 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         min_dr (float): Minimum doublet ratio threshold.
         dr (float): Measured doublet ratio (e.g., CIV 1548/1550 ratio).
         max_dr (float): Maximum doublet ratio threshold.
-        ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.
-        ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.
-        delta_chi2 (float): Chi-squared difference between flat and fitted models.
+        delta_chi2_line1 (float): Per-line delta chi-squared for line 1.
+        delta_chi2_line2 (float): Per-line delta chi-squared for line 2.
+        fit_param_std (array-like, optional): Standard errors of the 6 Gaussian fit
+            parameters [amp1_err, c0_err, sig1_err, amp2_err, c1_err, sig2_err]. Defaults to None (check skipped).
         conf_level (float, optional): Confidence level for statistical significance.
-            Defaults to 0.95 (95% confidence).
+            Defaults to None (no confidence level cut), If conf_level is None, delta_chi2 cuts are not applied. If conf_level is given, delta_chi2_line1/2 must exceed chi2 critical value.
         vmax (float, optional): Maximum allowed velocity difference between components
             in km/s. Defaults to 120.
 
@@ -450,52 +517,86 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         - Doublet ratio physical limits
         - Equivalent width significance
         - Statistical significance via delta chi-squared test
+        - Fit-parameter SNR: abs(param) / param_err > FIT_PARAM_SNR (when fit_param_std supplied)
 
         Prints detailed information about each criterion and whether it passes.
 
     """
 
-    critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters))
+    if fit_param_std is None:
+        fit_param_snr_ok = True
+        fit_param_snr_detail = "(fit_param_std not provided)"
+    elif np.all(fit_param_std > 0):
+        fit_param_snr = np.abs(gaussian_parameters) / fit_param_std
+        fit_param_snr_ok = bool(np.all(fit_param_snr > _constants.FIT_PARAM_SNR))
+        fit_param_snr_detail = f"{fit_param_snr}"
+    else:
+        fit_param_snr_ok = False
+        fit_param_snr_detail = "(fit_param_std is invalid)"
 
     conds = [
         ((gaussian_parameters > bound[0] + 0.001).all(),
          f"{gaussian_parameters} > {bound[0] + 0.001}",
          "gaussian_parameters > bound[0] + 0.001"),
+
         ((gaussian_parameters < bound[1] - 0.001).all(),
          f"{gaussian_parameters} < {bound[1] - 0.001}",
-         "gaussian_parameters < bound[0] - 0.001"),
+         "gaussian_parameters < bound[1] - 0.001"),
+
         (lower_del_lam <= c1 - c0 <= upper_del_lam,
          f"{lower_del_lam} <= {c1 - c0} <= {upper_del_lam}",
          "lower_del_lam <= c1 - c0 <= upper_del_lam"),
+
         (sn1 >= sn_line1, f"{sn1} >= {sn_line1}",
          "sn1 >= sn_line1"),
+
         (sn2 >= sn_line2, f"{sn2} >= {sn_line2}",
          "sn2 >= sn_line2"),
-        (vel1 >= 0, f"{vel1} >= 0",
-         "vel1 >=0"),
-        (vel2 >= 0, f"{vel2} >= 0",
-         "vel2 >=0"),
-        (min_dr < dr < max_dr, f"{min_dr} < {dr} < {max_dr}",
-         "min_dr < dr < max_dr"),
-        (ew1_snr > 1, f"{ew1_snr} > 1",
-         "ew1_snr > 1"),
-        (ew2_snr > 1, f"{ew2_snr} > 1",
-         "ew2_snr > 1"),
-        (abs(vel1 - vel2) <= vmax, f"|{vel1} - {vel2}| <= {vmax}",
-         f"|vel1 - vel2| < = {vmax}"),
-         (delta_chi2 > critical_value, f"{delta_chi2} > {critical_value}",
-         f"delta_chi2 > {critical_value}")
+
+        (np.isfinite(vel1) and np.isfinite(vel2) and abs(vel1 - vel2) <= vmax,
+         f"|{vel1} - {vel2}| <= {vmax}",
+         f"|vel1 - vel2| <= {vmax}"),
+
+        (min_dr <= dr <= max_dr,
+         f"{min_dr} <= {dr} <= {max_dr}",
+         "min_dr <= dr <= max_dr"),
+
+        (fit_param_snr_ok, fit_param_snr_detail,
+         f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})"),
     ]
 
-    true_count = sum(c[0] for c in conds)
-    false_count = len(conds) - true_count
+    if conf_level is not None:
+        if not (0.0 < conf_level <= 1.0):
+            raise ValueError("conf_level must be None or in the range (0, 1].")
+
+        critical_value = chi2.ppf(
+            conf_level,
+            df=len(gaussian_parameters) / 2
+        )
+
+        conds += [
+            (delta_chi2_line1 > critical_value,
+             f"{delta_chi2_line1} > {critical_value}",
+             f"delta_chi2_line1 > {critical_value}"),
+
+            (delta_chi2_line2 > critical_value,
+             f"{delta_chi2_line2} > {critical_value}",
+             f"delta_chi2_line2 > {critical_value}"),
+        ]
+
     result = all(c[0] for c in conds)
 
     if verbose:
+        true_count = sum(c[0] for c in conds)
+        false_count = len(conds) - true_count
+
         logger.debug("QSO_INDEX = %s, Condition checks for Z_ABS = %s", qso_id, zabs)
         for status, detail, text in conds:
             logger.debug("%s: %s: %s", text, detail, status)
-        logger.debug("Summary: %s / %s conditions satisfied, %s failed.", true_count, len(conds), false_count)
+        logger.debug(
+            "Summary: %s / %s conditions satisfied, %s failed.",
+            true_count, len(conds), false_count
+        )
         logger.debug("Final result: %s", result)
 
     return result
@@ -578,7 +679,7 @@ def z_abs_from_same_metal_absorber(first_list_z, lam_obs, residual, error, d_pix
         residual (numpy.ndarray): Residual values.
         error (numpy.ndarray): Error values corresponding to the residuals.
         d_pix (float): Pixel distance for line separation during Gaussian fitting.
-        use_kernel (str, optional): Kernel type (MgII, CIV).
+        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         logwave (bool): if wavelength bins are on log scale
 
     Returns:
@@ -623,54 +724,64 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         abs_z (list or numpy.ndarray): List of absorber redshifts.
         sn1_all (list or numpy.ndarray): List of SNR values for the first line.
         sn2_all (list or numpy.ndarray): List of SNR values for the second line.
-        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII).
+        use_kernel (str, optional): Kernel type (MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI).
         fitted_params (list of arrays): corresponding gaussian fitting parameters for those redshifts
 
     Returns:
-        list: Updated list of indices indicating bad (1) or good (-1) absorbers.
+        list: -1 = keep, 1 = remove
     """
     # Define constants based on the kernel type
     c0, c1 = lines[doublet_keys[use_kernel][0]], lines[doublet_keys[use_kernel][1]]
+    frac_thresh = (c1 - c0) / c0
 
-    thresh = (c1 - c0) / c0
+    z = np.asarray(abs_z, dtype=float)
+    sn1 = np.nan_to_num(np.asarray(sn1_all, dtype=float), nan=-np.inf)
+    sn2 = np.nan_to_num(np.asarray(sn2_all, dtype=float), nan=-np.inf)
 
-    abs_z = np.array(abs_z)
-    sn1_all = np.array(sn1_all)
-    sn2_all = np.array(sn2_all)
-    nabs = abs_z.size
-    ind_true = np.ones(nabs, dtype='int32')  # Initialize all as bad (1)
+    nabs = z.size
+    ind_true = np.ones(nabs, dtype="int32")
 
-    if nabs > 1:
-        for k in range(nabs):
-            if ind_true[k] == -1:  # Skip if already marked as good
-                continue
-
-            # Calculate differences between current absorber and others
-            diff = np.abs(abs_z[k] - abs_z)
-            ix = np.where((diff >= 0) & (diff <= thresh))[0]
-
-            if ix.size > 0:
-                # Consider the current absorber and its closely spaced ones
-                candidates = np.append(k, ix)
-                best_idx = candidates[0]  # Default to the current one
-
-                # Compare SNR and line positions to decide the best absorber
-                for j in candidates:
-                    line_diff = abs(fitted_params[j][1] - c0)
-                    if line_diff < abs(fitted_params[best_idx][1] - c0):
-                        best_idx = j
-                    elif line_diff == abs(fitted_params[best_idx][1] - c0):
-                        if sn1_all[j] > sn1_all[best_idx]:
-                            best_idx = j
-
-                # Mark the best one as good (-1) and others as bad (1)
-                ind_true[best_idx] = -1
-                ind_true[candidates[candidates != best_idx]] = 1
-            else:
-                # No closely spaced absorbers, mark the current one as good (-1)
-                ind_true[k] = -1
-    else:
+    if nabs == 0:
+        return ind_true
+    if nabs == 1:
         ind_true[0] = -1
+        return ind_true
+
+    order = np.argsort(z)
+    zsort = z[order]
+
+    groups = []
+    group = [order[0]]
+
+    for ii in range(1, nabs):
+        i_prev = order[ii - 1]
+        i_curr = order[ii]
+
+        dz_frac = abs(z[i_curr] - z[i_prev]) / (1.0 + 0.5 * (z[i_curr] + z[i_prev]))
+
+        if dz_frac <= frac_thresh:
+            group.append(i_curr)
+        else:
+            groups.append(group)
+            group = [i_curr]
+
+    groups.append(group)
+
+    score = sn1 + sn2
+
+    for group in groups:
+        group = np.asarray(group, dtype=int)
+
+        if group.size == 1:
+            best_idx = group[0]
+        else:
+            # Prefer stronger total line S/N.
+            # Tie-breaker: fitted line-1 center closer to expected rest wavelength.
+            line_diff = np.array([abs(fitted_params[j][1] - c0) for j in group])
+            best_idx = group[np.lexsort((line_diff, -score[group]))[0]]
+
+        ind_true[group] = 1
+        ind_true[best_idx] = -1
 
     return ind_true
 
@@ -694,23 +805,47 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
             - z_err (float): Estimated error in the corrected redshift.
     """
 
-    z1 = (fitted_obs_l1 / line1) - 1
-    # define from first line and redshift (more stable and correct)
-    fitted_obs_l2 = fitted_obs_l1 + (line2 - line1) * (1 + z1)
-    z2 = fitted_obs_l2 / line2 - 1
+    z1 = fitted_obs_l1 / line1 - 1.0
+    z2 = fitted_obs_l2 / line2 - 1.0
 
-    err1 = (std_fitted_obs_l1 / line1)
-    err2 = (std_fitted_obs_l2 / line2)
+    err1 = std_fitted_obs_l1 / line1
+    err2 = std_fitted_obs_l2 / line2
 
-    # New redshifts computed using line centers
-    # of the first and second Gaussian using a weighted mean
+    if (
+        np.isfinite(err1)
+        and np.isfinite(err2)
+        and err1 > 0.0
+        and err2 > 0.0
+    ):
+        w1 = 1.0 / err1**2
+        w2 = 1.0 / err2**2
 
-    w1 = line1 / (line1 + line2)
-    w2 = line2 / (line1 + line2)
-    z_corr = w1 * z1 + w2 * z2
-    z_err = np.sqrt((w1 * err1)**2 + (w2 * err2)**2)
+        z_corr = (w1 * z1 + w2 * z2) / (w1 + w2)
+        z_err = np.sqrt(1.0 / (w1 + w2))
+    else:
+        w1 = line1 / (line1 + line2)
+        w2 = line2 / (line1 + line2)
+
+        z_corr = w1 * z1 + w2 * z2
+        z_err = 0.0
 
     return z_corr, z_err
+
+def _filter_result_dict(result, keep):
+
+    keep = np.asarray(keep, dtype=bool)
+    n = keep.size
+
+    out = {}
+    for key, val in result.items():
+        arr = np.asarray(val)
+
+        if arr.ndim > 0 and arr.shape[0] == n:
+            out[key] = arr[keep]
+        else:
+            out[key] = val
+
+    return out
 
 def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None, verbose=False):
 
@@ -719,7 +854,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
     that will be used to define the search windohe given absorber.
 
     Args:
-        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
+        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI.)
         start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
         end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
 
@@ -748,7 +883,7 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
             lam_red = lines['OVI_1033']
 
         elif absorber == 'NV':
-            lam_blue = lines['Lyb_1026']
+            lam_blue = lines['Lya']
             lam_red = lines['NV_1240']
 
         elif absorber == 'SiIV':
@@ -761,12 +896,11 @@ def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_re
 
         elif absorber == 'NaI':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
+            lam_red = lines['NaI_5897']
 
         elif absorber == 'CaII':
             lam_blue = lines['Lya']
-            lam_red = _constants.LARGE_WAVE
-
+            lam_red = lines['CaII_3969']
         else:
             raise ValueError(f"Unsupported absorber, it must be from {doublet_keys.keys()}")
 
@@ -777,7 +911,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     Return observed-frame wavelength range (lam_start, lam_end) to search for the given absorber.
 
     Args:
-        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII.)
+        absorber (str): Absorber name (e.g., MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI.)
         zqso (float): Quasar emission redshift
         min_wave (float): minimum Observed wavelength
         max_wave (float): maximum Observed wavelength
@@ -788,6 +922,13 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
 
     Returns:
         lam_start, lam_end (float): Observed-frame wavelength limits
+
+    Note:
+        ``constants.SMALL_WAVE`` and ``constants.LARGE_WAVE`` act as hard observed-frame
+        bounds applied on top of the per-spectrum ``min_wave``/``max_wave`` clip.  Their
+        defaults (10 and 1e6) impose no restriction; set them in your constants file to
+        restrict the search to a fixed detector range (e.g. ``SMALL_WAVE = 3600``,
+        ``LARGE_WAVE = 10000`` for SDSS/DESI optical coverage).
     """
 
     # Convert velocity offset to redshift offset
@@ -801,12 +942,54 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
     lam_blue_obs = lam_blue * (1 + zqso + dz)
     lam_red_obs = lam_red * (1 + zqso - dz)
 
-    lam_start = max(min_wave, lam_blue_obs) + lam_edge_sep
-    lam_end = min(max_wave, lam_red_obs) - lam_edge_sep
+    lam_start = max(min_wave, lam_blue_obs, _constants.SMALL_WAVE) + lam_edge_sep
+    lam_end = min(max_wave, lam_red_obs, _constants.LARGE_WAVE) - lam_edge_sep
+
+    if verbose and _constants.SMALL_WAVE > 0:
+        logger.info('SMALL_WAVE observed-frame lower limit applied: %.1f Ang', _constants.SMALL_WAVE)
+    if verbose and _constants.LARGE_WAVE < 1e6:
+        logger.info('LARGE_WAVE observed-frame upper limit applied: %.1f Ang', _constants.LARGE_WAVE)
 
     return lam_start, lam_end
 
-def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, verbose=False):
+def get_qso_emission_mask(wavelength, zqso, dv=10000.0, qso_emission_lines=None):
+    """
+    Return True for wavelength pixels allowed for absorber search.
+
+    Pixels within +/- dv km/s of major QSO emission lines are masked out.
+
+    Args:
+        wavelength (numpy.ndarray): Observed-frame wavelength array.
+        zqso (float): QSO redshift.
+        dv (float): Velocity window around QSO emission lines in km/s.
+        qso_emission_lines (dict, optional): Dictionary of QSO emission lines
+            in rest-frame Angstrom.
+
+    Returns:
+        numpy.ndarray: Boolean array. True means pixel is allowed.
+    """
+
+    wavelength = np.asarray(wavelength, dtype=float)
+
+    allowed = np.isfinite(wavelength)
+
+    if qso_emission_lines is None:
+        qso_emission_lines = _constants.QSO_EMISSION_LINES
+
+    for _, lam_rest in qso_emission_lines.items():
+        lam_em_obs = lam_rest * (1.0 + zqso)
+
+        if not np.isfinite(lam_em_obs) or lam_em_obs <= 0:
+            continue
+
+        vel = speed_of_light * (wavelength - lam_em_obs) / lam_em_obs
+
+        allowed &= np.abs(vel) > dv
+
+    return allowed
+
+
+def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, min_wave, max_wave, start_rest_wave=None, end_rest_wave=None, dv=5000, lam_edge_sep=0, logwave=False, qso_dv_mask_emline=None, verbose=False):
     """
     Wrapper function to return the most basic wavelength window for absorber
     search.
@@ -816,19 +999,20 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
         residual (numpy.ndarray): The residual array of the QSO spectrum.
         err_residual (numpy.ndarray): The error residual array of the QSO spectrum.
         zqso (float): The redshift of the QSO.
-        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII)
+        absorber (str): (Options: MgII, CIV, OVI, NV, SiIV, AlIII, FeII, CaII, NaI)
         min_wave (float): minimum observed wavelength edge (in Ang)
         max_wave (float): maximum observed wavelength edge (in Ang)
         start_rest_wave (float, optional): start wave in QSO rest-frame for absorber search (default None)
         end_rest_wave (float, optional): end wave in QSO rest-frame for absorber search (default None)
         dv (float): absolute velocity offset from QSO redshift (default 5000 km/s)
         lam_edge_sep (float): separation from minimum/maximum wavelength, i.e. lam_min +/- lam_edge_sep, this is just to make sure that we avoid the very edge of the spectrum
+        logwave (bool, optional): If True, wavelength pixels are on a fixed log-scale (e.g. SDSS/DESI). Used to report pixel count. Default is False.
+        qso_dv_mask_emline (float, optional): If provided, will mask pixels within +/- dv km/s of major QSO emission lines. Default is None.
         verbose (bool, optional): If True will print time info. Default is False.
 
     Returns:
         tuple: A tuple containing unmasked wavelength, residual, and errors.
     """
-    start = elapsed(None, "")
 
     lam_start, lam_end = get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=start_rest_wave, end_rest_wave=end_rest_wave, dv=dv, lam_edge_sep=lam_edge_sep, verbose=verbose)
 
@@ -866,12 +1050,30 @@ def absorber_search_window(wavelength, residual, err_residual, zqso, absorber, m
     residual = residual[~rmv_lam0]
     error_residual = error_residual[~rmv_lam0]
 
+    # Mask QSO emission-line regions if requested
+    if qso_dv_mask_emline is not None:
+        emline_allowed = get_qso_emission_mask(
+            lam_search,
+            zqso,
+            dv=qso_dv_mask_emline
+        )
+
+        lam_search = lam_search[emline_allowed]
+        residual = residual[emline_allowed]
+        error_residual = error_residual[emline_allowed]
+
     if verbose:
-        elapsed(start, f"INFO: final wave window selection for {absorber} took")
+        npix = lam_search.size
+        ls, le = float(lam_start), float(lam_end)
+        if logwave:
+            logger.info("search window: %.1f - %.1f Ang, %d pixels (log-lambda scale)", ls, le, npix)
+        else:
+            dlam = float(lam_search[-1] - lam_search[0]) if npix > 1 else 0.0
+            logger.info("search window: %.1f - %.1f Ang, %d pixels (delta-lambda = %.2f Ang)", ls, le, npix, dlam)
 
     return lam_search, residual, error_residual
 
-def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs):
+def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, constant_file=None, **kwargs):
     """Check if an absorber can be searched in a given QSO spectrum.
 
     This function loads a single QSO spectrum from a spec.QSOSpecRead object,
@@ -881,6 +1083,9 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     Args:
         spectra (object): spec.QSOSpecRead object
         absorber (str): Absorber name (e.g., 'MgII', 'CIV', 'OVI', etc.).
+        constant_file (str, optional): Path to a user constants file. When provided, the file
+            is loaded, global constants are patched in-place, and ``search_parameters`` from
+            the file are merged into ``kwargs`` as defaults (explicit ``kwargs`` take precedence).
         kwargs (dict): search parameters as described in qsoabsfind.constants()
 
     Returns:
@@ -895,6 +1100,22 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     start_time = time.time()
 
     snr_val = -1
+
+    if constant_file is not None:
+        from .config import load_constants
+        _user_constants = load_constants(constant_file)
+        # Patch global constants in-place with any overrides from the user constants file.
+        for _name in _constants.OVERRIDABLE_CONSTANTS:
+            _user_val = getattr(_user_constants, _name, None)
+            if _user_val is not None:
+                setattr(_constants, _name, _user_val)
+        # Merge search_parameters as base; explicit kwargs take precedence.
+        _merged = dict(_user_constants.search_parameters)
+        _merged.update(kwargs)
+        kwargs = _merged
+
+    from .utils import snr_of_spectra
+    verbose = kwargs.get("verbose", False)
 
     spectra.metadata = Table(spectra.metadata)  # in case spectra.metadata is a Row
 
@@ -916,7 +1137,7 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
     lam_obs = lam_obs.astype('float64')
 
     # Remove NaN values from the arrays
-    non_nan_indices = ~np.isnan(residual)
+    non_nan_indices = np.isfinite(residual)
     lam_obs = lam_obs[non_nan_indices]
     residual = residual[non_nan_indices]
     error = error[non_nan_indices]
@@ -926,43 +1147,47 @@ def return_if_absorber_can_be_detected_in_a_spectrum(spectra, absorber, **kwargs
         lam_obs, residual, error, z_qso, absorber, min_wave, max_wave,
         lam_edge_sep=kwargs["lam_edge_sep"],
         start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
-        dv=kwargs["dv"], verbose=kwargs["verbose"]
+        dv=kwargs["dv"], logwave=kwargs.get("logwave", False),
+        qso_dv_mask_emline=kwargs.get("qso_dv_mask_emline", None),
+        verbose=verbose
     )
 
     # Verify that the arrays are of equal size
     assert lam_search.size == unmsk_residual.size == unmsk_error.size, \
         "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
-    if kwargs.get("verbose", False):
+    if verbose:
         logger.info('Time took to find available search pixels: %.3f [sec]', time.time()-start_time)
 
     if lam_search.size <= _constants.MIN_NPIXEL:
         return int(0), snr_val
 
-    if "snr_cut" in kwargs and kwargs["snr_cut"] is not None:
-        if "statistics" in kwargs and kwargs["statistics"] is not None:
-            if kwargs["statistics"] == "median":
-                snr_val = np.nanmedian(unmsk_residual / unmsk_error)
-            if kwargs["statistics"] == "mean":
-                snr_val = np.nanmean(unmsk_residual / unmsk_error)
-            if kwargs.get("verbose", False):
-                logger.info('Checking SNR in the wavelength search region %s SNR = %.2f, threshold = %s)', snr_val, kwargs["snr_cut"], kwargs["statistics"])
-        if snr_val < kwargs["snr_cut"]:
-            return int(0), snr_val
+    snr_val, _ = snr_of_spectra(unmsk_residual, unmsk_error, **kwargs)
+
+    snr_cut = kwargs.get("snr_cut")
+    if snr_cut is not None and snr_val < snr_cut:
+        if verbose:
+            logger.info("SNR check failed (snr_val=%.2f < snr_cut=%.2f)", snr_val, snr_cut)
+        return int(0), snr_val
 
     return int(1), snr_val
 
 
 def _check_searchable_one(params):
-    """Worker helper for find_searchable_qsos — must be module-level to be picklable."""
+    """Worker helper for find_searchable_qsos -- must be module-level to be picklable."""
     from .datamodel import QSOSpecRead
-    fits_file, idx, absorber, kwargs = params
+    fits_file, idx, absorber, constant_file, kwargs = params
     spec = QSOSpecRead(fits_file, index=idx, autoload=True, verbose=False)
-    is_good_qso, snr_val = return_if_absorber_can_be_detected_in_a_spectrum(spec, absorber, **kwargs)
-    return idx, is_good_qso, snr_val
+    spec.metadata = Table(spec.metadata)
+    if 'Z' in spec.metadata.colnames:
+        spec.metadata.rename_column('Z', 'Z_QSO')
+    z_qso = float(np.asarray(spec.metadata['Z_QSO']).ravel()[0])
+    is_good_qso, snr_val = return_if_absorber_can_be_detected_in_a_spectrum(
+        spec, absorber, constant_file=constant_file, **kwargs)
+    return idx, z_qso, is_good_qso, snr_val
 
 
-def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None, verbose=False):
+def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None):
     """Run searchability checks for all QSO spectra in parallel.
 
     For each spectrum, determines whether the given absorber can be searched
@@ -974,22 +1199,22 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
 
     Args:
         fits_file (str): Path to the FITS file containing normalised QSO spectra.
-        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``).
+        absorber (str): Absorber name (e.g. ``'MgII'``, ``'CIV'``, ``'OVI'``, ``'NV'``, ``'SiIV'``, ``'AlIII'``, ``'FeII'``, ``'CaII'``, ``'NaI'``).
         constant_file (str): Path to the user constants ``.py`` file.
         ncpus (int): Number of parallel worker processes (default 4).
         n_qso (int or str, optional): Number of spectra to check, or a range
             string such as ``'1-1000'`` or ``'1-1000:10'``.  If ``None``, all
             spectra in the file are checked.
-        verbose (bool): If ``True``, pass verbose flag to the per-spectrum
-            check (default ``False``).
 
     Returns:
-        astropy.table.Table: Table with two columns:
+                astropy.table.Table: Table with columns:
 
         - ``QSO_INDEX`` (int): Spectrum index in the FITS file.
-        - ``IS_GOOD`` (bool): ``True`` if the absorber can be searched in
+                - ``Z_QSO`` (float): QSO emission redshift from the metadata.
+                - ``IS_QSO_AVAILABLE`` (bool): ``True`` if the absorber can be searched in
           that spectrum, ``False`` otherwise.
-        - ``SNR`` (float): SNR value in the absorber search region (if snr_cut added, otherwise snr value = -1)
+                - ``SNR_QSO_{stat}`` (float): SNR value in the absorber search
+                    region, where ``{stat}`` is the configured ``statistics`` value.
     """
     import os
     import multiprocessing
@@ -1002,9 +1227,8 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
     const_path = os.path.abspath(constant_file)
     user_constants = load_constants(const_path)
 
-    _overridable = ('SMALL_WAVE', 'LARGE_WAVE', 'LAM_CIV_MIN', 'MIN_NPIXEL')
-    logger.info('Physical constant resolution (user file overrides shown with *):')
-    for _name in _overridable:
+    print('INFO: Physical constant resolution (user file overrides shown with *):')
+    for _name in _constants.OVERRIDABLE_CONSTANTS:
         _user_val = getattr(user_constants, _name, None)
         _pkg_val = getattr(_constants, _name)
         if _user_val is not None and _user_val != _pkg_val:
@@ -1015,14 +1239,13 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
 
     # Build per-spectrum kwargs from the user constants search parameters
     search_params = dict(user_constants.search_parameters)
-    search_params['verbose'] = verbose
 
     # Resolve QSO index range
     if n_qso is None:
         n_qso = read_nqso_from_header(fits_file)
     spec_indices = parse_qso_sequence(str(n_qso))
 
-    params_list = [(fits_file, idx, absorber, search_params) for idx in spec_indices]
+    params_list = [(fits_file, idx, absorber, const_path, search_params) for idx in spec_indices]
     n_jobs = min(ncpus, max(1, multiprocessing.cpu_count() - 1))
     print('INFO: Checking searchability of %d spectra for %s absorber using %d CPUs' % (
                 len(spec_indices), absorber, n_jobs))
@@ -1037,14 +1260,21 @@ def find_searchable_qsos(fits_file, absorber, constant_file, ncpus=4, n_qso=None
             )
         )
 
-    qso_indices, is_good_qso, snr_val = zip(*results) if results else ([], [], [])
+    qso_indices, z_qso, is_good_qso, snr_val = zip(*results) if results else ([], [], [], [])
+
+    stat = search_params.get('statistics', 'median')
+    if stat is None:
+        stat = 'median'
+    stat_label = str(stat).replace(' ', '_').replace('.', 'p')
+    snr_col = f'SNR_QSO_{stat_label}'
 
     out = Table()
     out['QSO_INDEX'] =  np.asarray(list(qso_indices), dtype=np.int32)
-    out['IS_GOOD'] = np.asarray([bool(v) for v in is_good_qso], dtype=bool)
-    out['SNR'] = np.asarray(snr_val, dtype=np.float32)
+    out['Z_QSO'] = np.asarray(z_qso, dtype=np.float64)
+    out['IS_QSO_AVAILABLE'] = np.asarray([bool(v) for v in is_good_qso], dtype=bool)
+    out[snr_col] = np.asarray(snr_val, dtype=np.float32)
 
-    n_good = sum(out['IS_GOOD'])
+    n_good = sum(out['IS_QSO_AVAILABLE'])
     print('INFO: %d / %d QSOs have a searchable %s window' % (n_good, len(out), absorber))
 
     return out

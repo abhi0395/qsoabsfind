@@ -19,30 +19,42 @@ I have also provided two example QSO spectra FITS files. You can use these files
 Output FITS File Structure
 --------------------------
 
-The **output** `fits file` will have two (or three, optional) HDUs **ABSORBER** and **METADATA** or, (**COLUMN_DENSITY**, optional):
+The **output** FITS file always contains four HDUs. An optional fifth HDU is added when ``--coldens-dv`` is used,
+and when ``--zabs-known-file`` is used the ``ABSORBER`` HDU gains an extra column:
 
-**1) ABSORBER** HDU will contain the following structured data:
+**1) PRIMARY** HDU contains user-supplied key/value headers passed via ``--headers``.
 
-- ``INDEX_SPEC``: (*int*), Index of quasar (can be used to read the RA, DEC, and Z of QSOs).
-- ``Z_ABS``: (*float*), Redshift of absorber.
-- ``${METAL}_${LINE}_EW``: (*float*), Rest-frame equivalent widths (EWs) of absorber lines (e.g., MgII 2796, 2803 or CIV 1548, 1550) in Angstroms.
-- ``${METAL}_${LINE}_EW_ERROR``: (*float*), Uncertainties in rest-frame EWs of absorber lines in Angstroms.
-- ``Z_ABS_ERR``: (*float*), Measured error in the redshift of the absorber.
-- ``GAUSS_FIT``: (*float array*), Rest-frame fitting parameters of a double Gaussian to the absorber doublet (the width can be used to measure the velocity dispersion).
-- ``GAUSS_FIT_STD``: (*float array*), Uncertainties in rest-frame fitting parameters of the double Gaussian to the absorber doublet.
-- ``SN_${METAL}_${LINE}``: (*float*), Signal-to-noise ratio of the lines.
-- ``${METAL}_EW_TOTAL``: (*float*), Total EW of the lines in Angstroms.
-- ``${METAL}_EW_TOTAL_ERROR``: (*float*), Uncertainties in total EW of the lines in Angstroms.
-- ``${METAL}_${LINE}_VDISP``: (*float*), Rest-frame instrumental-resolution-corrected velocity dispersion of each line (e.g., MgII 2796, 2803 or CIV 1548, 1550) in km/s. Can be **zero** for unresolved lines.
-- ``DELTA_CHI2``: (*float*), Delta chi2 statistics between Gaussian model and a flat continuum model (null hypothesis).
+**2) ABSORBER** HDU contains one row per detected absorber (or one row per validated redshift
+when using ``--zabs-known-file``). Columns:
 
+- ``INDEX_SPEC``: (*int*), Index of the QSO spectrum in the input file.
+- ``Z_ABS``: (*float*), Redshift of the absorber. Sentinel values: ``-1`` means the search could not be attempted (too few pixels or doublet outside wavelength coverage); ``0`` means the search ran but nothing was found.
+- ``${METAL}_${LINE}_EW``: (*float*), Rest-frame equivalent width of each doublet line (e.g. ``MGII_2796_EW``, ``MGII_2803_EW``) in Angstroms.
+- ``${METAL}_${LINE}_EW_ERROR``: (*float*), Uncertainty on the rest-frame EW in Angstroms.
+- ``${METAL}_EW_TOTAL``: (*float*), Sum of EWs of both doublet lines in Angstroms.
+- ``${METAL}_EW_TOTAL_ERROR``: (*float*), Uncertainty on the total EW in Angstroms.
+- ``Z_ABS_ERR``: (*float*), Uncertainty on the absorber redshift.
+- ``GAUSS_FIT``: (*float array[6]*), Double-Gaussian rest-frame fit parameters [amp1, centre1, sigma1, amp2, centre2, sigma2].
+- ``GAUSS_FIT_STD``: (*float array[6]*), Uncertainties on the Gaussian fit parameters.
+- ``SN_${METAL}_${LINE}``: (*float*), Signal-to-noise ratio of each doublet line.
+- ``${METAL}_${LINE}_VDISP``: (*float*), Instrumental-resolution-corrected rest-frame velocity dispersion of each line in km/s. Zero for unresolved lines.
+- ``DELTA_CHI2``: (*float*), Improvement in chi2 between the double-Gaussian model and a flat continuum (null hypothesis).
+- ``ZABS_KNOWN``: (*float*, **only present when** ``--zabs-known-file`` **is used**), the input known redshift supplied for validation.
 
-**2) METADATA** HDU will contain all the metadata (corresponding to each absorber) available in the input spectra file.
+**3) METADATA** HDU contains all metadata columns from the input file's ``METADATA`` extension,
+with one row per entry in the ``ABSORBER`` HDU.
 
-**3) COLUMN_DENSITY** HDU is optional:
+**4) QSO_INFO** HDU summarises every spectrum that was processed, regardless of whether an
+absorber was detected. Columns:
 
-If the ``--coldens`` option is provided when running ``qsoabsfind``, the code also calculates the total column density of each detected doublet using the apparent optical depth method.
-This implementation follows the methodology described by `Savage & Sembach (1991) <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_.
+- ``INDEX_SPEC``: (*int*), Spectrum index in the input file.
+- ``Z_QSO``: (*float*), QSO redshift from the input metadata.
+- ``IS_QSO_AVAILABLE``: (*bool*), ``True`` if the search could be attempted (doublet wavelengths fall inside the spectrum's wavelength coverage and enough pixels were available); ``False`` when the spectrum was unsearchable.
+
+**5) COLUMN_DENSITY** HDU is optional:
+
+If the ``--coldens-dv`` option is provided when running ``qsoabsfind``, the code also calculates the total column density of each detected doublet using the apparent optical depth method.
+following `Savage & Sembach (1991) <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_.
 
 This optional HDU will contain:
 

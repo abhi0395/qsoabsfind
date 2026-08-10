@@ -25,9 +25,32 @@ Before running, please read :doc:`File formats <fileformat>`.
                --absorber $your_absorber \
                --output $output \
                --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
-               --ncpus 4
-               --coldens
-               --dv 300
+               --ncpus 4 \
+               --coldens-dv 300
+
+
+**3. Your input spectra** (absorber search with trapezoidal EW measurement):
+----------------------------------------------------------------------------
+
+By default EWs are measured from the double-Gaussian model fit.  Use
+``--trapz-ew-sigma`` to switch to direct trapezoidal integration instead:
+each line's rest-frame EW is computed by integrating :math:`(1-f_\lambda)` over
+a symmetric window of :math:`\pm n\sigma` centred on the Gaussian-fit line
+centre.  The value you supply is *n* (typically ``3``).
+
+For close doublets such as C IV (separation ~ 2.6 Ang), the two integration
+windows are automatically clipped at the doublet midpoint so that each line's
+integral is independent.
+
+.. code-block:: bash
+
+    qsoabsfind --input-fits-file $input \
+               --constant-file $your_constant \
+               --absorber $your_absorber \
+               --output $output \
+               --headers SURVEY=$YOUR_SURVEY AUTHOR=$YOUR_NAME \
+               --ncpus 4 \
+               --trapz-ew-sigma 3
 
 
 Running with a YAML config file
@@ -94,33 +117,136 @@ Similarly, I have also provided an example QSO spectra file, ``data/desi/qso_tes
 **SDSS DR16 spectra** (MgII search):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Optionally, users can instruct the module to calculate **total column densities** of metal absorbers using the
-**apparent optical depth (AOD) method** (see `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_).
+To also calculate **total column densities** of metal absorbers using the
+**apparent optical depth (AOD) method** (see `Savage & Sembach 1991 <https://ui.adsabs.harvard.edu/abs/1991ApJ...379..245S/abstract>`_), pass ``--coldens-dv``.
 
-To enable this feature, use the ``--coldens`` flag. You can also specify the velocity range using ``--dv``, which defines the maximum velocity (in km/s) on each side of the line center for integrating the optical depth.
-
-Here, ``--dv 300`` means the integration will be performed over ±300 km/s from each line center. You can adjust this value depending on the expected velocity width of the absorption lines.
+The value sets the +/- velocity range (km/s) for integrating the optical depth around each line center. For example, ``--coldens-dv 300`` integrates over +/-300 km/s.
 
 .. code-block:: bash
 
     qsoabsfind --input-fits-file data/sdss/qso_test_spectra.fits \
-               --constant-file data/sdss/desi_constants.py \
+               --constant-file data/sdss/sdss_constants.py \
                --absorber MgII \
                --output test_MgII.fits \
                --headers SURVEY=SDSS AUTHOR=YOUR_NAME \
-               --ncpus 4
-               --coldens
-               --dv 300
+               --ncpus 4 \
+               --coldens-dv 300
 
-Description
-------------
+CLI Arguments
+-------------
 
-- ``--input_fits_file``: Input QSO spectra FITS file (e.g., ``data/sdss/qso_test_spectra.fits`` or ``data/desi/qso_test_spectra.fits``)
-- ``--constant_file``: Your constants file (e.g., ``data/sdss/sdss_constants.py`` or ``data/desi/desi_constants.py``) or your customized file
-- ``--output``: Output filename to save absorber catalog
-- ``--absorber``: MgII, CIV, FeII, NV, OVI, SiIV, AlIII
-- ``--coldens``: To enable AODM based column density estimation
-- ``--dv``: Velocity width (in *km/s*) for flux integration around each line center
+.. list-table:: CLI Quick Reference
+   :header-rows: 1
+   :widths: 30 9 62
+
+   * - Flag
+     - Required?
+     - Summary
+   * - ``--input-fits-file``
+     - Yes
+     - Input FITS file with continuum-normalised QSO spectra.
+   * - ``--absorber``
+     - Yes
+     - Doublet name (e.g. ``MgII``, ``CIV``). See built-in list below.
+   * - ``--constant-file``
+     - Yes
+     - Search-parameter constants ``.py`` file.
+   * - ``--output``
+     - Yes
+     - Output FITS catalog path.
+   * - ``--config``
+     - No
+     - YAML config file; CLI flags always override YAML values.
+   * - ``--n-qso``
+     - No
+     - Subset of spectra: integer, range (``1-1000``), or stepped range (``1-1000:10``).
+   * - ``--headers``
+     - No
+     - One or more ``KEY=VALUE`` pairs written to the output FITS PRIMARY HDU.
+   * - ``--ncpus``
+     - No
+     - Number of parallel worker processes (default: ``4``).
+   * - ``--coldens-dv``
+     - No
+     - Enable column-density estimation via AODM; value sets :math:`\pm` velocity range in km/s.
+   * - ``--trapz-ew-sigma``
+     - No
+     - Enable trapezoidal EW integration; value is the :math:`\pm n\sigma` window half-width.
+   * - ``--zabs-known-file``
+     - No
+     - FITS file with known redshifts; skips convolution search for those systems.
+   * - ``--verbose``
+     - No
+     - Print detailed per-spectrum and debug logging.
+
+*Required* (may be supplied via ``--config`` instead of the command line):
+
+.. option:: --input-fits-file <path>
+
+   Path to the input FITS file containing continuum-normalised QSO spectra.
+
+.. option:: --absorber <name>
+
+   Doublet to search for. In-built choices: ``MgII``, ``CIV``, ``OVI``, ``NV``, ``SiIV``, ``AlIII``, ``FeII``, ``CaII``, ``NaI``. User can also provide a custom absorber with the required constants. See :doc:`Parameter File <paramfile>` for more details.
+
+.. option:: --constant-file <path>
+
+   Path to the search-parameter constants ``.py`` file. See :doc:`Parameter File <paramfile>` for more details.
+
+.. option:: --output <path>
+
+   Output FITS catalog file path.
+
+*Optional:*
+
+.. option:: --config <path>
+
+   Path to a YAML config file. CLI flags always
+   override YAML values. A minimally annotated template is provided in :doc:`Parameter File <paramfile>`.
+
+.. option:: --n-qso <value>
+
+   Which spectra to process. Accepts a single integer (``500``), a range (``1-1000``), or a
+   stepped range (``1-1000:10``). Default: all spectra in the file.
+
+.. option:: --headers <NAME=VALUE> [<NAME=VALUE> ...]
+
+   One or more ``KEY=VALUE`` pairs written as keywords to the output FITS PRIMARY HDU
+   (e.g. ``SURVEY=SDSS AUTHOR=YOUR_NAME``).
+
+.. option:: --ncpus <int>
+
+   Number of parallel worker processes. Default: ``4``.
+
+.. option:: --coldens-dv <float>
+
+   If provided, also computes total column densities for each detected absorber using the apparent
+   optical depth method (AODM; Savage & Sembach 1991). The value sets the +/- velocity range (km/s)
+   for optical-depth integration around each line centre (e.g. ``300``). Adds a ``COLUMN_DENSITY``
+   HDU to the output file.
+
+.. option:: --trapz-ew-sigma <float>
+
+   If provided, rest-frame equivalent widths are measured by direct trapezoidal integration of
+   :math:`(1 - f_\lambda)` over a window of :math:`\pm n\sigma` centred on each Gaussian-fit line
+   centre, where *n* is the value supplied here (e.g. ``3``). For close doublets (e.g. C IV with
+   a ~ 2.6 Ang separation), the windows are automatically clipped at the doublet midpoint to
+   prevent double-counting. When omitted (default), EWs are taken from the double-Gaussian model
+   fit.
+
+.. option:: --verbose
+
+   Enable detailed per-spectrum and debug logging to the terminal and log file.
+
+.. option:: --zabs-known-file <path>
+
+   Path to a FITS file with columns ``INDEX_SPEC`` and ``Z_ABS``. When supplied, the convolution
+   search is skipped and Gaussian fitting is run at the provided redshifts only. Multiple rows
+   with the same ``INDEX_SPEC`` are treated as multiple known redshifts for that spectrum. Adds
+   a ``ZABS_KNOWN`` column in the ``ABSORBER`` HDU.
+
+   The ``max_dv_known`` key in the constants file controls how far (in km/s) the fitted redshift
+   is allowed to drift from the seed before the detection is rejected (default: 500 km/s).
 
 
 Useful notes
@@ -134,4 +260,4 @@ Parallel mode can be memory-intensive if the input FITS file is large in size. A
 
    - **Merge results at the end:** After processing, you can merge your results using `qsoabsfind.utils.combine_fits_files <https://github.com/abhi0395/qsoabsfind/blob/main/qsoabsfind/utils.py>`_ function. Please read the description before using it.
 
-In order to decide the right size of the FITS file, consider the total available memory and the number of CPUs in your system.
+To decide the right file size, consider the total available memory and the number of CPUs in your system.

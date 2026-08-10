@@ -8,16 +8,16 @@ In each module, get a module-level logger with the standard pattern::
     import logging
     logger = logging.getLogger(__name__)
 
-Call ``setup_logging`` once at the application entry point (e.g. in
-``parallel_convolution.main``) to configure levels, format, and optional
-warning capture::
+Call ``setup_logging`` once at the application entry point (CLI or notebook)::
 
-    from .logger import setup_logging
-    setup_logging(verbose=args.verbose, warnings_file=warnings_file)
+    from qsoabsfind.logger import setup_logging
+    setup_logging(verbose=args.verbose)
 
-After that call all module loggers automatically inherit the root configuration.
-``verbose=True`` sets the root level to DEBUG (shows all ``logger.debug`` calls);
-``verbose=False`` (the default) sets it to INFO.
+In a notebook or interactive session you can also use the standard Python
+one-liner instead::
+
+    import logging
+    logging.basicConfig(level=logging.INFO)
 """
 
 import logging

@@ -4,8 +4,11 @@ and absorber catalog FITS files.
 """
 import time
 import os
+import logging
 from .io import read_fits_file, read_any_fits_file
-from .utils import elapsed, get_all_extnames
+from .utils import get_all_extnames
+
+logger = logging.getLogger(__name__)
 
 class QSOSpecRead:
     """
@@ -44,7 +47,7 @@ class QSOSpecRead:
         start_time = time.time()
         self.header, self.flux, self.error, self.wavelength, self.metadata = read_fits_file(self.fits_file, self.index)
         if self.verbose:
-            elapsed(start_time, f"INFO: Time taken to read {self.fits_file}")
+            logger.info("Time taken to read %s: %.2f seconds", self.fits_file, time.time() - start_time)
 
     def get_metadata(self, asdict=False):
         """
@@ -99,7 +102,7 @@ class AbsorberData():
         # Read each extension
         for idx, ext_name, hdu_type in self.extnames:
             if self.verbose:
-                print(f"Reading extension '{ext_name}' ({hdu_type})")
+                logger.info("Reading extension '%s' (%s)", ext_name, hdu_type)
 
             # Use index for PRIMARY HDU, name for others
             hdu_identifier = idx if ext_name in ['PRIMARY', f'HDU_{idx}'] else ext_name
@@ -108,9 +111,10 @@ class AbsorberData():
 
         # Assign specific extensions as attributes
         self.catalog = all_data.get('ABSORBER', None)
-        self.absorber = self.catalog  # Alias for backward compatibility
         self.metadata = all_data.get('METADATA', None)
         self.column_density = all_data.get('COLUMN_DENSITY', None)  # May be None
+        self.qso_info = all_data.get('QSO_INFO', None)  # May be None
+
 
         # Store header from last read
         self.header = hdr
@@ -122,11 +126,15 @@ class AbsorberData():
             raise ValueError(f"Required extension 'METADATA' not found in {self.filepath}")
 
         if self.verbose:
-            print(f"Loaded {len(self.extnames)} extensions from {self.filepath}")
-            print(f"  ABSORBER: {len(self.catalog)} rows")
-            print(f"  METADATA: {len(self.metadata)} rows")
+            logger.info("Loaded %d extensions from %s", len(self.extnames), self.filepath)
+            logger.info("  ABSORBER: %d rows", len(self.catalog))
+            logger.info("  METADATA: %d rows", len(self.metadata))
             if self.column_density is not None:
-                print(f"  COLUMN_DENSITY: {len(self.column_density)} rows")
+                logger.info("  COLUMN_DENSITY: %d rows", len(self.column_density))
             else:
-                print(f"  COLUMN_DENSITY: Not present (optional)")
-            elapsed(start_time, f"INFO: Time taken to read catalog from {self.filepath}")
+                logger.info("  COLUMN_DENSITY: Not present (optional)")
+            if self.qso_info is not None:
+                logger.info("  QSO_INFO: %d rows", len(self.qso_info))
+            else:
+                logger.info("  QSO_INFO: Not present (optional)")
+            logger.info("Time taken to read catalog from %s: %.2f seconds", self.filepath, time.time() - start_time)
