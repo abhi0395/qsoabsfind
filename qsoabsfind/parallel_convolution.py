@@ -236,7 +236,7 @@ def main():
              '(AODM; Savage & Sembach 1991). The value sets the +/- velocity range (km/s) for '
              'optical-depth integration around each line centre (e.g. 300). '
              'Adds a COLUMN_DENSITY HDU to the output file.')
-    parser.add_argument('--verbose', action='store_true', help='Enable detailed per-spectrum/debug logging.')
+    parser.add_argument('--verbose', action='store_true', default=None,help='Enable detailed per-spectrum/debug logging.')
     parser.add_argument('--zabs-known-file', type=str, default=None,
         help='Path to a FITS file with columns INDEX_SPEC and Z_ABS. When provided, the '
              'convolution search is skipped for the listed spectra and only Gaussian fitting '

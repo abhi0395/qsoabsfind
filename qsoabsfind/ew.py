@@ -305,43 +305,41 @@ def quick_significance_test(flux_norm, fitted_model, error,
             Per-line delta chi-square values.  A value of 0 is returned for a
             line if its surrounding pixels are not all below the continuum level.
     """
-    if flux_norm.size == 0 or error.size == 0:
-        return 0.0, 0.0
+    if (
+        flux_norm.size == 0 or error.size == 0 or
+        fitted_params is None or wavelength_rest is None or
+        wavelength_rest.size == 0
+    ):
+        return np.nan, np.nan
 
-    dchi2_line1 = 0.0
-    dchi2_line2 = 0.0
+    def one_line(center):
+        idx = np.argmin(np.abs(wavelength_rest - center))
+        s = max(0, idx - n_pixels)
+        e = min(len(flux_norm), idx + n_pixels + 1)
 
-    if fitted_params is not None and wavelength_rest is not None and wavelength_rest.size > 0:
-        # --- Line 1 ---
-        lc1 = fitted_params[1]
-        idx1 = np.argmin(np.abs(wavelength_rest - lc1))
-        s1 = max(0, idx1 - n_pixels)
-        e1 = min(len(flux_norm), idx1 + n_pixels + 1)
-        pix1 = flux_norm[s1:e1]
-        if np.all(pix1 < 1.0):
-            mod1 = fitted_model[s1:e1]
-            err1 = error[s1:e1]
-            cont1 = np.ones(e1 - s1)
-            dchi2_line1 = (np.sum(((pix1 - cont1) / err1) ** 2)
-                          - np.sum(((pix1 - mod1) / err1) ** 2))
+        pix = flux_norm[s:e]
+        mod = fitted_model[s:e]
+        err = error[s:e]
 
-        # --- Line 2 ---
-        lc2 = fitted_params[4]
-        idx2 = np.argmin(np.abs(wavelength_rest - lc2))
-        s2 = max(0, idx2 - n_pixels)
-        e2 = min(len(flux_norm), idx2 + n_pixels + 1)
-        pix2 = flux_norm[s2:e2]
-        if np.all(pix2 < 1.0):
-            mod2 = fitted_model[s2:e2]
-            err2 = error[s2:e2]
-            cont2 = np.ones(e2 - s2)
-            dchi2_line2 = (np.sum(((pix2 - cont2) / err2) ** 2)
-                          - np.sum(((pix2 - mod2) / err2) ** 2))
+        good = np.isfinite(pix) & np.isfinite(mod) & np.isfinite(err) & (err > 0)
 
-    return dchi2_line1, dchi2_line2
+        if np.sum(good) < 2:
+            return np.nan
+
+        pix, mod, err = pix[good], mod[good], err[good]
+
+        if not np.all(pix < 1.0):
+            return np.nan
+
+        chi2_cont = np.sum(((pix - 1.0) / err) ** 2)
+        chi2_model = np.sum(((pix - mod) / err) ** 2)
+
+        return chi2_cont - chi2_model
+
+    return one_line(fitted_params[1]), one_line(fitted_params[4])
 
 
-def reduced_chi2_double_gaussian(
+def fit_cost_double_gaussian(
     wave,
     flux,
     error,

@@ -369,27 +369,41 @@ def find_z_from_minimum(wavelength, residual, line_rest, z_guess, window=_consta
         search window. If no pixels fall within the window, returns `z_guess`.
 
     Note:
-        - If the search window contains only NaNs, `np.nanargmin` will raise a
-          `ValueError`. Consider pre-filtering `residual` or guarding with
-          `np.isfinite` if this is a possibility in your data.
         - The window is defined in **observed-frame** wavelength by converting the
           pixel count to delta lambda using the local pixel spacing.
     """
-    lam_expected = line_rest * (1 + z_guess)
+    lam_expected = line_rest * (1.0 + z_guess)
+
+    if wavelength.size < 2:
+        return z_guess
+
     if log:
         del_log_lam = np.log10(wavelength[1]) - np.log10(wavelength[0])
-        delta = lam_expected * (10**(window * del_log_lam) - 1)
+        delta = lam_expected * (10**(window * del_log_lam) - 1.0)
     else:
-        delta_lam = (wavelength[1] - wavelength[0])
+        delta_lam = wavelength[1] - wavelength[0]
         delta = window * delta_lam
-    mask = (wavelength > lam_expected - delta) & (wavelength < lam_expected + delta)
 
-    if np.any(mask):
-        idx_min = np.nanargmin(residual[mask])
-        lam_min = wavelength[mask][idx_min]
-        return lam_min / line_rest - 1
-    else:
-        return z_guess  # fallback
+    mask = (
+        (wavelength > lam_expected - delta)
+        & (wavelength < lam_expected + delta)
+        & np.isfinite(wavelength)
+        & np.isfinite(residual)
+    )
+
+    if not np.any(mask):
+        return z_guess
+
+    wave_win = wavelength[mask]
+    res_win = residual[mask]
+
+    idx_min = np.argmin(res_win)
+    lam_min = wave_win[idx_min]
+
+    if not np.isfinite(lam_min):
+        return z_guess
+
+    return lam_min / line_rest - 1.0
 
 def median_selection_after_combining(combined_final_our_z, lam_search, residual, d_pix, use_kernel, delta_z, window=_constants.REDSHIFT_REFINE_WINDOW, gamma=_constants.MEDIAN_WEIGHT_GAMMA):
     """
@@ -455,9 +469,9 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
                              lower_del_lam, c0, c1, upper_del_lam,
                              sn1, sn_line1, sn2, sn_line2,
                              vel1, vel2, min_dr, dr, max_dr,
-                             ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
+                             delta_chi2_line1, delta_chi2_line2,
                              fit_param_std=None,
-                             conf_level=0.95, vmax=10, verbose=False):
+                             conf_level=None, vmax=10, verbose=False):
     """Check absorber selection criteria, print details, and count satisfied conditions.
 
     Evaluates whether a candidate absorber passes various selection criteria based on
@@ -483,14 +497,12 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
         min_dr (float): Minimum doublet ratio threshold.
         dr (float): Measured doublet ratio (e.g., CIV 1548/1550 ratio).
         max_dr (float): Maximum doublet ratio threshold.
-        ew1_snr (float): Equivalent width signal-to-noise ratio for line 1.
-        ew2_snr (float): Equivalent width signal-to-noise ratio for line 2.
         delta_chi2_line1 (float): Per-line delta chi-squared for line 1.
         delta_chi2_line2 (float): Per-line delta chi-squared for line 2.
         fit_param_std (array-like, optional): Standard errors of the 6 Gaussian fit
             parameters [amp1_err, c0_err, sig1_err, amp2_err, c1_err, sig2_err]. Defaults to None (check skipped).
         conf_level (float, optional): Confidence level for statistical significance.
-            Defaults to 0.95 (95% confidence).
+            Defaults to None (no confidence level cut), If conf_level is None, delta_chi2 cuts are not applied. If conf_level is given, delta_chi2_line1/2 must exceed chi2 critical value.
         vmax (float, optional): Maximum allowed velocity difference between components
             in km/s. Defaults to 120.
 
@@ -511,17 +523,13 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
 
     """
 
-    critical_value = chi2.ppf(conf_level, df=len(gaussian_parameters) / 2)
-
     if fit_param_std is None:
         fit_param_snr_ok = True
         fit_param_snr_detail = "(fit_param_std not provided)"
-
     elif np.all(fit_param_std > 0):
         fit_param_snr = np.abs(gaussian_parameters) / fit_param_std
         fit_param_snr_ok = bool(np.all(fit_param_snr > _constants.FIT_PARAM_SNR))
         fit_param_snr_detail = f"{fit_param_snr}"
-
     else:
         fit_param_snr_ok = False
         fit_param_snr_detail = "(fit_param_std is invalid)"
@@ -546,39 +554,49 @@ def check_absorber_selection(qso_id, zabs, gaussian_parameters, bound,
          "sn2 >= sn_line2"),
 
         (np.isfinite(vel1) and np.isfinite(vel2) and abs(vel1 - vel2) <= vmax,
-        f"|{vel1} - {vel2}| <= {vmax}",
-        f"|vel1 - vel2| <= {vmax}"),
+         f"|{vel1} - {vel2}| <= {vmax}",
+         f"|vel1 - vel2| <= {vmax}"),
 
         (min_dr <= dr <= max_dr,
-        f"{min_dr} <= {dr} <= {max_dr}",
-        "physical_min_dr - dr_error <= dr <= physical_max_dr + dr_error"
-        ),
-
-        (ew1_snr > 1, f"{ew1_snr} > 1",
-         f"ew1_snr > 1"),
-
-        (ew2_snr > 1, f"{ew2_snr} > 1",
-         f"ew2_snr > 1"),
-
-         (delta_chi2_line1 > critical_value, f"{delta_chi2_line1} > {critical_value}",
-         f"delta_chi2_line1 > {critical_value}"),
-
-        (delta_chi2_line2 > critical_value, f"{delta_chi2_line2} > {critical_value}",
-         f"delta_chi2_line2 > {critical_value}"),
+         f"{min_dr} <= {dr} <= {max_dr}",
+         "min_dr <= dr <= max_dr"),
 
         (fit_param_snr_ok, fit_param_snr_detail,
-         f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})")
+         f"np.all(|fit_params| / fit_param_std > {_constants.FIT_PARAM_SNR})"),
     ]
 
-    true_count = sum(c[0] for c in conds)
-    false_count = len(conds) - true_count
+    if conf_level is not None:
+        if not (0.0 < conf_level <= 1.0):
+            raise ValueError("conf_level must be None or in the range (0, 1].")
+
+        critical_value = chi2.ppf(
+            conf_level,
+            df=len(gaussian_parameters) / 2
+        )
+
+        conds += [
+            (delta_chi2_line1 > critical_value,
+             f"{delta_chi2_line1} > {critical_value}",
+             f"delta_chi2_line1 > {critical_value}"),
+
+            (delta_chi2_line2 > critical_value,
+             f"{delta_chi2_line2} > {critical_value}",
+             f"delta_chi2_line2 > {critical_value}"),
+        ]
+
     result = all(c[0] for c in conds)
 
     if verbose:
+        true_count = sum(c[0] for c in conds)
+        false_count = len(conds) - true_count
+
         logger.debug("QSO_INDEX = %s, Condition checks for Z_ABS = %s", qso_id, zabs)
         for status, detail, text in conds:
             logger.debug("%s: %s: %s", text, detail, status)
-        logger.debug("Summary: %s / %s conditions satisfied, %s failed.", true_count, len(conds), false_count)
+        logger.debug(
+            "Summary: %s / %s conditions satisfied, %s failed.",
+            true_count, len(conds), false_count
+        )
         logger.debug("Final result: %s", result)
 
     return result
@@ -710,50 +728,60 @@ def contiguous_pixel_remover(abs_z, sn1_all, sn2_all, use_kernel, fitted_params)
         fitted_params (list of arrays): corresponding gaussian fitting parameters for those redshifts
 
     Returns:
-        list: Updated list of indices indicating bad (1) or good (-1) absorbers.
+        list: -1 = keep, 1 = remove
     """
     # Define constants based on the kernel type
     c0, c1 = lines[doublet_keys[use_kernel][0]], lines[doublet_keys[use_kernel][1]]
+    frac_thresh = (c1 - c0) / c0
 
-    thresh = (c1 - c0) / c0
+    z = np.asarray(abs_z, dtype=float)
+    sn1 = np.nan_to_num(np.asarray(sn1_all, dtype=float), nan=-np.inf)
+    sn2 = np.nan_to_num(np.asarray(sn2_all, dtype=float), nan=-np.inf)
 
-    abs_z = np.array(abs_z)
-    sn1_all = np.array(sn1_all)
-    sn2_all = np.array(sn2_all)
-    nabs = abs_z.size
-    ind_true = np.ones(nabs, dtype='int32')  # Initialize all as bad (1)
+    nabs = z.size
+    ind_true = np.ones(nabs, dtype="int32")
 
-    if nabs > 1:
-        for k in range(nabs):
-            if ind_true[k] == -1:  # Skip if already marked as good
-                continue
-
-            # Calculate differences between current absorber and others
-            diff = np.abs(abs_z[k] - abs_z)
-            ix = np.where((diff >= 0) & (diff <= thresh))[0]
-
-            if ix.size > 0:
-                # Consider the current absorber and its closely spaced ones
-                candidates = np.append(k, ix)
-                best_idx = candidates[0]  # Default to the current one
-
-                # Compare SNR and line positions to decide the best absorber
-                for j in candidates:
-                    line_diff = abs(fitted_params[j][1] - c0)
-                    if line_diff < abs(fitted_params[best_idx][1] - c0):
-                        best_idx = j
-                    elif line_diff == abs(fitted_params[best_idx][1] - c0):
-                        if sn1_all[j] > sn1_all[best_idx]:
-                            best_idx = j
-
-                # Mark the best one as good (-1) and others as bad (1)
-                ind_true[best_idx] = -1
-                ind_true[candidates[candidates != best_idx]] = 1
-            else:
-                # No closely spaced absorbers, mark the current one as good (-1)
-                ind_true[k] = -1
-    else:
+    if nabs == 0:
+        return ind_true
+    if nabs == 1:
         ind_true[0] = -1
+        return ind_true
+
+    order = np.argsort(z)
+    zsort = z[order]
+
+    groups = []
+    group = [order[0]]
+
+    for ii in range(1, nabs):
+        i_prev = order[ii - 1]
+        i_curr = order[ii]
+
+        dz_frac = abs(z[i_curr] - z[i_prev]) / (1.0 + 0.5 * (z[i_curr] + z[i_prev]))
+
+        if dz_frac <= frac_thresh:
+            group.append(i_curr)
+        else:
+            groups.append(group)
+            group = [i_curr]
+
+    groups.append(group)
+
+    score = sn1 + sn2
+
+    for group in groups:
+        group = np.asarray(group, dtype=int)
+
+        if group.size == 1:
+            best_idx = group[0]
+        else:
+            # Prefer stronger total line S/N.
+            # Tie-breaker: fitted line-1 center closer to expected rest wavelength.
+            line_diff = np.array([abs(fitted_params[j][1] - c0) for j in group])
+            best_idx = group[np.lexsort((line_diff, -score[group]))[0]]
+
+        ind_true[group] = 1
+        ind_true[best_idx] = -1
 
     return ind_true
 
@@ -802,6 +830,22 @@ def redshift_estimate(fitted_obs_l1, fitted_obs_l2, std_fitted_obs_l1, std_fitte
         z_err = 0.0
 
     return z_corr, z_err
+
+def _filter_result_dict(result, keep):
+
+    keep = np.asarray(keep, dtype=bool)
+    n = keep.size
+
+    out = {}
+    for key, val in result.items():
+        arr = np.asarray(val)
+
+        if arr.ndim > 0 and arr.shape[0] == n:
+            out[key] = arr[keep]
+        else:
+            out[key] = val
+
+    return out
 
 def return_search_window_wavelength_range(absorber, start_rest_wave=None, end_rest_wave=None, verbose=False):
 
@@ -903,7 +947,7 @@ def get_search_limits(absorber, zqso, min_wave, max_wave, start_rest_wave=None, 
 
     if verbose and _constants.SMALL_WAVE > 0:
         logger.info('SMALL_WAVE observed-frame lower limit applied: %.1f Ang', _constants.SMALL_WAVE)
-    if verbose and _constants.LARGE_WAVE < 1e9:
+    if verbose and _constants.LARGE_WAVE < 1e6:
         logger.info('LARGE_WAVE observed-frame upper limit applied: %.1f Ang', _constants.LARGE_WAVE)
 
     return lam_start, lam_end

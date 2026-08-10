@@ -20,11 +20,12 @@ from .absorberutils import (
     calculate_doublet_ratio,
     group_and_select_weighted_redshift,
     check_absorber_selection,
+    _filter_result_dict
 )
 from .ew import (
     measure_absorber_properties_double_gaussian,
     trapezoidal_ew,
-    reduced_chi2_double_gaussian
+    fit_cost_double_gaussian
 )
 from .datamodel import QSOSpecRead
 from .config import load_constants
@@ -86,21 +87,24 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     """
     if constant_file is not None:
         _user_constants = load_constants(constant_file)
-        # Patch global constants in-place with any overrides from the user constants file.
-        # This is necessary for spawn-based multiprocessing (macOS/Windows) where child
-        # processes re-import modules fresh and do not inherit patches from the parent.
+
+        # Patch global constants in-place with user overrides.
         for _name in _constants.OVERRIDABLE_CONSTANTS:
             _user_val = getattr(_user_constants, _name, None)
             if _user_val is not None:
                 setattr(_constants, _name, _user_val)
-        # Merge search_parameters as base; explicit kwargs take precedence.
+
+        # Merge search_parameters as base; only explicitly provided kwargs override.
         _merged = dict(_user_constants.search_parameters)
-        _merged.update(kwargs)
+
+        for key, val in kwargs.items():
+            if val is not None:
+                _merged[key] = val
+
         kwargs = _merged
 
     start_time = time.time()
-    verbose = kwargs.get("verbose", False)
-
+    verbose = kwargs.get('verbose', False)
     # Read the specified QSO spectrum from the FITS file
     if verbose:
         logger.info("Starting search for QSO INDEX = %s", spec_index)
@@ -121,7 +125,6 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
     residual, error = spectra.flux.astype('float64'), spectra.error.astype('float64')
     lam_obs = lam_obs.astype('float64')
 
-
     # Remove NaN values from the arrays
     non_nan_indices = np.isfinite(residual)
     lam_obs, residual, error = lam_obs[non_nan_indices], residual[non_nan_indices], error[non_nan_indices]
@@ -139,9 +142,15 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         snr_val, stat = snr_of_spectra(residual, error, **kwargs)
     else:
         # Identify the wavelength region for searching the specified absorber
+        if verbose:
+            logger.debug(f"PATCH CHECK before search window: SMALL_WAVE={_constants.SMALL_WAVE} LARGE_WAVE={_constants.LARGE_WAVE}")
+
         lam_search, unmsk_residual, unmsk_error = absorber_search_window(
             lam_obs, residual, error, z_qso, absorber, min_wave, max_wave, start_rest_wave=kwargs["start_rest_wave"], end_rest_wave=kwargs["end_rest_wave"],
             dv=kwargs["dv"], lam_edge_sep=kwargs["lam_edge_sep"], logwave=kwargs.get("logwave", False), verbose=verbose, qso_dv_mask_emline=kwargs.get("qso_dv_mask_emline", None))
+
+        if verbose:
+            logger.debug("lam_search range: %.2f %.2f  npix=%d", np.nanmin(lam_search), np.nanmax(lam_search),lam_search.size)
 
         assert lam_search.size == unmsk_residual.size == unmsk_error.size, "Mismatch in array sizes of lam_search, unmsk_residual, and unmsk_error"
 
@@ -149,7 +158,7 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         snr_val, stat = snr_of_spectra(unmsk_residual, unmsk_error, **kwargs)
         if snr_cut is not None and snr_val < snr_cut:
             if verbose:
-                logger.info("SNR check failed (%s snr_val=%.2f < snr_cut=%.2f), spec index = %s",
+                logger.debug("SNR check failed (%s snr_val=%.2f < snr_cut=%.2f), spec index = %s",
                             stat, snr_val, snr_cut, spec_index)
             result = _build_result(
                 [spec_index], [-1], [[0, 0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0, 0]], [0], [0], [0],
@@ -168,8 +177,8 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
             conv_kwargs[key] = kwargs[key]
 
     if verbose:
-        logger.info("search absorber = %s", absorber)
-        logger.info("Z_QSO = %s", z_qso[0])
+        logger.debug("search absorber = %s", absorber)
+        logger.debug("Z_QSO = %s", z_qso[0])
 
     result = convolution_method_absorber_finder_in_QSO_spectra(
         spec_index,
@@ -182,9 +191,30 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         **conv_kwargs,
     )
 
-    result[f'snr_qso'] = snr_val
+    zkey = 'z_abs'
+    if zkey in result:
+        z_abs = np.asarray(result[zkey], dtype=float)
+
+        line1 = lines[doublet_keys[absorber][0]]
+        line2 = lines[doublet_keys[absorber][1]]
+
+        lam1_obs = line1 * (1.0 + z_abs)
+        lam2_obs = line2 * (1.0 + z_abs)
+
+        keep_wave = (
+            (z_abs < 0)
+            | (
+                np.isfinite(z_abs)
+                & (lam1_obs >= _constants.SMALL_WAVE)
+                & (lam2_obs <= _constants.LARGE_WAVE)
+            )
+        )
+        result = _filter_result_dict(result, keep_wave)
+
+    result["snr_qso"] = snr_val
+
     if verbose:
-        logger.info("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
+        logger.debug("Time taken to finish %s detection for index = %s Quasar: %.2f seconds", absorber, spec_index, time.time() - start_time)
 
     return result
 
@@ -485,12 +515,12 @@ def _validate_candidates(spec_index, z_abs_candidates, lam_obs, residual, error,
                                                lower_del_lam, c0, c1, upper_del_lam,
                                                sn1, sn_line1, sn2, sn_line2,
                                                disp_vel1, disp_vel2, min_dr, dr, max_dr,
-                                               ew1_snr, ew2_snr, delta_chi2_line1, delta_chi2_line2,
+                                               delta_chi2_line1, delta_chi2_line2,
                                                fit_param_std=fit_param_std_temp[0],
                                                conf_level=conf_level, vmax=_constants.MAX_VEL_DISPERSION, verbose=verbose)
 
 
-                redchi2_doublet = reduced_chi2_double_gaussian(lam_obs,
+                redchi2_doublet = fit_cost_double_gaussian(lam_obs,
                                                 residual,
                                                 error,
                                                 z_new,

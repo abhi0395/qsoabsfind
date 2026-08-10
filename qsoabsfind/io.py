@@ -44,27 +44,50 @@ def read_fits_file(fits_file, index=None):
     return header, flux, error, wavelength, metadata
 
 def _build_qso_info_hdu(input_file, spec_indices, results):
-    spec_arr = np.array(list(spec_indices))
-    metadata = Table.read(input_file, hdu="METADATA")
-    metadata = Table(metadata[spec_arr])
-    if 'Z' in metadata.colnames:
-        metadata.rename_column('Z', 'Z_QSO')
-    z_qso = np.array(metadata['Z_QSO'])
-    # IS_QSO_AVAILABLE is True when the search could run (z_abs != -1),
-    # regardless of whether an absorber was actually found. It is False
-    # only when the spectrum had too few pixels or the doublet fell outside
-    # the wavelength coverage (default value -1) or snr cut was not satisfied in case snr_cut was passed in kwargs argument.
-    unsearchable = set(results.get('unsearchable_indices', []))
-    is_available = np.array([int(idx) not in unsearchable for idx in spec_arr], dtype=bool)
-    snr_qso_map = results.get('snr_qso_map', {})
-    snr_qso = np.array([snr_qso_map.get(int(idx), -1.0) for idx in spec_arr], dtype=np.float32)
-    return fits.BinTableHDU.from_columns([
-        fits.Column(name='INDEX_SPEC', format='K', array=spec_arr),
-        fits.Column(name='Z_QSO', format='D', array=z_qso),
-        fits.Column(name='IS_QSO_AVAILABLE', format='L', array=is_available),
-        fits.Column(name='SNR_QSO', format='E', array=snr_qso),
-    ], name='QSO_INFO')
 
+    spec_arr = np.asarray(list(spec_indices), dtype=np.int64)
+
+    metadata = Table.read(input_file, hdu="METADATA")
+    metadata = Table(metadata[spec_arr], copy=True)
+
+    # Use Z_QSO from metadata if present, otherwise use Z.
+    if "Z_QSO" in metadata.colnames:
+        z_qso = np.asarray(metadata["Z_QSO"])
+    elif "Z" in metadata.colnames:
+        z_qso = np.asarray(metadata["Z"])
+    else:
+        raise KeyError("Neither 'Z_QSO' nor 'Z' found in METADATA HDU.")
+
+    unsearchable = set(results.get("unsearchable_indices", []))
+    is_available = np.asarray(
+        [int(idx) not in unsearchable for idx in spec_arr],
+        dtype=bool,
+    )
+
+    snr_qso_map = results.get("snr_qso_map", {})
+    snr_qso = np.asarray(
+        [snr_qso_map.get(int(idx), -1.0) for idx in spec_arr],
+        dtype=np.float32,
+    )
+
+    qso_info = Table()
+
+    # Keep these four columns fixed and first.
+    qso_info["INDEX_SPEC"] = spec_arr
+    qso_info["Z_QSO"] = z_qso
+    qso_info["IS_QSO_AVAILABLE"] = is_available
+    qso_info["SNR_QSO"] = snr_qso
+
+    # Add all remaining metadata columns with original names/formats.
+    # Skip duplicates of the four fixed output columns.
+    fixed_cols = set(qso_info.colnames)
+
+    for col in metadata.colnames:
+        if col in fixed_cols:
+            continue
+        qso_info[col] = metadata[col]
+
+    return fits.BinTableHDU(qso_info, name="QSO_INFO")
 
 def save_results_to_fits(results, input_file, output_file, headers, absorber, spec_indices=None):
     """
@@ -104,7 +127,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         VDISP1, VDISP2 = f'{l1}_VDISP', f'{l2}_VDISP'
         VDISP1_ERR, VDISP2_ERR = f'{l1}_VDISP_ERR', f'{l2}_VDISP_ERR'
         DCHI2_1, DCHI2_2 = f'DELTA_CHI2_{l1}', f'DELTA_CHI2_{l2}'
-        REDCHI2 = f'REDCHI2_FIT'
+        REDCHI2 = f'FIT_COST'
 
     absorber_cols = [
         fits.Column(name='INDEX_SPEC', format='K', array=np.array(results['index_spec'])),

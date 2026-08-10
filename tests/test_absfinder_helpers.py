@@ -486,7 +486,6 @@ class TestCheckAbsorberSelection(unittest.TestCase):
             sn2=4.0, sn_line2=2.0,
             vel1=20.0, vel2=20.0,
             min_dr=0.8, dr=1.5, max_dr=2.2,
-            ew1_snr=5.0, ew2_snr=3.0,
             delta_chi2_line1=30.0,
             delta_chi2_line2=30.0,
             conf_level=0.95,

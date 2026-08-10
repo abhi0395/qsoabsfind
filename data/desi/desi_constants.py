@@ -26,8 +26,8 @@ search_parameters = {
     'sn_line2': 2, # SNR cut for second line
     'use_covariance': True, # to use covariance matrix in EW error calculation
     'logwave': False,  # Assume DESI-style log scale by default
-    'lam_edge_sep': 25, # Wavelength cut from spectrum edges (in Ang)
-    'conf_level':0.95, # 95 percent confidence level for absorber selection
+    'lam_edge_sep': 10, # Wavelength cut from spectrum edges (in Ang)
+    'conf_level':None, # No confidence level for absorber selection
     'verbose': False, # for printing statements for debugging
     'dv': 5000,  # velocity offset from quasars redshift in km/s
     'start_rest_wave':None, # blue end of rest-frame quasar wavelength, None --> default
@@ -41,6 +41,7 @@ search_parameters = {
     'res_is_R': True, # if True, res_val_start and res_val_end are R values; if False, they are delta_lambda values,
     'statistics':'median', # 'mean' or 'median' for QSOs in search window
     'snr_cut':3, # SNR cut for candidate selection
+    'qso_dv_mask_emline':None, # velocity offset from quasar redshift to mask out emission lines in km/s
     }
 
 # ==============================
