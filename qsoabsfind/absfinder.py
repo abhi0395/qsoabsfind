@@ -20,7 +20,6 @@ from .absorberutils import (
     calculate_doublet_ratio,
     group_and_select_weighted_redshift,
     check_absorber_selection,
-    _filter_result_dict
 )
 from .ew import (
     measure_absorber_properties_double_gaussian,
@@ -190,26 +189,6 @@ def read_single_spectrum_and_find_absorber(fits_file, spec_index, absorber, cons
         unmsk_residual,
         **conv_kwargs,
     )
-
-    zkey = 'z_abs'
-    if zkey in result:
-        z_abs = np.asarray(result[zkey], dtype=float)
-
-        line1 = lines[doublet_keys[absorber][0]]
-        line2 = lines[doublet_keys[absorber][1]]
-
-        lam1_obs = line1 * (1.0 + z_abs)
-        lam2_obs = line2 * (1.0 + z_abs)
-
-        keep_wave = (
-            (z_abs < 0)
-            | (
-                np.isfinite(z_abs)
-                & (lam1_obs >= _constants.SMALL_WAVE)
-                & (lam2_obs <= _constants.LARGE_WAVE)
-            )
-        )
-        result = _filter_result_dict(result, keep_wave)
 
     result["snr_qso"] = snr_val
 

@@ -178,15 +178,12 @@ def parallel_convolution_search(
         combined_results['zabs_known'] = []
 
     for result in results:
-        # in known-z mode keep every row (z_abs=-1, 0, or a fitted value);
-        # in convolution mode keep only detected absorbers (z_abs > 0)
-        if 'zabs_known' in combined_results:
-            keep = np.ones(len(result['z_abs']), dtype=bool)
-        else:
-            keep = np.array(result['z_abs']) > 0
-        if np.all(np.array(result['z_abs']) == -1):
-            combined_results['unsearchable_indices'].append(int(result['index_spec'][0]))
-        combined_results['snr_qso_map'][int(result['index_spec'][0])] = float(result.get('snr_qso', -1.0))
+        keep = np.array(result['z_abs']) > 0
+        spec_idx = int(result['index_spec'][0]) if len(result.get('index_spec', [])) > 0 else None
+        if spec_idx is not None:
+            if np.all(np.array(result['z_abs']) == -1):
+                combined_results['unsearchable_indices'].append(spec_idx)
+            combined_results['snr_qso_map'][spec_idx] = float(result.get('snr_qso', -1.0))
 
         combined_results['index_spec'].extend(np.array(result['index_spec'])[keep])
         combined_results['z_abs'].extend(np.array(result['z_abs'])[keep])
@@ -416,24 +413,24 @@ def main():
         zabs_known_map=zabs_known_map, constant_file=const_path, **user_constants.search_parameters
     )
 
-    # only save absorber file if there at least one absorber is detected
-    if len(results["index_spec"])>0:
-        # Save the results to a FITS file
-        if zabs_known_map is not None:
-            n_valid = int(np.sum(np.array(results["z_abs"]) > 0))
-            logger.info('Number of %s systems validated (z_abs > 0): %s of %s entries',
-                        args.absorber, n_valid, len(results["index_spec"]))
-        else:
-            logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
-        save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber,
-                             spec_indices=spec_indices)
-
-        if args.coldens_dv is not None:
-            logwave = user_constants.search_parameters["logwave"]
-            col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.coldens_dv, logwave, n_jobs)
-            append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
+    # Save output FITS for every processed chunk/file, even when no absorbers are detected.
+    if zabs_known_map is not None:
+        n_valid = int(np.sum(np.array(results["z_abs"]) > 0))
+        logger.info('Number of %s systems validated (z_abs > 0): %s of %s entries',
+                    args.absorber, n_valid, len(spec_indices))
     else:
-        logger.info('No %s absorbers found, no file saved', args.absorber)
+        logger.info('Number of %s systems found: %s', args.absorber, len(results["index_spec"]))
+
+    save_results_to_fits(results, args.input_fits_file, args.output, headers, args.absorber,
+                            spec_indices=spec_indices)
+
+    if args.coldens_dv is not None:
+        logwave = user_constants.search_parameters["logwave"]
+        col_tt = return_total_column_density_table(args.input_fits_file, args.absorber, args.output, user_constants.search_parameters["continuum_error_frac"], args.coldens_dv, logwave, n_jobs)
+        append_table_to_fits(args.output, col_tt, 'COLUMN_DENSITY')
+    else:
+        if len(results["index_spec"]) == 0:
+            logger.info('No %s absorbers found; wrote output with zero-row ABSORBER/METADATA tables', args.absorber)
 
     # End timing
     end_time = time.time()

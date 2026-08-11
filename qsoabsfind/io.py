@@ -129,31 +129,43 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         DCHI2_1, DCHI2_2 = f'DELTA_CHI2_{l1}', f'DELTA_CHI2_{l2}'
         REDCHI2 = f'FIT_COST'
 
+    nrows = len(results['index_spec'])
+
+    def _scalar_arr(values, dtype=float):
+        return np.asarray(values, dtype=dtype)
+
+    def _vec6_arr(values):
+        if nrows == 0:
+            return np.empty((0, 6), dtype=np.float64)
+        return np.asarray(values, dtype=np.float64).reshape(nrows, 6)
+
+    absorber_index_spec = _scalar_arr(results['index_spec'], dtype=np.int64)
+
     absorber_cols = [
-        fits.Column(name='INDEX_SPEC', format='K', array=np.array(results['index_spec'])),
-        fits.Column(name='Z_ABS', format='D', array=np.array(results['z_abs'])),
-        fits.Column(name='GAUSS_FIT', format='6D', array=np.array(results['gauss_fit'])),
-        fits.Column(name='GAUSS_FIT_STD', format='6D', array=np.array(results['gauss_fit_std'])),
-        fits.Column(name=f'{EW_1}', format='D', unit='Angstrom', array=np.array(results['ew_1_mean'])),
-        fits.Column(name=f'{EW_2}', format='D', unit='Angstrom', array=np.array(results['ew_2_mean'])),
-        fits.Column(name=f'{EW_TOTAL}', format='D', unit='Angstrom', array=np.array(results['ew_total_mean'])),
-        fits.Column(name=f'{EW_1}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_1_error'])),
-        fits.Column(name=f'{EW_2}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_2_error'])),
-        fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', unit='Angstrom', array=np.array(results['ew_total_error'])),
-        fits.Column(name='Z_ABS_ERR', format='D', array=np.array(results['z_abs_err'])),
-        fits.Column(name=sn_1, format='D', array=np.array(results['sn_1'])),
-        fits.Column(name=sn_2, format='D', array=np.array(results['sn_2'])),
-        fits.Column(name=VDISP1, format='D', unit='km s-1', array=np.array(results['vel_disp1'])),
-        fits.Column(name=VDISP2, format='D', unit='km s-1', array=np.array(results['vel_disp2'])),
-        fits.Column(name=VDISP1_ERR, format='D', unit='km s-1', array=np.array(results['vel_disp1_err'])),
-        fits.Column(name=VDISP2_ERR, format='D', unit='km s-1', array=np.array(results['vel_disp2_err'])),
-        fits.Column(name=DCHI2_1, format='D', array=np.array(results['delta_chi2_line1'])),
-        fits.Column(name=DCHI2_2, format='D', array=np.array(results['delta_chi2_line2'])),
-        fits.Column(name=REDCHI2, format='D', array=np.array(results['pure_redchi2'])),
+        fits.Column(name='INDEX_SPEC', format='K', array=absorber_index_spec),
+        fits.Column(name='Z_ABS', format='D', array=_scalar_arr(results['z_abs'])),
+        fits.Column(name='GAUSS_FIT', format='6D', array=_vec6_arr(results['gauss_fit'])),
+        fits.Column(name='GAUSS_FIT_STD', format='6D', array=_vec6_arr(results['gauss_fit_std'])),
+        fits.Column(name=f'{EW_1}', format='D', unit='Angstrom', array=_scalar_arr(results['ew_1_mean'])),
+        fits.Column(name=f'{EW_2}', format='D', unit='Angstrom', array=_scalar_arr(results['ew_2_mean'])),
+        fits.Column(name=f'{EW_TOTAL}', format='D', unit='Angstrom', array=_scalar_arr(results['ew_total_mean'])),
+        fits.Column(name=f'{EW_1}_ERROR', format='D', unit='Angstrom', array=_scalar_arr(results['ew_1_error'])),
+        fits.Column(name=f'{EW_2}_ERROR', format='D', unit='Angstrom', array=_scalar_arr(results['ew_2_error'])),
+        fits.Column(name=f'{EW_TOTAL}_ERROR', format='D', unit='Angstrom', array=_scalar_arr(results['ew_total_error'])),
+        fits.Column(name='Z_ABS_ERR', format='D', array=_scalar_arr(results['z_abs_err'])),
+        fits.Column(name=sn_1, format='D', array=_scalar_arr(results['sn_1'])),
+        fits.Column(name=sn_2, format='D', array=_scalar_arr(results['sn_2'])),
+        fits.Column(name=VDISP1, format='D', unit='km s-1', array=_scalar_arr(results['vel_disp1'])),
+        fits.Column(name=VDISP2, format='D', unit='km s-1', array=_scalar_arr(results['vel_disp2'])),
+        fits.Column(name=VDISP1_ERR, format='D', unit='km s-1', array=_scalar_arr(results['vel_disp1_err'])),
+        fits.Column(name=VDISP2_ERR, format='D', unit='km s-1', array=_scalar_arr(results['vel_disp2_err'])),
+        fits.Column(name=DCHI2_1, format='D', array=_scalar_arr(results['delta_chi2_line1'])),
+        fits.Column(name=DCHI2_2, format='D', array=_scalar_arr(results['delta_chi2_line2'])),
+        fits.Column(name=REDCHI2, format='D', array=_scalar_arr(results['pure_redchi2'])),
     ]
     if 'zabs_known' in results:
         absorber_cols.append(
-            fits.Column(name='ZABS_KNOWN', format='D', array=np.array(results['zabs_known']))
+            fits.Column(name='ZABS_KNOWN', format='D', array=_scalar_arr(results['zabs_known']))
         )
     hdu = fits.BinTableHDU.from_columns(absorber_cols, name='ABSORBER')
 
@@ -166,7 +178,7 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
     primary_hdu.header['EXTNAME'] = 'PRIMARY'
 
     # load the QSO METADATA
-    _,_, _, _, metadata = read_fits_file(input_file, index=np.array(results['index_spec']))
+    _,_, _, _, metadata = read_fits_file(input_file, index=absorber_index_spec)
     qso_hdu = fits.BinTableHDU(metadata, name='METADATA')
 
     hdu_list = [primary_hdu, hdu, qso_hdu]

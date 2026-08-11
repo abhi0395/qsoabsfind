@@ -17,6 +17,7 @@ from qsoabsfind.io import (
     append_table_to_fits,
     read_any_fits_file,
 )
+from qsoabsfind.columndensity import return_total_column_density_table
 
 _SDSS_FITS = os.path.join(os.path.dirname(__file__), '..', 'data', 'sdss', 'qso_test_spectra.fits')
 _DESI_FITS = os.path.join(os.path.dirname(__file__), '..', 'data', 'desi', 'qso_test_spectra.fits')
@@ -225,6 +226,61 @@ class TestSaveResultsToFits(unittest.TestCase):
         try:
             with self.assertRaises(ValueError):
                 save_results_to_fits(results, self.input_file, out, self.headers, 'Vibranium')
+        finally:
+            if os.path.exists(out):
+                os.remove(out)
+
+    def test_empty_results_write_zero_row_absorber_metadata_and_full_qso_info(self):
+        results = self._make_results(n=0)
+        results['unsearchable_indices'] = [1]
+        results['snr_qso_map'] = {0: 5.0, 1: 1.5, 2: 8.0}
+        spec_indices = [0, 1, 2]
+
+        with tempfile.NamedTemporaryFile(suffix='.fits', delete=False) as f:
+            out = f.name
+        try:
+            save_results_to_fits(
+                results,
+                self.input_file,
+                out,
+                self.headers,
+                'MgII',
+                spec_indices=spec_indices,
+            )
+
+            t_abs = Table.read(out, hdu='ABSORBER')
+            t_meta = Table.read(out, hdu='METADATA')
+            t_qso = Table.read(out, hdu='QSO_INFO')
+
+            self.assertEqual(len(t_abs), 0)
+            self.assertEqual(len(t_meta), 0)
+            self.assertEqual(len(t_qso), len(spec_indices))
+            self.assertIn('IS_QSO_AVAILABLE', t_qso.colnames)
+            self.assertIn('GAUSS_FIT', t_abs.colnames)
+            self.assertIn('GAUSS_FIT_STD', t_abs.colnames)
+        finally:
+            if os.path.exists(out):
+                os.remove(out)
+
+    def test_empty_absorber_yields_zero_row_column_density(self):
+        results = self._make_results(n=0)
+
+        with tempfile.NamedTemporaryFile(suffix='.fits', delete=False) as f:
+            out = f.name
+        try:
+            save_results_to_fits(results, self.input_file, out, self.headers, 'MgII', spec_indices=[0, 1])
+            n_table = return_total_column_density_table(
+                self.input_file,
+                'MgII',
+                out,
+                continuum_error_frac=0.05,
+                dv=300,
+                logwave=False,
+                nproc=1,
+            )
+            self.assertEqual(len(n_table), 0)
+            self.assertIn('LOG10N', n_table.colnames)
+            self.assertIn('SATURATION', n_table.colnames)
         finally:
             if os.path.exists(out):
                 os.remove(out)
