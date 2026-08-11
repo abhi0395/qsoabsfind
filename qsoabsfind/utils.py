@@ -138,6 +138,82 @@ def parse_qso_sequence(qso_sequence):
     # If none of the conditions matched, raise an error
     raise ValueError(f"Invalid QSO sequence format: '{qso_sequence}'. Use 'start-end[:step]' or an integer.")
 
+def add_quality_flags( cat, ew1_col, ew2_col, vdisp1_col, vdisp2_col, lam1, lam2, f1,f2, vdisp_ratio_thresh=2.0):
+    """
+    Add diagnostic quality flags.
+
+    DR is computed as EW_stronger / EW_weaker, where line strength is
+    determined from f * lambda^2.
+
+    QUALITY_FLAG:
+        0 : nominally clean
+        1 : velocity-dispersion ratio suspicious only
+        2 : nominal DR outside physical range only
+        3 : both suspicious
+    """
+
+    ew1 = np.asarray(cat[ew1_col], dtype=float)
+    ew2 = np.asarray(cat[ew2_col], dtype=float)
+
+    v1 = np.asarray(cat[vdisp1_col], dtype=float)
+    v2 = np.asarray(cat[vdisp2_col], dtype=float)
+
+    s1 = f1 * lam1**2
+    s2 = f2 * lam2**2
+
+    if s1 >= s2:
+        ew_strong = ew1
+        ew_weak = ew2
+        dr_thin = s1 / s2
+    else:
+        ew_strong = ew2
+        ew_weak = ew1
+        dr_thin = s2 / s1
+
+    good_dr = (
+        np.isfinite(ew_strong)
+        & np.isfinite(ew_weak)
+        & (ew_strong > 0)
+        & (ew_weak > 0)
+    )
+
+    dr = np.full(len(cat), np.nan, dtype=np.float32)
+    dr[good_dr] = (ew_strong[good_dr] / ew_weak[good_dr]).astype(np.float32)
+
+    dr_nominal_flag = (
+        np.isfinite(dr)
+        & ((dr < 1.0) | (dr > dr_thin))
+    ).astype(np.int16)
+
+    good_v = np.isfinite(v1) & np.isfinite(v2) & (v1 > 0) & (v2 > 0)
+
+    vdisp_diff = np.full(len(cat), np.nan, dtype=np.float32)
+    vdisp_ratio = np.full(len(cat), np.nan, dtype=np.float32)
+
+    vdisp_diff[good_v] = np.abs(v1[good_v] - v2[good_v]).astype(np.float32)
+    vdisp_ratio[good_v] = (
+        np.maximum(v1[good_v], v2[good_v])
+        / np.minimum(v1[good_v], v2[good_v])
+    ).astype(np.float32)
+
+    vdisp_flag = (
+        np.isfinite(vdisp_ratio)
+        & (vdisp_ratio > vdisp_ratio_thresh)
+    ).astype(np.int16)
+
+    quality_flag = (vdisp_flag + 2 * dr_nominal_flag).astype(np.int16)
+
+    cat["DOUBLET_RATIO"] = dr
+    cat["DOUBLET_RATIO_THIN_LIMIT"] = np.full(len(cat), dr_thin, dtype=np.float32)
+
+    cat["VDISP_DIFF"] = vdisp_diff
+    cat["VDISP_RATIO"] = vdisp_ratio
+
+    cat["VDISP_FLAG"] = vdisp_flag
+    cat["DR_FLAG"] = dr_nominal_flag
+    cat["QUALITY_FLAG"] = quality_flag
+
+    return cat
 
 def snr_of_spectra(residual, error, **kwargs):
 

@@ -578,6 +578,37 @@ def return_total_column_density_table(
     start = time.time()
 
     tt = Table.read(output, hdu="ABSORBER")
+    if len(tt) == 0:
+        N_table = _sentinel_column_density_table()[:0]
+        for col in [
+            "LOG10N",
+            "SIG_LOG10N",
+            "DELTA_LOGN",
+            "SIG_DELTA_LOGN",
+        ]:
+            N_table[col] = N_table[col].astype("float64")
+
+        for col in [
+            "SATURATION",
+            "fN",
+            "LOWER_LIMIT",
+            "NPIX_SAT_STRONG",
+            "NPIX_SAT_WEAK",
+        ]:
+            N_table[col] = N_table[col].astype("int32")
+
+        N_table["LOG10N"].description = "log10[N/(cm^-2)]"
+        N_table["SIG_LOG10N"].description = "1-sigma uncertainty in log10 N (dex)"
+        N_table["DELTA_LOGN"].description = (
+            "log10(N_weak) - log10(N_strong) from AODM"
+        )
+        N_table["SIG_DELTA_LOGN"].description = (
+            "Statistical 1-sigma uncertainty on DELTA_LOGN (dex)"
+        )
+
+        logger.info("No absorber rows found; returning zero-row COLUMN_DENSITY table")
+        return N_table
+
     spectra = QSOSpecRead(
         spectra_fits,
         autoload=True,

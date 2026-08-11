@@ -39,8 +39,17 @@ when using ``--zabs-known-file``). Columns:
 - ``SN_${METAL}_${LINE}``: (*float*), Signal-to-noise ratio of each doublet line.
 - ``${METAL}_${LINE}_VDISP``: (*float*), Instrumental-resolution-corrected rest-frame velocity dispersion of each line in km/s. Zero for unresolved lines.
 - ``${METAL}_${LINE}_VDISP_ERR``: (*float*), Uncertainty on the rest-frame velocity dispersion of each line in km/s.
+- ``DOUBLET_RATIO``: (*float*), Measured equivalent-width ratio ``EW_stronger / EW_weaker`` for the doublet.
+- ``DOUBLET_RATIO_THIN_LIMIT``: (*float*), Expected thin-limit ratio from atomic physics, ``(f*lambda^2)_stronger / (f*lambda^2)_weaker``.
+- ``VDISP_DIFF``: (*float*), Absolute difference between the two fitted velocity dispersions, ``|VDISP_1 - VDISP_2|`` (km/s).
+- ``VDISP_RATIO``: (*float*), Ratio of larger to smaller fitted velocity dispersion, ``max(VDISP_1,VDISP_2)/min(VDISP_1,VDISP_2)``.
+- ``VDISP_FLAG``: (*int*), Velocity-dispersion consistency flag: ``1`` if ``VDISP_RATIO`` exceeds the configured threshold, else ``0``.
+- ``DR_FLAG``: (*int*), Doublet-ratio nominality flag: ``1`` if ``DOUBLET_RATIO`` is outside the nominal physical range, else ``0``.
+- ``QUALITY_FLAG``: (*int*), Combined diagnostic flag: ``0`` clean, ``1`` suspicious velocity-dispersion ratio only, ``2`` suspicious doublet ratio only, ``3`` both suspicious.
 - ``DELTA_CHI2``: (*float*), Improvement in chi2 between the double-Gaussian model and a flat continuum (null hypothesis).
+- ``FIT_COST``: (*float*), Cost function value from the double-Gaussian fit.
 - ``ZABS_KNOWN``: (*float*, **only present when** ``--zabs-known-file`` **is used**), the input known redshift supplied for validation.
+
 
 **3) METADATA** HDU contains all metadata columns from the input file's ``METADATA`` extension,
 with one row per entry in the ``ABSORBER`` HDU.
