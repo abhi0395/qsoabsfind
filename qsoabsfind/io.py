@@ -10,7 +10,9 @@ from astropy.table import Table
 logger = logging.getLogger(__name__)
 
 #Constants
-from .constants import doublet_keys
+from .constants import doublet_keys, oscillator_parameters, lines
+from . import constants as _constants
+from .utils import add_quality_flags
 
 def read_fits_file(fits_file, index=None):
     """
@@ -167,7 +169,15 @@ def save_results_to_fits(results, input_file, output_file, headers, absorber, sp
         absorber_cols.append(
             fits.Column(name='ZABS_KNOWN', format='D', array=_scalar_arr(results['zabs_known']))
         )
-    hdu = fits.BinTableHDU.from_columns(absorber_cols, name='ABSORBER')
+
+    # Build absorber table from existing FITS columns
+    absorber_hdu_tmp = fits.BinTableHDU.from_columns(absorber_cols, name="ABSORBER")
+    cat = Table(absorber_hdu_tmp.data)
+    lam1, lam2 = lines[doublet_keys[absorber][0]], lines[doublet_keys[absorber][1]]
+    f1, f2 = oscillator_parameters[f'{absorber}_f1'], oscillator_parameters[f'{absorber}_f2']
+    cat = add_quality_flags(cat, EW_1, EW_2, VDISP1, VDISP2, lam1, lam2, f1,f2, vdisp_ratio_thresh=_constants.VEL_DISP_RATIO_THRESH)
+
+    hdu = fits.BinTableHDU(cat, name='ABSORBER')
 
     hdr = fits.Header()
     for key, header in headers.items():

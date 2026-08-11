@@ -215,6 +215,13 @@ class TestSaveResultsToFits(unittest.TestCase):
             t = Table.read(out, hdu='ABSORBER')
             self.assertIn('CIV_1548_EW', t.colnames)
             self.assertIn('CIV_1548_VDISP_ERR', t.colnames)
+            self.assertIn('DOUBLET_RATIO', t.colnames)
+            self.assertIn('DOUBLET_RATIO_THIN_LIMIT', t.colnames)
+            self.assertIn('VDISP_DIFF', t.colnames)
+            self.assertIn('VDISP_RATIO', t.colnames)
+            self.assertIn('VDISP_FLAG', t.colnames)
+            self.assertIn('DR_FLAG', t.colnames)
+            self.assertIn('QUALITY_FLAG', t.colnames)
         finally:
             if os.path.exists(out):
                 os.remove(out)
@@ -258,6 +265,13 @@ class TestSaveResultsToFits(unittest.TestCase):
             self.assertIn('IS_QSO_AVAILABLE', t_qso.colnames)
             self.assertIn('GAUSS_FIT', t_abs.colnames)
             self.assertIn('GAUSS_FIT_STD', t_abs.colnames)
+            self.assertIn('DOUBLET_RATIO', t_abs.colnames)
+            self.assertIn('DOUBLET_RATIO_THIN_LIMIT', t_abs.colnames)
+            self.assertIn('VDISP_DIFF', t_abs.colnames)
+            self.assertIn('VDISP_RATIO', t_abs.colnames)
+            self.assertIn('VDISP_FLAG', t_abs.colnames)
+            self.assertIn('DR_FLAG', t_abs.colnames)
+            self.assertIn('QUALITY_FLAG', t_abs.colnames)
         finally:
             if os.path.exists(out):
                 os.remove(out)

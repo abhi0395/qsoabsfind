@@ -188,6 +188,7 @@ REDSHIFT_REFINE_WINDOW = 9       # pixel window for refining redshift by locatin
 MEDIAN_WEIGHT_GAMMA = 4          # power-law exponent for 1/lambda^gamma weighting in median_selection_after_combining
 CANDIDATE_DEDUP_CT = 2           # pixel tolerance multiplier for deduplicating close candidates
 MAX_VEL_DISPERSION = 50         # maximum allowed velocity difference between doublet components (km/s)
+VEL_DISP_RATIO_THRESH = 2.0  # maximum allowed ratio of velocity dispersions between doublet components
 CONV_KERNEL_EXTENT = 10          # convolution kernel half-extent: +/-N x sigma from line centre
 FIT_WINDOW_HALF_WIDTH = 15       # Gaussian fitting window half-width multiplier: d_pix * N Ang on each side
 GAUSS_FIT_NUM_ITER = 500         # maximum curve_fit iterations for double-Gaussian fitting
@@ -238,6 +239,7 @@ OVERRIDABLE_CONSTANTS = (
     'MEDIAN_WEIGHT_GAMMA',
     'CANDIDATE_DEDUP_CT',
     'MAX_VEL_DISPERSION',
+    'VEL_DISP_RATIO_THRESH',
     'CONV_KERNEL_EXTENT',
     'FIT_WINDOW_HALF_WIDTH',
     'GAUSS_FIT_NUM_ITER',
